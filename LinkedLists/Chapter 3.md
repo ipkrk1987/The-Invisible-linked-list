@@ -1,102 +1,102 @@
+# Episode 3: Back, Forward, and Time Travel
+## How Doubly Linked Lists Power Browser History (And Session Recovery)
 
-SEASON: 1 — The Invisible Linked List
+**Season 1 — The Invisible Linked List**  
+**Episode: S1E3**
 
-EPISODE: 3
+---
 
-TITLE: Back, Forward, and Time Travel — Doubly Linked Lists in Browser History
+## The Problem Every Browser User Creates
 
-(0:00 - The Problem Everyone Ignores)
+You open your browser. You click a link. Then another. Then back. Then forward three times. You open 50 tabs. Your browser crashes. When it restarts, **everything is exactly where you left it**.
 
-[Visual: Browser with dozens of tabs, complex navigation history]
+This seems magical, but it's not. It's engineering. Every web developer knows `window.history.back()`, but most never wonder: How does your browser remember where you've been, where you can go, and restore entire sessions after crashes?
 
-Narration: "Every web developer has used window.history.back(). But have you ever wondered: How does your browser remember where you've been, where you can go, and restore entire sessions after crashes? With 100+ tabs open?"
+With 100+ tabs open, thousands of pages visited per tab, and crashes that happen without warning, this is a production-scale problem hiding behind a simple API.
 
-```python
-# The scale problem:
-class BrowserAtScale:
-    def __init__(self):
-        self.tabs = 100           # Average power user
-        self.history_per_tab = 1000  # Pages per tab
-        self.navigation_events = 10_000  # Clicks/hour
-        self.session_restores = 5   # Crashes/month
-        
-        # Memory: 100 tabs × 1000 pages × 1KB = 100MB
-        # Disk: Need to persist for session restore
-        # Performance: Back/forward must feel instant (<100ms)
-        
-# The LeetCode problem hiding here: Design Browser History
-# LeetCode #1472: You have a browser with back/forward operations
-# But real browsers are 1000x more complex
-```
+Today, we're building browser history from LeetCode's doubly linked list, then systematically breaking it until we understand what makes real browsers work.
 
-(2:00 - From LeetCode to First Principles)
+---
 
-Narration: "Let's start with LeetCode #1472: Design Browser History. The naive solution:"
+## Part 1: The LeetCode Foundation
+
+Let's start with **LeetCode #1472: Design Browser History**. The naive solution uses an array:
 
 ```python
 class BrowserHistoryNaive:
-    """LeetCode solution - works for interviews, breaks in production."""
+    """LeetCode solution - works for interviews, breaks in production"""
     
     def __init__(self, homepage: str):
         self.history = [homepage]  # List of pages
         self.current = 0
     
     def visit(self, url: str) -> None:
-        # Clear forward history
+        """Visit new page - clear forward history"""
         self.history = self.history[:self.current + 1]
         self.history.append(url)
         self.current += 1
     
     def back(self, steps: int) -> str:
+        """Go back N steps"""
         self.current = max(0, self.current - steps)
         return self.history[self.current]
     
     def forward(self, steps: int) -> str:
+        """Go forward N steps"""
         self.current = min(len(self.history) - 1, self.current + steps)
         return self.history[self.current]
 
-# Problems at scale:
-# 1. Array slicing on visit: O(n) time, copies entire array
-# 2. Memory: Stores full page data, not just URLs
-# 3. No persistence: Lost on browser close
-# 4. No tab isolation: All tabs share history
-# 5. No session management: Can't restore crashes
+# Usage:
+browser = BrowserHistoryNaive("google.com")
+browser.visit("github.com")
+browser.visit("stackoverflow.com")
+print(browser.back(1))    # "github.com"
+print(browser.forward(1))  # "stackoverflow.com"
 ```
 
-(4:00 - The Doubly Linked List Solution)
+**What this teaches:** The algorithm. Navigation is pointer movement. Visiting clears forward history. This solution is correct for interviews.
 
-Narration: "The classic solution: Use a doubly linked list. Each node knows its previous and next page:"
+But it breaks at scale.
+
+---
+
+## Part 2: The Doubly Linked List Solution
+
+The classic improvement: **doubly linked list** for O(1) operations:
 
 ```python
-class HistoryNode:
-    """A node in the browser history chain."""
-    def __init__(self, url: str, data=None):
-        self.url = url
-        self.page_data = data  # Could be serialized DOM state
-        self.prev = None
-        self.next = None
-        self.timestamp = time.time()
-        self.visit_id = uuid.uuid4()  # Unique identifier
-        self.visit_type = 'typed'  # 'typed', 'clicked', 'redirected'
-        self.title = ""  # Page title for display
+import time
+import uuid
+from typing import Optional
 
-class DoublyLinkedHistory:
-    """Proper doubly linked list implementation."""
+class HistoryNode:
+    """A node in the browser history chain"""
+    def __init__(self, url: str, title: str = ""):
+        self.url = url
+        self.title = title
+        self.prev: Optional[HistoryNode] = None
+        self.next: Optional[HistoryNode] = None
+        
+        # Metadata
+        self.timestamp = time.time()
+        self.visit_id = str(uuid.uuid4())
+        self.visit_type = 'typed'  # 'typed', 'link', 'redirect'
+
+class BrowserHistory:
+    """Doubly linked list implementation - O(1) visit"""
     
     def __init__(self, homepage: str):
-        # Create initial node
         self.current = HistoryNode(homepage)
         self.head = self.current  # Oldest page
         self.tail = self.current  # Most recent page
         self.size = 1
-        
+    
     def visit(self, url: str, title: str = "") -> None:
-        """Visit a new page - O(1) time."""
+        """Visit new page - O(1) time"""
         # Create new node
-        new_node = HistoryNode(url)
-        new_node.title = title
+        new_node = HistoryNode(url, title)
         
-        # Link it after current
+        # Link after current
         new_node.prev = self.current
         self.current.next = new_node
         
@@ -105,545 +105,937 @@ class DoublyLinkedHistory:
         self.tail = new_node
         self.size += 1
         
-        # Clear forward history (garbage collect)
-        self._collect_forward_nodes()
+        # Clear forward history (everything after new_node)
+        new_node.next = None
     
-    def back(self, steps: int) -> str:
-        """Go back - O(steps) time."""
-        node = self.current
+    def back(self, steps: int = 1) -> str:
+        """Go back N steps - O(steps) time"""
         for _ in range(steps):
-            if node.prev is None:
+            if self.current.prev is None:
                 break
+            self.current = self.current.prev
+        return self.current.url
+    
+    def forward(self, steps: int = 1) -> str:
+        """Go forward N steps - O(steps) time"""
+        for _ in range(steps):
+            if self.current.next is None:
+                break
+            self.current = self.current.next
+        return self.current.url
+    
+    def get_back_list(self, max_items: int = 10) -> list:
+        """Get list of pages behind current (for UI menu)"""
+        pages = []
+        node = self.current.prev
+        while node and len(pages) < max_items:
+            pages.append({"url": node.url, "title": node.title})
             node = node.prev
-        self.current = node
-        return node.url
+        return pages
     
-    def forward(self, steps: int) -> str:
-        """Go forward - O(steps) time."""
-        node = self.current
-        for _ in range(steps):
-            if node.next is None:
-                break
+    def get_forward_list(self, max_items: int = 10) -> list:
+        """Get list of pages ahead of current (for UI menu)"""
+        pages = []
+        node = self.current.next
+        while node and len(pages) < max_items:
+            pages.append({"url": node.url, "title": node.title})
             node = node.next
-        self.current = node
-        return node.url
-    
-    def _collect_forward_nodes(self):
-        """Garbage collect nodes after current."""
-        # In real browsers: mark as collectible, not immediate delete
-        if self.current.next:
-            # Sever the link
-            self.current.next.prev = None
-            self.current.next = None
-            # Actual cleanup happens in background
+        return pages
+
+# Comparison:
+# Array: visit() is O(n) due to slicing, back/forward O(1)
+# Doubly linked list: visit() is O(1), back/forward O(steps)
+# Real browsers: Typical steps = 1-2, so O(1) dominates
 ```
 
-(7:00 - The Scale Problem: Memory Management)
+**Key insight:** The doubly linked list makes `visit()` O(1) instead of O(n). For a data structure modified thousands of times per session, this matters.
 
-Narration: "But with 1000 pages per tab, we can't keep everything in memory. We need paging and persistence:"
+But we're still missing critical production features.
+
+---
+
+## Part 3: The Scale Breaks - Where Theory Meets Reality
+
+### Scale Break #1: Memory Explosion
 
 ```python
-class PagedHistory:
-    """History that swaps to disk when memory pressure high."""
+# Typical user session:
+# - 10 tabs open
+# - 1000 pages visited per tab
+# - Each page has state (scroll position, form data, DOM snapshot)
+
+browser = BrowserHistory("homepage.com")
+
+for i in range(1000):
+    # Each page stores 100KB of state
+    page_state = {
+        "dom_snapshot": b"x" * 100_000,  # 100KB
+        "scroll_position": 1234,
+        "form_data": {"field1": "value"},
+    }
+    browser.visit(f"page_{i}.com", page_state)
+
+# Result: 1000 × 100KB = 100MB per tab
+# 10 tabs = 1GB of memory just for history!
+```
+
+**The Problem:** Storing everything in memory doesn't scale. Real browsers need **paging to disk**.
+
+---
+
+### Scale Break #2: Session Restore After Crash
+
+```python
+# Browser crashes during use
+browser = BrowserHistory("homepage.com")
+browser.visit("important-page.com")
+browser.visit("critical-form.com")  # User filled out 30-minute form
+
+# Crash! Power outage!
+# Program ends...
+
+# On restart:
+browser = BrowserHistory("homepage.com")
+# All history lost! User's work gone!
+```
+
+**The Problem:** In-memory data structures are **volatile**. Real browsers need **persistent storage** and **crash recovery**.
+
+---
+
+### Scale Break #3: Storage Quotas
+
+```python
+# User browses for 6 months
+# History grows unbounded
+
+browser = BrowserHistory("homepage.com")
+
+# 180 days × 100 pages/day × 50KB/page = 900MB
+for day in range(180):
+    for page in range(100):
+        browser.visit(f"day{day}_page{page}.com")
+
+# Problem on mobile: Device only has 2GB free space!
+# History consumes half of it!
+```
+
+**The Problem:** Unbounded growth. Real browsers enforce **storage quotas** (typically 200MB) and **intelligent eviction**.
+
+---
+
+### Scale Break #4: Corruption Recovery
+
+```python
+# Disk write interrupted during crash
+# History database file corrupted
+
+try:
+    browser = BrowserHistory.load_from_disk()
+except DatabaseCorruptedError:
+    # What now? Lose all history?
+    # User will be furious!
+    pass
+```
+
+**The Problem:** Persistent storage can be **corrupted**. Real browsers need **corruption detection** and **recovery strategies**.
+
+---
+
+## Part 4: Engineering Layer 1 - Paged History with Disk Persistence
+
+```python
+import sqlite3
+import pickle
+from collections import OrderedDict
+
+class PagedBrowserHistory:
+    """
+    History with memory management:
+    - Hot pages stay in RAM (LRU cache)
+    - Cold pages written to disk (SQLite)
+    - Transparent paging on access
+    """
     
-    def __init__(self):
-        self.memory_cache = LRUCache(maxsize=100)  # Keep 100 recent pages in RAM
-        self.disk_store = HistoryDatabase()  # SQLite/LevelDB for persistence
-        self.search_index = HistoryIndex()   # NEW: For omnibox search
-        self.current_id = None
-        self.memory_nodes = {}  # id -> HistoryNode
+    def __init__(self, cache_size: int = 100, db_path: str = "history.db"):
+        # In-memory cache (most recent 100 pages)
+        self.memory_cache = OrderedDict()  # visit_id -> HistoryNode
+        self.cache_size = cache_size
         
-    def visit(self, url: str, title: str = "", page_data: dict = None) -> None:
-        """Visit with automatic memory management."""
-        # Create node
-        node_id = str(uuid.uuid4())
-        node = HistoryNode(url, page_data)
-        node.id = node_id
-        node.title = title
+        # Current navigation pointer
+        self.current_id: Optional[str] = None
+        
+        # Persistent storage
+        self.db_path = db_path
+        self._init_database()
+    
+    def _init_database(self):
+        """Initialize SQLite database for history storage"""
+        self.conn = sqlite3.connect(self.db_path)
+        self.conn.execute("""
+            CREATE TABLE IF NOT EXISTS history (
+                visit_id TEXT PRIMARY KEY,
+                url TEXT NOT NULL,
+                title TEXT,
+                prev_id TEXT,
+                next_id TEXT,
+                timestamp REAL,
+                visit_type TEXT,
+                page_state BLOB
+            )
+        """)
+        
+        # Index for fast lookups
+        self.conn.execute("""
+            CREATE INDEX IF NOT EXISTS idx_timestamp 
+            ON history(timestamp DESC)
+        """)
+        
+        self.conn.commit()
+    
+    def visit(self, url: str, title: str = "", page_state: dict = None) -> str:
+        """Visit new page with automatic memory management"""
+        # Create new node
+        node = HistoryNode(url, title)
+        visit_id = node.visit_id
         
         # Link to current if exists
         if self.current_id:
-            current = self.get_node(self.current_id)
-            current.next_id = node_id
+            current_node = self._load_node(self.current_id)
+            current_node.next = node
             node.prev_id = self.current_id
-            self.save_node(current)  # Persist link update
+            
+            # Update current's next pointer in DB
+            self._update_node_link(self.current_id, next_id=visit_id)
         
-        # Update current
-        self.current_id = node_id
+        # Update current pointer
+        self.current_id = visit_id
         
         # Store in memory cache
-        self.memory_cache.put(node_id, node)
-        self.memory_nodes[node_id] = node
+        self._cache_node(visit_id, node)
         
-        # NEW: Update search index for omnibox
-        self.search_index.add_entry({
-            'id': node_id,
-            'url': url,
-            'title': title,
-            'timestamp': time.time(),
-            'visit_count': 1,
-            'type': 'typed' if page_data else 'clicked'
-        })
+        # Persist to disk
+        self._persist_node(node, page_state)
         
-        # Async persist to disk
-        asyncio.create_task(self.persist_node(node))
-        
-        # Check memory pressure
-        if len(self.memory_nodes) > 100:
-            self._evict_oldest_nodes()
+        return visit_id
     
-    # NEW: Search functionality for omnibox
-    def search_history(self, query: str, limit: int = 20):
-        """Search history by URL or title with ranking."""
-        # Real browsers use "frecency": frequency × recency
-        results = self.search_index.search(query)
+    def back(self, steps: int = 1) -> Optional[str]:
+        """Navigate back with automatic page loading"""
+        node = self._load_node(self.current_id)
         
-        # Rank by frecency (simple version)
-        ranked = sorted(results, 
-            key=lambda x: (
-                x.get('visit_count', 1) * 0.7 + 
-                (1.0 / (time.time() - x['timestamp'] + 1)) * 0.3
-            ),
-            reverse=True
+        for _ in range(steps):
+            if not node or not node.prev_id:
+                break
+            node = self._load_node(node.prev_id)
+        
+        if node:
+            self.current_id = node.visit_id
+            return node.url
+        
+        return None
+    
+    def forward(self, steps: int = 1) -> Optional[str]:
+        """Navigate forward with automatic page loading"""
+        node = self._load_node(self.current_id)
+        
+        for _ in range(steps):
+            if not node or not hasattr(node, 'next') or not node.next:
+                # Load next_id from database
+                next_id = self._get_next_id(node.visit_id)
+                if not next_id:
+                    break
+                node = self._load_node(next_id)
+            else:
+                node = node.next
+        
+        if node:
+            self.current_id = node.visit_id
+            return node.url
+        
+        return None
+    
+    def _load_node(self, visit_id: str) -> Optional[HistoryNode]:
+        """Load node from cache or disk"""
+        # Check memory cache first
+        if visit_id in self.memory_cache:
+            # Move to end (LRU)
+            self.memory_cache.move_to_end(visit_id)
+            return self.memory_cache[visit_id]
+        
+        # Load from disk
+        cursor = self.conn.execute(
+            "SELECT url, title, prev_id, next_id, timestamp, visit_type "
+            "FROM history WHERE visit_id = ?",
+            (visit_id,)
         )
+        row = cursor.fetchone()
         
-        return ranked[:limit]
+        if not row:
+            return None
+        
+        # Reconstruct node
+        node = HistoryNode(row[0], row[1])
+        node.visit_id = visit_id
+        node.prev_id = row[2]
+        # next_id stored but not loaded (lazy)
+        node.timestamp = row[4]
+        node.visit_type = row[5]
+        
+        # Cache it
+        self._cache_node(visit_id, node)
+        
+        return node
+    
+    def _cache_node(self, visit_id: str, node: HistoryNode):
+        """Add node to memory cache with LRU eviction"""
+        # Add to cache
+        self.memory_cache[visit_id] = node
+        self.memory_cache.move_to_end(visit_id)
+        
+        # Evict if over capacity
+        while len(self.memory_cache) > self.cache_size:
+            # Remove oldest (first item)
+            self.memory_cache.popitem(last=False)
+    
+    def _persist_node(self, node: HistoryNode, page_state: dict = None):
+        """Write node to disk"""
+        state_blob = pickle.dumps(page_state) if page_state else None
+        
+        self.conn.execute("""
+            INSERT OR REPLACE INTO history 
+            (visit_id, url, title, prev_id, next_id, timestamp, visit_type, page_state)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            node.visit_id,
+            node.url,
+            node.title,
+            getattr(node, 'prev_id', None),
+            None,  # next_id updated later
+            node.timestamp,
+            node.visit_type,
+            state_blob
+        ))
+        self.conn.commit()
+    
+    def _update_node_link(self, visit_id: str, next_id: str):
+        """Update node's next pointer in database"""
+        self.conn.execute(
+            "UPDATE history SET next_id = ? WHERE visit_id = ?",
+            (next_id, visit_id)
+        )
+        self.conn.commit()
+    
+    def _get_next_id(self, visit_id: str) -> Optional[str]:
+        """Get next_id from database"""
+        cursor = self.conn.execute(
+            "SELECT next_id FROM history WHERE visit_id = ?",
+            (visit_id,)
+        )
+        row = cursor.fetchone()
+        return row[0] if row and row[0] else None
+
+# Result: Memory usage bounded to 100 nodes regardless of total history size!
 ```
 
-(9:00 - Storage Quotas: The 200MB Limit)
+**Production Improvements:**
 
-Narration: "Real devices have limited storage. Your phone can't store 10GB of browser history. So browsers enforce storage quotas."
+1. **Memory bounded** - Only 100 recent pages in RAM
+2. **Transparent paging** - Automatically loads from disk when needed
+3. **Persistent** - Survives browser restarts
+4. **Indexed** - Fast timestamp-based queries for UI
 
-```python
-class HistoryQuotaManager:
-    """Enforce storage limits - NEW concept."""
-    
-    MAX_HISTORY_MB = 200  # Typical mobile limit
-    CHECK_INTERVAL = 300  # Check every 5 minutes
-    
-    def __init__(self, history_db):
-        self.history_db = history_db
-        self.running = False
-        
-    async def start(self):
-        """Background task: keep history under limit."""
-        self.running = True
-        while self.running:
-            await asyncio.sleep(self.CHECK_INTERVAL)
-            
-            current_size = self.history_db.get_size_mb()
-            if current_size <= self.MAX_HISTORY_MB:
-                continue
-            
-            # Need to free space
-            mb_to_free = current_size - self.MAX_HISTORY_MB
-            
-            # Delete intelligently:
-            # 1. Oldest entries first
-            # 2. Auto-redirects before typed URLs  
-            # 3. Less frequent visits before common ones
-            
-            deleted_count = await self.delete_low_value_history(mb_to_free)
-            
-            # Log for analytics
-            print(f"Quota enforcement: freed {mb_to_free}MB, deleted {deleted_count} entries")
-    
-    async def delete_low_value_history(self, mb_to_free):
-        """Delete history with lowest 'value' score."""
-        # Value = (visits × 2) + (is_typed × 10) - (age_in_days)
-        low_value_entries = self.history_db.find_low_value_entries(
-            limit=int(mb_to_free * 100)  # ~100 entries per MB
-        )
-        
-        for entry in low_value_entries:
-            # Remove from history chain
-            self.history_db.remove_entry(entry['id'])
-            
-            # Remove from search index
-            self.history_db.search_index.remove(entry['id'])
-        
-        return len(low_value_entries)
-```
+---
 
-(11:00 - The Real Challenge: Session Restoration)
+## Part 5: Engineering Layer 2 - Corruption Recovery
 
-Narration: "The hard part isn't navigation. It's crash recovery. When your browser crashes with 100 tabs open, it needs to restore everything:"
+The hardest production problem: **what happens when storage is corrupted?**
 
 ```python
-class SessionManager:
-    """Handles browser crashes and session restore."""
+import os
+import shutil
+import logging
+from enum import Enum
+
+class RecoveryStrategy(Enum):
+    FULL_RECOVERY = "full"      # Try to salvage everything
+    PARTIAL_RECOVERY = "partial"  # Salvage what we can
+    FRESH_START = "fresh"       # Start over, backup old data
+
+class ResilientBrowserHistory(PagedBrowserHistory):
+    """
+    History with corruption detection and recovery.
     
-    def __init__(self, profile_path):
-        self.profile_path = profile_path
-        self.checkpoint_interval = 30  # seconds
-        self.write_ahead_log = WriteAheadLog()
-        self.snapshot_store = SnapshotStorage()
+    Production requirement: Browser must NEVER fail to start,
+    even if history database is corrupted.
+    """
+    
+    def __init__(self, cache_size: int = 100, db_path: str = "history.db"):
+        self.db_path = db_path
+        self.cache_size = cache_size
         
-        # NEW: Open DB with corruption recovery
-        self.history_db = self.open_db_with_recovery(
-            f"{profile_path}/History"
-        )
+        # Attempt to open database with recovery
+        self.conn = self._open_with_recovery()
+        
+        # Initialize after successful open
+        super().__init__(cache_size, db_path)
     
-    def open_db_with_recovery(self, db_path):
-        """Open database, recover if corrupted - NEW resilience feature."""
+    def _open_with_recovery(self) -> sqlite3.Connection:
+        """
+        Open database with automatic corruption recovery.
+        
+        Strategy:
+        1. Try normal open + integrity check
+        2. If corrupted, try salvage recovery
+        3. If salvage fails, create fresh database
+        4. Always succeed - never throw to user
+        """
         max_attempts = 3
         
         for attempt in range(max_attempts):
             try:
-                db = SQLiteHistoryDB(db_path)
+                # Attempt to open
+                conn = sqlite3.connect(self.db_path)
+                
                 # Quick integrity check
-                db.execute("PRAGMA integrity_check;")
-                print(f"History database opened successfully")
-                return db
+                cursor = conn.execute("PRAGMA integrity_check")
+                result = cursor.fetchone()[0]
                 
-            except DatabaseCorruptedError:
-                if attempt == max_attempts - 1:
-                    # Final attempt failed
-                    print(f"DB corrupted, recovering: {db_path}")
-                    
-                    # 1. Backup corrupted file
-                    timestamp = int(time.time())
-                    backup_path = f"{db_path}.corrupt.{timestamp}"
-                    import shutil
-                    shutil.move(db_path, backup_path)
-                    
-                    # 2. Create fresh database
-                    fresh_db = SQLiteHistoryDB(db_path)
-                    fresh_db.init_schema()
-                    
-                    # 3. Try to salvage data in background
-                    asyncio.create_task(
-                        self.salvage_data(backup_path, fresh_db)
-                    )
-                    
-                    return fresh_db
+                if result == "ok":
+                    logging.info(f"History database opened successfully")
+                    return conn
+                else:
+                    raise DatabaseCorruptedError(f"Integrity check failed: {result}")
+            
+            except (sqlite3.DatabaseError, DatabaseCorruptedError) as e:
+                logging.error(f"Database corruption detected (attempt {attempt + 1}): {e}")
                 
-                # Wait and retry with exponential backoff
-                time.sleep(0.1 * (2 ** attempt))
+                if attempt < max_attempts - 1:
+                    # Try recovery
+                    recovery_successful = self._attempt_recovery(attempt)
+                    if recovery_successful:
+                        continue  # Retry open
+                else:
+                    # Final attempt failed - create fresh database
+                    logging.warning("Recovery failed, creating fresh database")
+                    return self._create_fresh_database()
         
-        raise Exception("Could not open or recover history database")
+        # Should never reach here, but safety fallback
+        return self._create_fresh_database()
     
-    async def salvage_data(self, corrupt_path, fresh_db):
-        """Best-effort data recovery from corrupted DB."""
+    def _attempt_recovery(self, attempt: int) -> bool:
+        """
+        Attempt to recover corrupted database.
+        
+        Returns True if recovery succeeded, False otherwise.
+        """
+        timestamp = int(time.time())
+        backup_path = f"{self.db_path}.corrupt.{timestamp}"
+        
         try:
-            # Try to read what we can
-            salvaged = await self.read_salvageable_data(corrupt_path)
+            # Step 1: Backup corrupted file
+            shutil.copy2(self.db_path, backup_path)
+            logging.info(f"Backed up corrupted database to {backup_path}")
             
-            # Insert into fresh DB
-            success_count = 0
-            for entry in salvaged:
-                try:
-                    fresh_db.insert_entry(entry)
-                    success_count += 1
-                except:
-                    continue  # Skip problematic entries
+            # Step 2: Try SQLite's built-in recovery
+            if attempt == 0:
+                logging.info("Attempting SQLite integrity recovery...")
+                return self._sqlite_recovery()
             
-            print(f"Salvaged {success_count}/{len(salvaged)} history entries")
+            # Step 3: Try salvage - extract readable data
+            elif attempt == 1:
+                logging.info("Attempting data salvage...")
+                return self._salvage_recovery(backup_path)
             
-        except Exception as e:
-            print(f"Salvage failed (but browser still works): {e}")
-            # Fresh DB is still usable
-    
-    async def periodic_checkpoint(self):
-        """Save consistent snapshot of all tabs."""
-        while True:
-            await asyncio.sleep(self.checkpoint_interval)
-            
-            # 1. Pause all navigation (briefly)
-            with self.pause_navigation():
-                # 2. Create consistent snapshot
-                snapshot = self.create_snapshot()
-                
-                # 3. Write to disk atomically
-                self.snapshot_store.save_snapshot(snapshot)
-                
-                # 4. Clear old WAL entries
-                self.write_ahead_log.truncate()
-```
-
-(14:00 - The Engineering: Multi-Tab Synchronization)
-
-Narration: "Now the real engineering begins: coordinating history across tabs, extensions, and sync services:"
-
-```python
-class CrossTabHistory:
-    """History that syncs across tabs and devices."""
-    
-    def __init__(self):
-        self.tab_histories = {}  # tab_id -> History
-        self.shared_history = SharedHistoryStore()
-        self.broadcast_channel = BroadcastChannel('history')
-        self.sync_service = CloudSyncService()
-        
-        # Security boundary enforcement
-        self.security_policy = HistorySecurityPolicy()
-        
-        # Listen for tab events
-        self.broadcast_channel.on('tab_closed', self.handle_tab_closed)
-        self.broadcast_channel.on('navigation', self.handle_external_nav)
-        self.sync_service.on('remote_update', self.handle_remote_update)
-    
-    def visit(self, tab_id: str, url: str, title: str = ""):
-        """Visit in one tab, notify others."""
-        # Security check: Is this tab allowed to record history?
-        if not self.security_policy.can_record_history(tab_id, url):
-            return
-        
-        # Update local tab history
-        tab_history = self.tab_histories[tab_id]
-        tab_history.visit(url, title)
-        
-        # Broadcast to other tabs in same window
-        self.broadcast_channel.postMessage({
-            'type': 'navigation',
-            'tab_id': tab_id,
-            'url': url,
-            'title': title,
-            'timestamp': time.time()
-        })
-        
-        # Update shared history (for omnibox suggestions)
-        self.shared_history.add_entry({
-            'url': url,
-            'title': title,
-            'tab_id': tab_id,
-            'timestamp': time.time()
-        })
-        
-        # Sync to cloud (if enabled)
-        if self.sync_service.enabled:
-            self.sync_service.queue_sync({
-                'action': 'add_history',
-                'url': url,
-                'title': title,
-                'device_id': self.device_id,
-                'timestamp': time.time()
-            })
-    
-    def handle_external_nav(self, event):
-        """Another tab navigated - update our UI if needed."""
-        # Update omnibox suggestions
-        self.omnibox.add_suggestion(event['url'], event['title'])
-        
-        # If this tab is watching that tab (dev tools)
-        if self.is_watching_tab(event['tab_id']):
-            self.update_devtools_view(event)
-```
-
-(17:00 - Security Boundary: The Process Wall)
-
-Narration: "Critical security detail: Web pages cannot read your history. The history store lives in the browser process, a separate security domain."
-
-```python
-# Architectural explanation - no full code needed:
-
-"""
-BROWSER PROCESS (Trusted)
-├── History Database (SQLite)
-├── Doubly Linked Lists (navigation)
-├── Search Index (omnibox)
-├── Quota Manager (200MB limit)
-└── Privacy Controls (incognito, retention)
-
-RENDERER PROCESS (Untrusted - Web Content)
-├── Can only ask via IPC: 
-│   "Have I visited this specific URL?"
-├── Or: "Suggest completions for what I'm typing"
-└── NEVER gets: iterate_history(), search_history(), etc.
-
-The boundary is enforced by:
-1. Process isolation (OS-level sandboxing)
-2. IPC (Inter-Process Communication with validation)
-3. Minimal API: window.history only gets forward/back
-"""
-
-# The tiny API exposed to web pages:
-class ExposedHistoryAPI:
-    """What websites actually see - extremely limited."""
-    
-    def back(self):
-        """Go back one page - sends IPC to browser process."""
-        # IPC message: {type: 'navigate_back', tab_id: 123}
-        self.browser_process.navigate_back(self.tab_id)
-    
-    def forward(self):
-        """Go forward one page."""
-        self.browser_process.navigate_forward(self.tab_id)
-    
-    def pushState(self, state, title, url):
-        """Add to history without navigation - still controlled."""
-        # Still goes through browser process security checks
-        self.browser_process.add_history_state(state, url, self.tab_id)
-    
-    # ABSOLUTELY NOT EXPOSED:
-    # getFullHistory(), searchHistory(query), 
-    # getVisitedDomains(), exportHistory()
-    
-    # The famous "history sniffing" attack? 
-    # Only works with :visited CSS, severely limited in modern browsers
-```
-
-Narration: "This security boundary is why malicious sites can't steal your browsing history. The doubly linked list lives in a protected process."
-
-(19:00 - The Production System: Chrome/Edge/Firefox Architecture)
-
-[Visual: Architecture diagram of real browser history system]
-
-Narration: "Let's see how real browsers architect this:"
-
-```
-┌─────────────────────────────────────────────────────────┐
-│                   BROWSER HISTORY SYSTEM                 │
-├─────────────────────────────────────────────────────────┤
-│  USER LAYER                                            │
-│  • Back/forward buttons                                │
-│  • History sidebar (search + frecency ranking)         │
-│  • Omnibox suggestions (indexed search)                │
-├─────────────────────────────────────────────────────────┤
-│  TAB LAYER                                             │
-│  • Per-tab doubly linked lists                         │
-│  • Session restore with corruption recovery            │
-│  • Form data persistence                               │
-├─────────────────────────────────────────────────────────┤
-│  STORAGE LAYER                                         │
-│  • Memory: LRU cache (100 recent pages)                │
-│  • Disk: SQLite with quotas (200MB limit)              │
-│  • Snapshots: Crash-consistent checkpoints             │
-├─────────────────────────────────────────────────────────┤
-│  SYNC & SECURITY LAYER                                 │
-│  • Cross-tab: BroadcastChannel                         │
-│  • Cross-device: Encrypted cloud sync                  │
-│  • Security: Process isolation + minimal API           │
-│  • Privacy: Incognito, retention policies, encryption  │
-├─────────────────────────────────────────────────────────┤
-│  PERFORMANCE LAYER                                     │
-│  • Prefetch: Likely back/forward pages                 │
-│  • Compression: Snappy for page state                  │
-│  • Lazy loading: History loads on demand               │
-└─────────────────────────────────────────────────────────┘
-```
-
-Narration: "Each layer handles specific concerns. Notice how the simple doubly linked list is just one component in a much larger system."
-
-(21:00 - The Hidden Complexity: Privacy & Security)
-
-Narration: "One more layer: privacy and security. History contains sensitive data:"
-
-```python
-class PrivacyAwareHistory:
-    """History with privacy controls."""
-    
-    def __init__(self):
-        self.incognito = False
-        self.retention_days = 90  # GDPR compliance
-        self.encryption_key = None
-        
-    def visit(self, url, page_data, title=""):
-        """Visit with privacy checks."""
-        # Check if URL should be private
-        if self.is_sensitive_url(url):
-            if self.incognito:
-                # Don't store at all in incognito
-                return self.ephemeral_visit(url, page_data, title)
+            # Step 4: Give up, prepare for fresh start
             else:
-                # Store encrypted in normal mode
-                page_data = self.encrypt_page_data(page_data)
+                return False
         
-        # Apply retention policy
-        self.enforce_retention_policy()
-        
-        # Apply storage quota
-        self.enforce_storage_quota()
-        
-        # Normal visit
-        super().visit(url, page_data, title)
+        except Exception as e:
+            logging.error(f"Recovery attempt failed: {e}")
+            return False
     
-    def enforce_retention_policy(self):
-        """Delete history older than retention period."""
-        cutoff = time.time() - (self.retention_days * 86400)
+    def _sqlite_recovery(self) -> bool:
+        """Use SQLite's REINDEX and VACUUM to fix corruption"""
+        try:
+            conn = sqlite3.connect(self.db_path)
+            
+            # Attempt to rebuild indexes
+            conn.execute("REINDEX")
+            
+            # Attempt to rebuild database file
+            conn.execute("VACUUM")
+            
+            # Check if it worked
+            cursor = conn.execute("PRAGMA integrity_check")
+            result = cursor.fetchone()[0]
+            
+            conn.close()
+            
+            return result == "ok"
         
-        # Mark old nodes for deletion
-        old_nodes = self.find_nodes_older_than(cutoff)
-        for node in old_nodes:
-            node.mark_for_deletion = True
-        
-        # Actual deletion in background
-        asyncio.create_task(self.background_deletion(old_nodes))
+        except Exception as e:
+            logging.error(f"SQLite recovery failed: {e}")
+            return False
     
-    def clear_browsing_data(self, time_range='all'):
-        """User requested history deletion - GDPR 'right to be forgotten'."""
-        # Find nodes in time range
-        nodes_to_delete = self.find_nodes_in_time_range(time_range)
+    def _salvage_recovery(self, backup_path: str) -> bool:
+        """
+        Salvage readable data from corrupted database.
         
-        # Securely delete (overwrite storage, not just mark)
-        for node in nodes_to_delete:
-            self.secure_delete_node(node)
+        Strategy:
+        1. Create fresh database
+        2. Read what we can from backup
+        3. Insert salvaged data
+        4. Return success even if partial
+        """
+        try:
+            # Create fresh database
+            fresh_conn = self._create_fresh_database()
+            
+            # Try to connect to backup (might partially work)
+            try:
+                backup_conn = sqlite3.connect(backup_path)
+            except:
+                logging.error("Cannot open backup file for salvage")
+                return False
+            
+            # Attempt to read history entries
+            salvaged_count = 0
+            failed_count = 0
+            
+            try:
+                cursor = backup_conn.execute("""
+                    SELECT visit_id, url, title, prev_id, next_id, 
+                           timestamp, visit_type, page_state
+                    FROM history
+                    ORDER BY timestamp DESC
+                """)
+                
+                for row in cursor:
+                    try:
+                        # Insert into fresh database
+                        fresh_conn.execute("""
+                            INSERT INTO history 
+                            (visit_id, url, title, prev_id, next_id, 
+                             timestamp, visit_type, page_state)
+                            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                        """, row)
+                        salvaged_count += 1
+                    except Exception as e:
+                        # Skip corrupted entries
+                        failed_count += 1
+                        continue
+                
+                fresh_conn.commit()
+                
+            except Exception as e:
+                logging.error(f"Salvage read failed: {e}")
+            
+            backup_conn.close()
+            fresh_conn.close()
+            
+            logging.info(f"Salvage complete: {salvaged_count} recovered, {failed_count} lost")
+            
+            # Success if we recovered anything
+            return salvaged_count > 0
         
-        # Also clear from sync servers
-        self.sync_engine.clear_range(time_range)
+        except Exception as e:
+            logging.error(f"Salvage recovery failed: {e}")
+            return False
+    
+    def _create_fresh_database(self) -> sqlite3.Connection:
+        """Create new empty database, removing old file"""
+        # Remove old file if exists
+        if os.path.exists(self.db_path):
+            os.remove(self.db_path)
         
-        # Clear search index
-        self.search_index.clear_range(time_range)
+        # Create fresh database
+        conn = sqlite3.connect(self.db_path)
         
-        # Clear caches
-        self.cache_clear()
+        # Initialize schema
+        conn.execute("""
+            CREATE TABLE history (
+                visit_id TEXT PRIMARY KEY,
+                url TEXT NOT NULL,
+                title TEXT,
+                prev_id TEXT,
+                next_id TEXT,
+                timestamp REAL,
+                visit_type TEXT,
+                page_state BLOB
+            )
+        """)
         
-        # Notify other tabs
-        self.broadcast.clear_history()
+        conn.execute("""
+            CREATE INDEX idx_timestamp ON history(timestamp DESC)
+        """)
+        
+        conn.commit()
+        
+        logging.info("Created fresh history database")
+        return conn
+
+class DatabaseCorruptedError(Exception):
+    """Raised when database integrity check fails"""
+    pass
+
+# Critical guarantee: Browser ALWAYS starts, even with corrupted history
+# User experience: "Some history may be missing" vs "Browser won't start"
 ```
 
-(23:00 - The Payoff: What We've Learned)
+**Production Guarantees:**
 
-Narration: "Let's recap what makes browser history a production-scale system:"
-
-[Visual: Three columns appear]
-
-```
-DATA STRUCTURES           SYSTEMS CONCEPTS           PRODUCTION PATTERNS
-─────────────────────     ─────────────────────     ─────────────────────
-Doubly Linked List   →    Memory Management     →    Paging to Disk
-  (navigation)             (LRU cache, eviction)     (hot/cold data)
-                        
-Search Index         →    Query Optimization    →    Frecency Ranking  
-  (omnibox)                (secondary indexes)       (frequency × recency)
-                        
-Write-Ahead Log      →    Crash Safety         →    Atomic Snapshots
-  (persistence)            (corruption recovery)     (consistent restore)
-                        
-Process Isolation    →    Security Boundaries  →    Minimal APIs
-  (security)               (IPC validation)          (need-to-know access)
-                        
-Storage Quotas       →    Resource Management  →    Graceful Degradation
-  (200MB limit)            (GC policies)             (delete low-value)
-```
-
-Narration: "The progression is clear: Start with a simple data structure (doubly linked list), add storage awareness, then resilience, then security, then scale optimizations. This is how software grows from LeetCode to production."
-
-(24:00 - Next Episode Teaser)
-
-Narration: "Today we scaled doubly linked lists to handle browser history. But what about when you need undo/redo in complex applications? Or version control for design files? Or time travel debugging?"
-
-[Visual: Complex application with undo stack, Figma version history, Redux DevTools]
-
-Narration: "That's the power of immutable data structures and persistent collections — where every change creates a new version, and you can walk through time. We'll explore how React, Redux, and design tools handle this at scale."
-
-Narration: "Until then, remember: In production systems, the right data structure is just the beginning. It's the architecture around it that makes it work at scale."
+1. **Never fail to start** - Corruption never blocks browser launch
+2. **Automatic recovery** - Try multiple strategies (REINDEX, VACUUM, salvage)
+3. **Data preservation** - Backup corrupt file before recovery
+4. **Graceful degradation** - Partial recovery better than total loss
+5. **Logging** - Track recovery attempts for debugging
 
 ---
 
-EPISODE 3 COMPLETE
+## Part 6: Engineering Layer 3 - Storage Quotas and Eviction
 
-Duration: ~25 minutes
-Key Concepts:
+Real browsers can't store unlimited history. Mobile devices especially need **quota enforcement**:
 
-1. Doubly linked lists for navigation (LeetCode #1472)
-2. Memory management & paging to disk
-3. NEW: Search indexing for omnibox (frecency ranking)
-4. NEW: Storage quotas & intelligent garbage collection
-5. Crash safety & corruption recovery
-6. Multi-tab & cross-device synchronization
-7. NEW: Security boundaries & process isolation
-8. Privacy controls & GDPR compliance
+```python
+import asyncio
+from typing import List, Dict
 
+class QuotaEnforcedHistory(ResilientBrowserHistory):
+    """
+    History with storage quotas and intelligent eviction.
+    
+    Real-world limits:
+    - Desktop: 500MB history database
+    - Mobile: 200MB history database
+    - Tablet: 300MB history database
+    """
+    
+    MAX_HISTORY_MB = 200  # Configurable based on device
+    WARNING_THRESHOLD_MB = 180  # 90% of limit
+    CHECK_INTERVAL_SECONDS = 300  # Check every 5 minutes
+    
+    def __init__(self, cache_size: int = 100, db_path: str = "history.db"):
+        super().__init__(cache_size, db_path)
+        
+        # Start background quota enforcement
+        self.quota_task = None
+        self.running = False
+    
+    def start_quota_enforcement(self):
+        """Start background task to enforce quotas"""
+        self.running = True
+        self.quota_task = asyncio.create_task(self._quota_enforcement_loop())
+    
+    async def _quota_enforcement_loop(self):
+        """Background task: monitor and enforce storage quotas"""
+        while self.running:
+            await asyncio.sleep(self.CHECK_INTERVAL_SECONDS)
+            
+            # Check current size
+            current_size_mb = self._get_database_size_mb()
+            
+            if current_size_mb >= self.WARNING_THRESHOLD_MB:
+                logging.warning(f"History approaching quota: {current_size_mb}MB / {self.MAX_HISTORY_MB}MB")
+            
+            if current_size_mb >= self.MAX_HISTORY_MB:
+                # Enforce quota
+                mb_to_free = current_size_mb - (self.MAX_HISTORY_MB * 0.8)  # Free to 80%
+                deleted = await self._intelligent_eviction(mb_to_free)
+                logging.info(f"Quota enforcement: freed {mb_to_free}MB, deleted {deleted} entries")
+    
+    def _get_database_size_mb(self) -> float:
+        """Get current database file size in MB"""
+        if not os.path.exists(self.db_path):
+            return 0.0
+        return os.path.getsize(self.db_path) / (1024 * 1024)
+    
+    async def _intelligent_eviction(self, mb_to_free: float) -> int:
+        """
+        Delete history intelligently based on value.
+        
+        Value score = (visit_count × 2) + (is_typed × 10) - (age_days × 0.5)
+        
+        Logic:
+        - Frequently visited pages = high value
+        - Typed URLs (not clicked links) = high value
+        - Recent pages = higher value
+        - Auto-redirects = low value
+        """
+        # Calculate value scores for all entries
+        cursor = self.conn.execute("""
+            SELECT 
+                visit_id,
+                url,
+                timestamp,
+                visit_type,
+                LENGTH(page_state) as size_bytes,
+                (julianday('now') - julianday(timestamp / 86400.0, 'unixepoch')) as age_days
+            FROM history
+            ORDER BY timestamp DESC
+        """)
+        
+        entries = []
+        for row in cursor:
+            visit_id, url, timestamp, visit_type, size_bytes, age_days = row
+            
+            # Count visits to this URL
+            visit_count = self._count_visits_to_url(url)
+            
+            # Calculate value score
+            value = (visit_count * 2) + (10 if visit_type == 'typed' else 0) - (age_days * 0.5)
+            
+            entries.append({
+                'visit_id': visit_id,
+                'url': url,
+                'value': value,
+                'size_bytes': size_bytes or 1024,  # Estimate if NULL
+                'age_days': age_days
+            })
+        
+        # Sort by value (lowest first)
+        entries.sort(key=lambda x: x['value'])
+        
+        # Delete lowest-value entries until we've freed enough space
+        bytes_to_free = int(mb_to_free * 1024 * 1024)
+        bytes_freed = 0
+        deleted_count = 0
+        
+        for entry in entries:
+            if bytes_freed >= bytes_to_free:
+                break
+            
+            # Delete entry
+            self._delete_history_entry(entry['visit_id'])
+            
+            bytes_freed += entry['size_bytes']
+            deleted_count += 1
+        
+        # Vacuum database to reclaim space
+        self.conn.execute("VACUUM")
+        
+        return deleted_count
+    
+    def _count_visits_to_url(self, url: str) -> int:
+        """Count how many times URL has been visited"""
+        cursor = self.conn.execute(
+            "SELECT COUNT(*) FROM history WHERE url = ?",
+            (url,)
+        )
+        return cursor.fetchone()[0]
+    
+    def _delete_history_entry(self, visit_id: str):
+        """Delete history entry and update linked list pointers"""
+        # Get entry's links
+        cursor = self.conn.execute(
+            "SELECT prev_id, next_id FROM history WHERE visit_id = ?",
+            (visit_id,)
+        )
+        row = cursor.fetchone()
+        if not row:
+            return
+        
+        prev_id, next_id = row
+        
+        # Update prev's next pointer
+        if prev_id:
+            self.conn.execute(
+                "UPDATE history SET next_id = ? WHERE visit_id = ?",
+                (next_id, prev_id)
+            )
+        
+        # Update next's prev pointer
+        if next_id:
+            self.conn.execute(
+                "UPDATE history SET prev_id = ? WHERE visit_id = ?",
+                (prev_id, next_id)
+            )
+        
+        # Delete entry
+        self.conn.execute("DELETE FROM history WHERE visit_id = ?", (visit_id,))
+        self.conn.commit()
 
+# Result: History never grows beyond device limits, 
+# but keeps most valuable data
+```
 
+---
+
+## Part 7: When Doubly Linked Lists Break
+
+Doubly linked lists are perfect for **sequential navigation**, but they have limits:
+
+### **Problem 1: Memory Overhead**
+
+```python
+# Memory comparison:
+class ArrayHistory:
+    # Array: 1 URL pointer per entry
+    # Memory: N × 8 bytes (pointer size)
+    pass
+
+class DoublyLinkedHistory:
+    # Doubly linked list: 1 URL pointer + 2 link pointers per entry
+    # Memory: N × 24 bytes (3 pointers)
+    # Overhead: 3× the array!
+    pass
+
+# With 1 million history entries:
+# Array: 8MB
+# Doubly linked list: 24MB
+# Trade-off: 3× memory for O(1) insertion
+```
+
+**Why it breaks:** For read-heavy workloads (rarely modify history), array is more memory-efficient.
+
+---
+
+### **Problem 2: Cache Locality**
+
+```python
+# Arrays: Sequential memory = CPU cache-friendly
+array = [page1, page2, page3, ...]  # All in contiguous memory
+
+# Linked lists: Scattered memory = CPU cache-hostile
+node1 -> node2 (at random address) -> node3 (at random address)
+
+# Impact: Traversing linked list causes cache misses
+# Real benchmark: Array traversal 10× faster than linked list
+```
+
+**Why it breaks:** Modern CPUs prefetch sequential memory. Linked lists defeat this optimization.
+
+---
+
+### **Problem 3: No Random Access**
+
+```python
+# Need to jump to history entry #500?
+
+# Array: O(1)
+entry = history_array[500]
+
+# Doubly linked list: O(n)
+node = head
+for _ in range(500):
+    node = node.next
+# Must traverse 500 nodes!
+```
+
+**Why it breaks:** UI features like "Jump to date" or "Search history" need random access.
+
+---
+
+### **When NOT to Use Doubly Linked Lists**
+
+| Requirement | Array | Doubly Linked List | Real Browsers Use |
+|-------------|-------|-------------------|-------------------|
+| Sequential navigation | ✅ Good | ✅ Excellent | Linked list |
+| Memory efficiency | ✅ Excellent | ❌ 3× overhead | Hybrid (list + index) |
+| Cache locality | ✅ Excellent | ❌ Poor | Linked list (acceptable trade-off) |
+| Random access (search, jump) | ✅ O(1) | ❌ O(n) | Secondary index (SQLite) |
+| Insertion at arbitrary position | ❌ O(n) | ✅ O(1) | Linked list |
+
+**Real browsers:** Hybrid approach. Doubly linked list for navigation state (in-memory), SQLite with B-tree indexes for search/queries (on-disk).
+
+---
+
+## Part 8: The Complete Production System
+
+Let's see the full architecture real browsers use:
+
+```
+┌─────────────────────────────────────────────────────────┐
+│              BROWSER HISTORY ARCHITECTURE               │
+├─────────────────────────────────────────────────────────┤
+│  USER LAYER                                            │
+│  • Back/Forward buttons (doubly linked list)           │
+│  • History sidebar (SQLite query + frecency ranking)   │
+│  • Omnibox suggestions (full-text search index)        │
+│  • "Reopen closed tab" (stack of closed tabs)          │
+├─────────────────────────────────────────────────────────┤
+│  NAVIGATION LAYER (Per-Tab)                            │
+│  • Doubly linked list (current session in RAM)         │
+│  • Session state (scroll, form data, DOM snapshots)    │
+│  • Prefetching (likely back/forward pages)             │
+├─────────────────────────────────────────────────────────┤
+│  STORAGE LAYER                                         │
+│  • Memory: LRU cache (100 recent pages)                │
+│  • Disk: SQLite database with B-tree indexes           │
+│  • Quotas: 200MB mobile, 500MB desktop                 │
+│  • Corruption recovery: Salvage + automatic repair     │
+├─────────────────────────────────────────────────────────┤
+│  SEARCH & INDEXING LAYER                               │
+│  • Full-text search (SQLite FTS5 extension)            │
+│  • Frecency ranking (frequency × recency)              │
+│  • URL completion (prefix matching)                    │
+│  • Visit count tracking (per-URL statistics)           │
+├─────────────────────────────────────────────────────────┤
+│  SYNC & SECURITY LAYER                                 │
+│  • Cross-device sync (encrypted, conflict resolution)  │
+│  • Process isolation (browser ≠ renderer process)      │
+│  • Privacy: Incognito mode, retention policies         │
+│  • GDPR: Right to be forgotten, export                 │
+└─────────────────────────────────────────────────────────┘
+```
+
+**Key Insight:** The doubly linked list is just **one component** in a much larger system. It handles navigation state, but search, quotas, sync, and security require additional layers.
+
+---
+
+## What Comes Next: Time Travel and Undo/Redo
+
+Today we built browser history: sequential navigation through pages. But what about applications that need **non-linear time travel**?
+
+Consider these real systems:
+
+```python
+# Figma: Designers can undo/redo across multiple objects
+figma.undo()  # Which object? Which layer? Which property?
+
+# Redux DevTools: Jump to any state in history
+redux.time_travel_to(action_42)
+
+# Git: Merge histories from parallel universes (branches)
+git.merge_base(branch_a, branch_b)
+
+# Photoshop: 50-level undo with branching undo paths
+photoshop.undo_tree.goto(node_id)
+```
+
+These systems need more than doubly linked lists. They need:
+
+1. **Undo trees** (not chains) - branching undo paths
+2. **Persistent data structures** - every version kept efficiently
+3. **Copy-on-write** - cheap snapshots without full copies
+4. **Structural sharing** - reuse unchanged subtrees
+
+**The challenge at scale:**
+
+```
+Scenario: Figma design file
+- 10,000 objects (rectangles, text, images)
+- 5,000 undo states (1 hour of work)
+- Naive approach: 10,000 × 5,000 = 50 million objects stored
+- Memory: 50GB (impossible!)
+
+Solution: Persistent collections with structural sharing
+- Actual storage: ~500MB (100× compression)
+- Undo/redo: O(log n) time
+- Time travel: Jump to any state instantly
+```
+
+**In Episode 4: "Time Travel at Scale,"** we'll discover:
+
+1. **Persistent linked lists** - LeetCode pattern meets immutability
+2. **Undo trees** - When linear history isn't enough
+3. **Conflict-free replicated data types (CRDTs)** - Distributed undo
+4. **Copy-on-write** - How Git stores millions of commits efficiently
+5. **Structural sharing** - The secret behind React, Redux, and Figma
+
+The data structure stays simple. The engineering becomes profound.
+
+---
+
+**Next Episode: From Linear History to Time Travel — Undo, Redux, and CRDTs**
+
+The complete code for this implementation is available at [GitHub Repository Link]. Browser history isn't just navigation—it's about building systems that never lose user work.

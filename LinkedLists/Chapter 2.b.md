@@ -1,84 +1,196 @@
-Perfect. Let me craft Episode 2.b as a lean, focused advanced follow-up with your suggested structure. This will be a 25-minute deep dive that assumes viewers have seen Episode 2.
+# Episode 2b: Distributed Merge Base at Scale
+## When 100M Commits Break Your Algorithm
+
+**Season 1 — The Invisible Linked List (Advanced Follow-Up)**
 
 ---
 
-SEASON: 1 — The Invisible Linked List
+## The Crisis
 
-EPISODE: 2.b — Advanced Follow-Up
+Episode 2a solved merge-base for single-machine Git repositories. We optimized from O(n²) to bidirectional BFS. Victory!
 
-TITLE: When 100M Commits Break Your Merge Algorithm: Distributed Merge Base at Monorepo Scale
-
-(0:00 - Opening: The Crisis)
-
-[Visual: Dashboard with red alerts, latency graphs spiking]
-
-Narration: "Last episode, we optimized Git's merge-base from 50 seconds to under 1ms. We're heroes. Production is happy."
-
-[Visual: Alert pops up: "CRITICAL: Merge operations timing out in monorepo"]
-
-Narration: "Then your company's monorepo hits 100 million commits. And everything breaks."
+Then your company's monorepo hits **100 million commits**. Everything breaks.
 
 ```python
-# The numbers that break Episode 2:
+# The numbers that break Episode 2a:
 REPO_SIZE = 100_000_000  # 100M commits
 DAILY_MERGES = 50_000
 LONGEST_BRANCH = 2_000_000  # 2M commits deep
 
-# Episode 2 solution: bidirectional BFS
+# Bidirectional BFS:
 # Worst case: 2M depth × 2 = 4M node visits
 # At 10µs/visit = 40 seconds per merge
 # At 50k merges/day = 555 days of CPU time!
 
 # Memory: Commit-graph for 100M commits?
 # 100M × 100 bytes = 10GB RAM
-# Can't memory-map that on standard servers
+# Can't memory-map that on every developer laptop
 ```
 
-Narration: "This isn't about finding a better algorithm. This is about distributed systems, probabilistic data structures, and SLO-driven approximations. Welcome to Episode 2.b."
+This isn't about finding a better algorithm. This is about **distributed systems, probabilistic data structures, and trading perfect accuracy for speed**.
 
-(2:00 - Why Episode 2's Algorithm Isn't Enough)
+---
 
-[Visual: Diagram showing commits sharded across multiple machines]
+## Part 1: Distributed Systems Fundamentals
 
-Narration: "At 100M commits, your data isn't on one machine. It's sharded across storage nodes, CDN edges, developer laptops, and CI servers."
+### Why 100M Commits Can't Live on One Machine
+
+**The physics**:
+- RAM is expensive: 1TB RAM server = $50,000+
+- Network is slow: 100ns (RAM) vs 50ms (cross-region) = 500,000x difference
+- Disks fail: 4% annual failure rate for HDDs
+- Developers are global: Syncing 10GB on every `git fetch` is unacceptable
+
+**Solution**: Shard data across multiple machines
+
+```
+Machine 1: Commits 0-25M
+Machine 2: Commits 25M-50M  
+Machine 3: Commits 50M-75M
+Machine 4: Commits 75M-100M
+```
+
+### The CAP Theorem Trade-off
+
+**CAP Theorem**: In a distributed system with network partitions, you can have at most 2 of:
+1. **Consistency**: All nodes see the same data
+2. **Availability**: Every request gets a response
+3. **Partition tolerance**: System works despite network failures
+
+**For Git at scale**:
+- **Partition tolerance**: Required (network failures happen)
+- **Consistency**: Desired (commits are immutable, easier than mutable data)
+- **Availability**: Needed (developers can't wait)
+
+**Trade-off**: Use **eventual consistency** with optimistic replication. Commits propagate asynchronously. Merge-base might use slightly stale data, but it converges.
+
+### Data Partitioning Strategies
+
+| Strategy | How It Works | Pro | Con |
+|----------|-------------|-----|-----|
+| **Range partitioning** | Commits 0-25M on shard 0 | Sequential access fast | Hot spots (recent commits) |
+| **Hash partitioning** | SHA hash % N = shard ID | Uniform distribution | Poor locality (parents on different shards) |
+| **Graph partitioning** | Keep related commits together | Minimizes cross-shard queries | Complex rebalancing |
+| **Hybrid** | Hash for storage, replicate hot commits | Balanced load + locality | Higher storage cost |
+
+**Git at scale uses hybrid**: Hash-partition for storage, cache hot commits (recent merges, active branches) locally.
+
+### The Network Cost Problem
+
+Finding merge-base in a distributed system:
 
 ```python
 class DistributedReality:
-    def locate_commit(self, sha):
-        """Finding a commit means checking multiple locations."""
-        locations = []
+    def find_merge_base(self, commit_a, commit_b):
+        # Step 1: Which shard has commit_a?
+        shard_a = self.locate(commit_a)  # Network call: 1ms
         
-        # Check CDN edges (fast, might be stale)
-        for edge in self.cdn_edges:
-            if edge.has_commit(sha):
-                locations.append(f"edge_{edge.id}")
+        # Step 2: Fetch commit_a
+        data_a = shard_a.get(commit_a)  # Network call: 1ms
         
-        # Check storage shards (authoritative)
-        shard_id = self.hash_sha_to_shard(sha)
-        if self.shards[shard_id].has_commit(sha):
-            locations.append(f"shard_{shard_id}")
+        # Step 3: For each parent of commit_a:
+        for parent in data_a.parents:
+            shard_p = self.locate(parent)  # Network call: 1ms
+            # ... and so on
         
-        # Check developer caches (unreliable)
-        for cache in self.developer_caches:
-            if cache.might_have(sha):  # Probabilistic!
-                locations.append(f"cache_{cache.id}")
-        
-        return locations  # Could be in multiple places!
-
-# New constraint: Network latency
-# Local memory: 100ns
-# Same data center: 500µs
-# Cross-region: 50ms
-# That's a 500,000x difference!
+        # Problem: Bidirectional BFS on 2M-depth branch
+        # = 2M network calls = 2,000 seconds!
 ```
 
-Narration: "Your elegant bidirectional BFS now means thousands of network calls between machines. The algorithm is correct, but the system constraints make it unusable."
+**Key insight**: We must minimize cross-shard communication. We need **probabilistic approximations** that give "good enough" answers fast.
 
-(4:00 - Act I: The Bloom Filter Breakthrough)
+---
 
-[Visual: Bloom filter diagram showing bits set for commit ancestry]
+## Part 2: Probabilistic Data Structures Theory
 
-Narration: "Here's our first weapon: Bloom filters. These probabilistic data structures let us answer 'might have common ancestors?' without moving gigabytes of data."
+### The Space-Time-Accuracy Trade-off
+
+Exact algorithms require:
+- **Space**: Store complete ancestry information
+- **Time**: Traverse entire graph
+- **Accuracy**: 100% correct answer
+
+Probabilistic algorithms trade accuracy for speed:
+- **Space**: Store compact summaries (1KB instead of 100MB)
+- **Time**: O(1) lookups instead of O(n) traversals  
+- **Accuracy**: 99.9% correct (with tunable false positive rate)
+
+### Bloom Filters: The Foundation
+
+A **Bloom filter** is a space-efficient probabilistic data structure that answers: **"Is X in the set?"**
+
+**Properties**:
+- **No false negatives**: If it says "not in set", definitely not in set
+- **Possible false positives**: If it says "in set", probably in set (1% chance wrong)
+- **Space efficiency**: 1KB can represent millions of items
+- **Speed**: O(1) lookups, no disk access
+
+**How it works**:
+```
+1. Create bit array of size m (e.g., 8192 bits = 1KB)
+2. Use k hash functions (e.g., k=7)
+3. To add item: Set k bits to 1
+4. To check item: Check if all k bits are 1
+```
+
+**Example** (simplified with 16 bits, 3 hash functions):
+```
+Empty filter:     [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
+
+Add "commit-abc":
+  hash1(abc) % 16 = 3
+  hash2(abc) % 16 = 7  
+  hash3(abc) % 16 = 12
+  
+After:            [0,0,0,1,0,0,0,1,0,0,0,0,1,0,0,0]
+
+Add "commit-xyz":
+  hash1(xyz) % 16 = 1
+  hash2(xyz) % 16 = 7  (collision!)
+  hash3(xyz) % 16 = 14
+  
+After:            [0,1,0,1,0,0,0,1,0,0,0,0,1,0,1,0]
+
+Check "commit-abc": bits 3,7,12 all set? YES → probably in set ✓
+Check "commit-xyz": bits 1,7,14 all set? YES → probably in set ✓  
+Check "commit-foo": bits 2,8,9 all set? NO → definitely not in set ✓
+Check "commit-bar": bits 1,7,12 all set? YES → FALSE POSITIVE! ✗
+```
+
+**False positive probability**:
+```
+P(false_positive) = (1 - e^(-kn/m))^k
+
+Where:
+  k = number of hash functions
+  n = number of items inserted
+  m = number of bits
+
+Optimal k = (m/n) * ln(2) ≈ 0.7 * (m/n)
+```
+
+For 1% false positive rate with 1M items: need ~1.2MB
+
+### Why Bloom Filters Win for Git Ancestry
+
+**Problem**: Does commit A have commit B as an ancestor?
+
+**Exact solution**:
+- Store full ancestry list: 100MB per commit
+- Traverse graph: 10,000+ disk seeks
+- Time: 10 seconds
+
+**Bloom filter solution**:
+- Store 1KB summary of ancestry
+- Check bits: 7 memory accesses
+- Time: 100 nanoseconds
+- Accuracy: 99% (1% false positives acceptable for merge-base hints)
+
+Now let's implement it.
+
+---
+
+## Part 3: Building Ancestry Bloom Filters
 
 ```python
 class AncestryBloomFilter:

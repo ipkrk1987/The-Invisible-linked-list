@@ -1,29 +1,127 @@
+# Episode 2a: Finding the Merge Base
+## How "Linked List Intersection" Powers Git Merge
 
+**Season 1 — The Invisible Linked List**
 
-SEASON: 1 — The Invisible Linked List
+---
 
-EPISODE: S1E2
+## The Problem Every Team Faces
 
-TITLE: From LeetCode to Production: How "Linked List Intersection" Finds Git's Merge Base
+You're working on a feature branch. Your teammate merges their changes to main. You run `git merge main`. Git finds the **merge base** (common ancestor), diffs both branches against it, and creates a merge commit.
 
-(0:00 - Opening Hook)
+This seems automatic, but behind the scenes Git is solving: **Given two commit histories, find their most recent common ancestor**. This is exactly LeetCode #160 (Intersection of Two Linked Lists), but with production-scale constraints.
 
-You just solved LeetCode #160 — Intersection of Two Linked Lists. Green checkmark. Close tab.
+Today we'll understand the theory first, then build it.
 
-But this isn't just another algorithm. This exact logic runs every time you type git merge, git rebase, or even when GitHub shows you "This branch is X commits ahead, Y commits behind."
+---
 
-Today, we'll follow one problem through four layers of engineering complexity:
+## Part 1: The Theory of Version Control DAGs
 
-1. The Algorithm — From O(n²) to O(1) space
-2. The Storage — How Git stores millions of commits without exploding RAM
-3. The Validation — Ensuring correctness when disks fail and networks corrupt
-4. The Scale — What happens at 100,000+ commits
+### Why Git Uses a Directed Acyclic Graph (DAG)
 
-By the end, you'll understand not just how Git finds merge bases, but how production systems turn algorithms into reliable infrastructure.
+Git's commit history isn't a simple linked list—it's a **DAG** (Directed Acyclic Graph):
 
-(1:30 - Layer 1: The Algorithmic Insight)
+```
+Commit graph:
+        A---B---C  (main)
+       /         \
+      D           F---G  (merge commit)
+       \         /
+        E-------/  (feature branch)
+```
 
-Let's start with the classic LeetCode problem:
+**Properties**:
+1. **Directed**: Commits point to parents (backward in time)
+2. **Acyclic**: No cycles (can't be your own ancestor)
+3. **Multiple parents**: Merge commits have 2+ parents
+4. **Multiple children**: Branches diverge from common commits
+
+### What Is a "Merge Base"?
+
+The **merge base** of two commits is their **lowest common ancestor (LCA)** in the DAG.
+
+**Example**:
+```
+    A---B---C  (main)
+     \   \
+      \   D---E  (feature)
+       \
+        F---G  (hotfix)
+```
+
+- Merge base of `C` and `E`: **B** (most recent common ancestor)
+- Merge base of `E` and `G`: **A** (further back)
+- Merge base of `C` and `G`: **A**
+
+### Why Finding Merge Base Matters
+
+Git's three-way merge algorithm needs the merge base:
+
+```
+Base (merge-base):  "hello world"
+Theirs (main):      "hello beautiful world"
+Ours (feature):     "hello world!"
+
+Merge result:       "hello beautiful world!"
+```
+
+**Without the merge base**:
+- You can't tell if a difference is a change or deletion
+- Conflicts become unsolvable
+- You'd need to manually review every difference
+
+**With the merge base**:
+- Changes since base are clear: theirs added "beautiful", ours added "!"
+- Non-conflicting changes merge automatically
+- Only true conflicts require human input
+
+### Reachability in Git DAGs
+
+A commit `A` is **reachable** from commit `B` if there's a path from `B` to `A` following parent pointers.
+
+```
+    A---B---C
+     \     /
+      D---E
+```
+
+- `A` is reachable from `C` (path: C→B→A)
+- `A` is reachable from `E` (path: E→D→A)  
+- `D` is NOT reachable from `C` (no path exists)
+
+**Merge base = Most recent commit reachable from BOTH branches**
+
+### The Algorithmic Challenge
+
+**Naive approach**: For each ancestor of branch A, check if it's an ancestor of branch B:
+
+```python
+def is_ancestor(commit, target):
+    """Is target reachable from commit?"""
+    if commit == target:
+        return True
+    for parent in commit.parents:
+        if is_ancestor(parent, target):
+            return True
+    return False
+
+# Check every ancestor of A
+for ancestor in ancestors(branch_a):
+    if is_ancestor(branch_b, ancestor):
+        return ancestor  # Found merge base!
+```
+
+**Time complexity**: O(n²) where n = number of commits
+- Linux kernel: 1M+ commits → 1 trillion operations
+- Chrome: 1.5M commits → unacceptably slow
+
+We need something better.
+
+---
+
+## Part 2: The LeetCode Foundation
+
+Let's start with the algorithmic insight from LeetCode #160:
 
 ```python
 class ListNode:
@@ -87,9 +185,16 @@ def getIntersectionNode_aligned(headA: ListNode, headB: ListNode):
 # both pointers become equidistant from the intersection.
 ```
 
-But here's where production thinking begins: What if we can't measure lengths efficiently? What if each .next operation involves a disk seek or network call?
+**Why this works for Git**:
+- Two branches that diverged from a common commit share history (tail)
+- By aligning the "length" (walking back equal distances), we find where they converge
+- Time: O(n + m), Space: O(1)
 
-(4:00 - Layer 2: Storage & Memory Constraints)
+But production Git has complications: commits aren't in RAM, they're on disk.
+
+---
+
+## Part 3: Production Storage Constraints
 
 In Git, commits aren't in a nice Python list. They're stored across multiple layers:
 

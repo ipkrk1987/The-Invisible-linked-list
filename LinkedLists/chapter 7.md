@@ -1,50 +1,140 @@
-Perfect! Episode 7 as the season finale focusing on ring buffers and streaming is absolutely the right move. Let's build it:
+# Episode 7: When Data Never Stops
+## Ring Buffers, Streaming Systems, and the Art of Bounded Queues
+
+**Season 1 — The Invisible Linked List (Season Finale)**
 
 ---
 
-SEASON: 1 — The Invisible Linked List
+## The Problem That Never Ends
 
-EPISODE: 7 (Season Finale)
+Six episodes in, you've mastered:
+- **Episode 1**: Storing linear history (Git commits)
+- **Episode 2**: Finding intersections (merge-base)
+- **Episode 3**: Navigating bidirectionally (browser history)
+- **Episode 4**: Time travel and immutability (undo/redo)
+- **Episode 5**: Deciding what to keep (LRU caches)
+- **Episode 6**: Distributing across systems
 
-TITLE: When Data Never Stops: Ring Buffers, Logs, and Real-Time Systems
+But all of these assume data **eventually stops arriving**. What happens when it doesn't?
 
-(0:00 - The Problem That Never Ends)
+**Real-world infinite streams**:
+- Stock tickers: 100,000 trades/second
+- Video streaming: 60 frames/second at 8MB/frame (480MB/s!)
+- Server logs: 10,000 lines/second from 1,000 servers
+- Network packets: 1,000,000 packets/second on a 10Gbps link
 
-[Visual: Streaming data - stock tickers, video frames, log entries, network packets]
+**The constraint**: Infinite data, finite memory. You can't store everything. You can't stop to process. You must keep up in real-time.
 
-Narration: "We've mastered storing data (linked lists), finding intersections (merge-base), navigating history (browser), and caching (LRU). But what happens when data never stops arriving? When you're processing stock trades at 100,000/sec, video frames at 60fps, or logs from 10,000 servers?"
+The solution: **ring buffers**—fixed-size circular queues that form the backbone of every streaming system, from Kafka to video players to operating system I/O.
+
+---
+
+## Part 1: The Theory of Bounded Queues
+
+### Why Unbounded Queues Are Dangerous
+
+The naive approach: use an unbounded queue (Python's `list`, Java's `ArrayList`):
 
 ```python
-class InfiniteStreamProblem:
-    """The challenge of never-ending data."""
-    
-    def __init__(self):
-        self.data_rates = {
-            'stock_tickers': 100_000,  # trades/second
-            'video_stream': 60,        # frames/second (4K: 8MB/frame!)
-            'server_logs': 10_000,     # log lines/second
-            'network_packets': 1_000_000,  # packets/second
-        }
-        
-        # The problem: Infinite data, finite memory
-        # Can't store everything
-        # Can't stop to process
-        # Must keep up in real-time
-        
-# Previous episodes gave us tools:
-# Episode 1: Store linear history (Git)
-# Episode 2: Find intersections in history
-# Episode 3: Navigate history (back/forward)
-# Episode 4: Travel through time (undo/redo)
-# Episode 5: Decide what to keep (LRU)
-# Episode 6: Distribute across systems
-
-# Now: Handle infinite streams with finite buffers
+queue = []
+while True:
+    data = receive_data()  # 100,000/sec
+    queue.append(data)
+    process(queue.pop(0))  # Takes 0.00002 seconds
 ```
 
-(2:00 - The Data Structure: Ring Buffer / Circular Queue)
+**What goes wrong**: If producer is faster than consumer even slightly, the queue grows without bound:
+- Producer: 100,000 items/sec
+- Consumer: 90,000 items/sec
+- **Net accumulation**: 10,000 items/sec
+- After 1 minute: 600,000 items queued
+- After 1 hour: 36,000,000 items → out of memory
 
-Narration: "The solution is deceptively simple: a ring buffer (circular queue). A fixed-size array that wraps around, overwriting old data. Let's build it from scratch:"
+This is called **unbounded queuing**, and it's how production systems die.
+
+### Bounded Queues: The Solution
+
+A **bounded queue** has a fixed capacity. When full, you must choose:
+
+| Strategy | Behavior | Use Case |
+|----------|----------|----------|
+| **Block producer** | Producer waits until space available | Critical data (financial transactions) |
+| **Drop oldest** | Overwrite oldest item (ring buffer) | Time-series data (metrics, logs) |
+| **Drop newest** | Reject new item | When history matters (audit logs) |
+| **Drop sample** | Keep every Nth item | High-volume analytics |
+| **Backpressure** | Signal upstream to slow down | Distributed systems |
+
+### Ring Buffer Mathematics
+
+A ring buffer is an array with two pointers that wrap around:
+
+```
+Capacity: 8
+Buffer: [A, B, C, D, _, _, _, _]
+         ^
+        tail (read from here)
+                    ^
+                   head (write here)
+```
+
+**Key invariants**:
+1. `head` points to next write position
+2. `tail` points to next read position
+3. Size: `(head - tail + capacity) % capacity`
+4. Full when: `(head + 1) % capacity == tail`
+5. Empty when: `head == tail` and `size == 0`
+
+**After writing E**:
+```
+[A, B, C, D, E, _, _, _]
+ ^
+ tail
+                ^
+               head
+```
+
+**After writing F, G, H, I** (wraps around):
+```
+[I, B, C, D, E, F, G, H]
+    ^
+   tail
+ ^
+head (wrapped!)
+```
+
+**After reading B, C, D**:
+```
+[I, _, _, _, E, F, G, H]
+                ^
+               tail
+ ^
+head
+```
+
+**Complexity**:
+- Read: O(1)
+- Write: O(1)
+- No memory allocation after initialization
+- Cache-friendly (sequential memory access)
+
+### The Producer-Consumer Problem
+
+Ring buffers solve the classic **producer-consumer problem**:
+
+**Single producer, single consumer**:
+- Producer writes at `head`, increments `head`
+- Consumer reads at `tail`, increments `tail`
+- No synchronization needed if they don't access the same index
+
+**Multiple producers/consumers** (requires synchronization):
+- Use atomic operations or locks
+- Or: One ring buffer per producer (Kafka's partition model)
+
+Now let's implement it.
+
+---
+
+## Part 2: Implementing a Ring Buffer
 
 ```python
 class RingBuffer:
@@ -128,9 +218,64 @@ class RingBuffer:
 # 4. When head == tail: either empty or full (use size to distinguish)
 ```
 
-(5:00 - The Overwrite Variant: When Old Data Must Die)
+---
 
-Narration: "For streaming systems, we often want to overwrite old data when full. This creates a 'sliding window' of the most recent data:"
+## Part 4: Backpressure Theory—When Consumers Can't Keep Up
+
+### The Fundamental Problem
+
+Producers and consumers rarely run at the same speed. When the consumer falls behind, the buffer fills. What happens next?
+
+### Backpressure Strategies
+
+**1. Blocking (TCP-style)**
+- Producer waits when buffer full
+- Guarantees no data loss
+- Risk: Slow consumer blocks entire pipeline
+
+**2. Dropping (UDP-style)**
+- Drop oldest (ring buffer overwrite): Best for time-series (metrics)
+- Drop newest (reject): Best for ordered streams (video frames)
+- Sampling (drop probabilistically): Best for analytics
+
+**3. Signaling (Reactive Streams)**
+- Consumer requests N items
+- Producer sends only what's requested
+- Examples: Reactive Extensions (RxJava), Akka Streams
+
+**4. Dynamic Scaling**
+- Spin up more consumers when buffer fills
+- Cloud-native approach (Kubernetes horizontal pod autoscaling)
+
+### Comparison: Blocking vs Dropping
+
+| Scenario | Blocking | Dropping |
+|----------|----------|----------|
+| **Financial transactions** | ✅ Must not lose data | ❌ Losing trades unacceptable |
+| **Video streaming** | ❌ Stalling ruins UX | ✅ Drop frames to stay real-time |
+| **Server metrics** | ❌ Metrics aren't critical | ✅ Sampling is fine |
+| **Audit logs** | ✅ Legal requirement | ❌ Compliance violation |
+| **Live stock tickers** | ❌ Stale prices are useless | ✅ Show most recent only |
+
+### Little's Law: Queue Theory Fundamentals
+
+**Little's Law**: L = λ × W
+
+Where:
+- L = Average number of items in system
+- λ = Arrival rate (items/sec)
+- W = Average time in system (sec/item)
+
+**Example**: If requests arrive at 1000/sec and each takes 0.01 sec to process:
+- L = 1000 × 0.01 = 10 items in queue on average
+
+**Implication**: If you want to bound queue size to 100 items, and requests arrive at 1000/sec, you must process each in < 0.1 seconds.
+
+Now let's build production systems.
+
+---
+
+## Part 5: Production Streaming Systems
 
 ```python
 class OverwritingRingBuffer(RingBuffer):

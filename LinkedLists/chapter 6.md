@@ -1,43 +1,177 @@
-Perfect! Here's Episode 6 on distributed caching and multi-tier architectures:
+# Episode 6: Distributed Caches at Scale
+## From Single-Machine LRU to Global CDNs
+
+**Season 1 — The Invisible Linked List**
 
 ---
 
-SEASON: 1 — The Invisible Linked List
+## The Single-Server Limit
 
-EPISODE: 6
+Episode 5 mastered LRU caching on one machine. But what happens when:
+- Your cache needs to serve **millions of requests per second**
+- Hot data is **terabytes** (won't fit in one server's RAM)
+- Users are **globally distributed** (latency to one datacenter is unacceptable)
+- Servers **fail** (need redundancy)
 
-TITLE: Distributed Caches at Scale: From Ring Buffers to Global CDNs
-
-(0:00 - The Scale Problem: When One Server Isn't Enough)
-
-Narration: "In Episode 5, we mastered single-machine LRU. But what happens when your cache needs to serve millions of requests per second? When it must span multiple data centers? When TB of hot data won't fit in one server's RAM?"
+**The hard truth**: One server can't handle this.
 
 ```python
-# The single-server limit:
-class SingleServerLimit:
-    def __init__(self):
-        self.max_ram = 256 * (1024**3)  # 256GB RAM (high-end server)
-        self.max_qps = 100_000  # ~100K requests/second
-        self.max_connections = 10_000  # Concurrent connections
-        
-        # Twitter scale: 300M users, 500M tweets/day
-        # Facebook scale: 2B users, 4PB of photos
-        # YouTube scale: 500 hours uploaded/minute
-        
-        # One server can't handle this!
-        # Solution: Distributed caching
-
-# Distributed cache requirements:
-# 1. Horizontal scaling (add more servers)
-# 2. Data partitioning (which server has which key?)
-# 3. Replication (fault tolerance)
-# 4. Consistency (what happens during updates?)
-# 5. Rebalancing (when servers join/leave)
+# Single-server limits:
+class SingleServerReality:
+    max_ram = 256 * (1024**3)  # 256GB (high-end server: $50k)
+    max_qps = 100_000  # ~100K requests/second
+    max_bandwidth = 10 * (1024**3)  # 10 Gbps network
+    
+    # Real-world scale:
+    # Twitter: 300M users, 500M tweets/day
+    # Netflix: 2B hours watched/month, 4K video = 25 Mbps
+    # Facebook: 2B users, 4PB of photos
+    
+    # One server is 1000x too small!
 ```
 
-(3:00 - Consistent Hashing: The Foundation of Distributed Caches)
+We need **distributed caching**. But this introduces new problems: Which server stores which data? How do we stay consistent? What happens when servers crash?
 
-Narration: "The first problem: which server stores which key? Naive hashing (key % N) breaks when servers are added or removed. The solution: consistent hashing."
+---
+
+## Part 1: Distributed Systems Fundamentals
+
+### Horizontal vs Vertical Scaling
+
+| Approach | How It Works | Pros | Cons |
+|----------|-------------|------|------|
+| **Vertical scaling** | Buy bigger server (more RAM/CPU) | Simple, no code changes | Expensive, hard limits (1TB RAM = $200k+), single point of failure |
+| **Horizontal scaling** | Add more servers | Cheaper, no theoretical limit | Complex, requires coordination |
+
+**Modern systems use horizontal scaling** because:
+1. Commodity hardware is cheap (128GB server = $2k)
+2. No single point of failure
+3. Can scale incrementally
+4. Cloud providers (AWS, GCP) make it easy
+
+### The Consistency Spectrum
+
+When data is on multiple machines, how do we keep it consistent?
+
+**Strong consistency** (all nodes see same data immediately):
+```python
+# Write to primary, replicate synchronously
+write(key="user:123", value="Alice")
+# Block until all replicas confirm
+wait_for_replicas(timeout=100ms)
+# Now all reads see "Alice"
+```
+
+**Pros**: Simple reasoning, no stale data  
+**Cons**: Slow (waits for network), unavailable if replicas down  
+**Use**: Banking (account balances), inventory (stock counts)
+
+**Eventual consistency** (nodes converge over time):
+```python
+# Write to primary, replicate asynchronously  
+write(key="user:123", value="Alice")
+# Return immediately
+# Replicas get updated "eventually" (1-100ms typical)
+```
+
+**Pros**: Fast, available even if replicas down  
+**Cons**: Readers might see stale data temporarily  
+**Use**: Social media (likes, views), caches (stale is acceptable)
+
+**Caches typically use eventual consistency** because:
+1. Stale cache data is acceptable (worst case: cache miss)
+2. Speed matters more than perfect consistency
+3. Availability is critical (cache must always respond)
+
+### Data Partitioning: Which Server Gets Which Key?
+
+**Problem**: 100M keys, 100 servers. How do we decide where to store each key?
+
+**Naive approach**: `server_id = hash(key) % num_servers`
+
+```python
+key = "user:123"
+server = hash(key) % 100  # server 42
+```
+
+**What breaks**: Add server 101 → **99% of keys move to different servers!**
+
+```python
+# Before (100 servers):
+hash("user:123") % 100 = 42
+
+# After (101 servers):
+hash("user:123") % 101 = 87  # MOVED!
+
+# 99 out of 100 keys rehash to different servers
+# = Cache storm (100M cache misses simultaneously)
+# = Database dies from load
+```
+
+**Solution**: **Consistent hashing** (only ~1% of keys move)
+
+### Consistent Hashing Theory
+
+**Key insight**: Map both servers AND keys to points on a circle (0-2^32).
+
+```
+Hash space circle:
+         0
+    359°   1°
+   ┌───────┐
+350°|       | 10°
+   |   ●   |      ● = Server A at 45°
+   |       |      ◆ = Server B at 180°  
+   |   ◆   |      □ = Key "user:123" at 75°
+   └───────┘
+ 270°       90°
+   180°
+```
+
+**Rule**: Key goes to first server clockwise from its hash position.
+
+**Example**:
+- Server A: hash(”A") = 45°
+- Server B: hash("B") = 180°
+- Key "user:123": hash("user:123") = 75° → goes to Server B (first clockwise)
+- Key "user:456": hash("user:456") = 200° → goes to Server A (wrap around)
+
+**When adding Server C at 120°**:
+- Keys between 45°-120° move from B to C
+- All other keys stay put
+- Only ~1/n keys move (where n = number of servers)
+
+**Virtual nodes optimization**:
+Instead of 1 position per server, create 100 virtual nodes:
+```python
+for i in range(100):
+    position = hash(f"ServerA-{i}")
+    ring[position] = "ServerA"
+```
+
+**Why**: Improves load distribution (avoids hot spots when servers hash to nearby positions)
+
+### Replication Strategy
+
+Store each key on multiple servers for fault tolerance:
+
+```
+Key "user:123" at 75°:
+  Primary:   Server B (180°) ← first clockwise
+  Replica 1: Server C (270°) ← second clockwise  
+  Replica 2: Server A (45°)  ← third (wraps around)
+```
+
+**Replication factor** (typically 3):
+- Lose 1 server: data still available
+- Lose 2 servers: still available (can survive 2 simultaneous failures)
+- Lose 3 servers: data lost
+
+Now let's build it.
+
+---
+
+## Part 2: Implementing Consistent Hashing
 
 ```python
 class ConsistentHashRing:
