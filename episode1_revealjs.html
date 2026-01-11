@@ -1,0 +1,1428 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Episode 1: The Invisible Linked List</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js/dist/reveal.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js/dist/theme/black.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js/plugin/highlight/monokai.css">
+  <style>
+    .reveal { font-family: 'Segoe UI', 'Arial', sans-serif; }
+    .reveal h1, .reveal h2, .reveal h3 { text-transform: none; }
+    .feynman-why {
+      background: rgba(255,255,200,0.95);
+      border-left: 6px solid #facc15;
+      border-radius: 10px;
+      margin: 24px auto;
+      padding: 18px 22px;
+      font-size: 0.85em;
+      box-shadow: 0 2px 12px 0 rgba(250,204,21,0.20);
+      color: #7c4700;
+      max-width: 85%;
+      text-align: left;
+    }
+    .feynman-diagram {
+      background: rgba(236,254,255,0.95);
+      border-left: 6px solid #06b6d4;
+      border-radius: 10px;
+      margin: 16px auto;
+      padding: 14px 22px;
+      font-size: 0.82em;
+      box-shadow: 0 2px 12px 0 rgba(6,182,212,0.15);
+      color: #0e3a4a;
+      max-width: 85%;
+      text-align: left;
+    }
+    .scale-break {
+      background: rgba(255,245,230,0.95);
+      border-left: 6px solid #f59e42;
+      border-radius: 10px;
+      margin: 18px auto;
+      padding: 16px 22px;
+      font-size: 0.85em;
+      box-shadow: 0 2px 12px 0 rgba(245,158,66,0.15);
+      color: #7c4700;
+      max-width: 85%;
+      text-align: left;
+    }
+    .comparison {
+      display: flex;
+      gap: 20px;
+      justify-content: center;
+      margin: 20px 0;
+      font-size: 0.7em;
+    }
+    .comparison-side {
+      padding: 18px;
+      border-radius: 10px;
+      width: 45%;
+      text-align: left;
+    }
+    .comparison-side.naive {
+      background: rgba(255,100,100,0.15);
+      border: 2px solid #f5576c;
+    }
+    .comparison-side.production {
+      background: rgba(100,255,200,0.15);
+      border: 2px solid #3ec6a8;
+    }
+    .comparison-title {
+      font-weight: bold;
+      margin-bottom: 12px;
+      font-size: 1.1em;
+    }
+    .stats-row {
+      display: flex;
+      gap: 20px;
+      justify-content: center;
+      margin: 20px 0;
+    }
+    .stat-card {
+      background: rgba(255,255,255,0.1);
+      border-radius: 10px;
+      padding: 15px 25px;
+      text-align: center;
+    }
+    .stat-value {
+      font-size: 1.8em;
+      font-weight: bold;
+      color: #4facfe;
+    }
+    .stat-label {
+      font-size: 0.75em;
+      opacity: 0.8;
+    }
+    .reveal pre {
+      font-size: 0.55em;
+      width: 90%;
+      margin: 0 auto;
+    }
+    .reveal pre code {
+      max-height: 400px;
+    }
+    .act-intro {
+      font-size: 0.9em;
+      opacity: 0.9;
+      max-width: 80%;
+      margin: 0 auto;
+      line-height: 1.6;
+    }
+    blockquote {
+      font-style: italic;
+      border-left: 4px solid #4facfe;
+      padding-left: 20px;
+      margin: 20px auto;
+      max-width: 80%;
+    }
+    /* Animation Canvas Styles */
+    .animation-canvas {
+      width: 90%;
+      height: 280px;
+      background: rgba(255,255,255,0.08);
+      border-radius: 12px;
+      position: relative;
+      overflow: hidden;
+      margin: 15px auto;
+      border: 1px solid rgba(255,255,255,0.15);
+    }
+    .control-panel {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      margin: 15px 0;
+      flex-wrap: wrap;
+    }
+    .btn {
+      padding: 8px 18px;
+      background: rgba(79, 172, 254, 0.2);
+      border: 1.5px solid #4facfe;
+      border-radius: 8px;
+      color: #4facfe;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+      transition: all 0.2s ease;
+    }
+    .btn:hover {
+      background: rgba(79, 172, 254, 0.35);
+      transform: translateY(-1px);
+    }
+    .btn.secondary {
+      background: rgba(245, 158, 66, 0.2);
+      border-color: #f59e42;
+      color: #f59e42;
+    }
+    .btn.secondary:hover {
+      background: rgba(245, 158, 66, 0.35);
+    }
+    .btn.success {
+      background: rgba(62, 198, 168, 0.2);
+      border-color: #3ec6a8;
+      color: #3ec6a8;
+    }
+    .btn.success:hover {
+      background: rgba(62, 198, 168, 0.35);
+    }
+    .node {
+      position: absolute;
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: #000;
+      font-weight: 700;
+      box-shadow: 0 4px 16px rgba(79, 172, 254, 0.4);
+      transition: all 0.8s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+      font-size: 0.8em;
+    }
+    .node .label { font-size: 10px; opacity: 0.8; }
+    .node .value { font-size: 16px; margin-top: 2px; }
+    .node.highlight {
+      animation: pulse 1.5s infinite;
+      box-shadow: 0 0 20px rgba(79, 172, 254, 0.8);
+    }
+    .arrow {
+      position: absolute;
+      height: 3px;
+      background: #4facfe;
+      transform-origin: left center;
+      transition: all 0.8s ease;
+    }
+    .arrow::after {
+      content: '';
+      position: absolute;
+      right: -8px;
+      top: -4px;
+      border-left: 10px solid #4facfe;
+      border-top: 5px solid transparent;
+      border-bottom: 5px solid transparent;
+    }
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.1); }
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(15px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .result-box {
+      margin: 15px auto;
+      padding: 12px 18px;
+      border-radius: 8px;
+      max-width: 85%;
+      font-size: 0.85em;
+      display: none;
+    }
+    .result-box.error {
+      background: rgba(245, 87, 108, 0.2);
+      border: 2px solid #f5576c;
+      color: #ff9999;
+    }
+    .result-box.success {
+      background: rgba(79, 172, 254, 0.2);
+      border: 2px solid #4facfe;
+      color: #99ddff;
+    }
+  </style>
+</head>
+<body>
+  <div class="reveal">
+    <div class="slides">
+
+      <!-- ============ TITLE ============ -->
+      <section>
+        <h1>🔗 The Invisible Linked List</h1>
+        <p style="font-size:1.2em;opacity:0.8;">From LeetCode to Production</p>
+        <p style="font-size:0.9em;color:#4facfe;">How Git Scales to 100M Developers</p>
+        <aside class="notes">Welcome! Today, we journey from a simple interview question to the heart of Git's engineering magic.</aside>
+      </section>
+
+      <!-- ============ PROLOGUE ============ -->
+      <section>
+        <section>
+          <h2>Prologue: Setting the Stage</h2>
+          <blockquote style="font-size:1.3em;color:#4facfe;">
+            "Every time you type <code>git commit</code>, you're walking a linked list."
+          </blockquote>
+        </section>
+        <section>
+          <div class="act-intro">
+            Welcome! Today, we'll journey from a simple interview question to the heart of Git's engineering magic.<br><br>
+            Along the way, you'll see how a humble linked list becomes the backbone of a world-class version control system.<br><br>
+            <em style="color:#facc15;">Ready to discover the hidden layers beneath your code?</em>
+          </div>
+          <aside class="notes">This is the hook: everything in Git is a linked list!</aside>
+        </section>
+      </section>
+
+      <!-- ============ ACT 1: LeetCode Foundation ============ -->
+      <section>
+        <section>
+          <h2>Act 1: The LeetCode Foundation</h2>
+          <p class="act-intro">
+            <strong>LeetCode #206: Reverse Linked List</strong><br>
+            The foundation of Git's commit history. Each commit is a node pointing to its parent.
+          </p>
+          <aside class="notes">Let's start at the very beginning: a single linked list, the classic interview problem.</aside>
+        </section>
+        <section>
+          <div class="feynman-why">
+            <strong>Why does this matter?</strong><br>
+            If you can reverse a linked list, you can understand how Git walks commit history. This is the core of every <code>git log</code> and <code>git bisect</code> operation!
+          </div>
+          <aside class="notes">This is the 'aha!' moment: the interview problem is the same as the real-world tool.</aside>
+        </section>
+        <section>
+          <h3>📊 Pointer Dance Animation</h3>
+          <div class="animation-canvas" id="canvas1"></div>
+          <div class="control-panel">
+            <button class="btn" onclick="anim1.addCommit()">Add Commit</button>
+            <button class="btn secondary" onclick="anim1.reverseList()">Reverse List</button>
+            <button class="btn" onclick="anim1.reset()">Reset</button>
+          </div>
+          <aside class="notes">Watch the pointers dance as we reverse the list—just like Git traverses your commit history.</aside>
+        </section>
+        <section>
+          <h3>The Code</h3>
+          <pre><code class="language-python">class Commit:
+    def __init__(self, message, parent=None):
+        self.message = message
+        self.parent = parent  # Points to previous commit
+        self.timestamp = time.time()
+
+class MiniGit:
+    def __init__(self):
+        self.head = None  # Most recent commit
+
+    def commit(self, message):
+        new_commit = Commit(message, self.head)
+        self.head = new_commit
+        return new_commit</code></pre>
+          <aside class="notes">Here's the code: each commit stores its parent. This is the heart of Git's data model.</aside>
+        </section>
+        <section>
+          <h3>Complexity</h3>
+          <div class="stats-row">
+            <div class="stat-card">
+              <div class="stat-label">Time</div>
+              <div class="stat-value">O(n)</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">Space</div>
+              <div class="stat-value">O(1)</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">Lines</div>
+              <div class="stat-value">15</div>
+            </div>
+          </div>
+          <aside class="notes">Simple, elegant, and efficient. This is the foundation we'll build on.</aside>
+        </section>
+      </section>
+
+      <!-- ============ ACT 2: Memory Explosion ============ -->
+      <section>
+        <section>
+          <h2>Act 2: Scale Break #1</h2>
+          <h3 style="color:#f59e42;">Memory Explosion 💥</h3>
+          <aside class="notes">What happens when you add more commits? Memory becomes a problem.</aside>
+        </section>
+        <section>
+          <div class="scale-break">
+            <strong>⚠️ The Problem</strong><br>
+            Every commit stores a full snapshot. 100K commits = 1-10GB naive storage.<br>
+            Without compression, Git would be unusable at scale.
+          </div>
+        </section>
+        <section>
+          <div class="feynman-why">
+            <strong>Why does this matter?</strong><br>
+            If Git stored every file every time, your repo would explode in size. Understanding this is key to appreciating Git's efficiency tricks.
+          </div>
+        </section>
+        <section>
+          <h3>📊 Snapshot vs. Delta</h3>
+          <div class="animation-canvas" id="canvas2"></div>
+          <div class="control-panel">
+            <button class="btn" onclick="anim2.addCommits()">Add 10 Commits</button>
+            <button class="btn success" onclick="anim2.applyPackfile()">Apply Packfile</button>
+            <button class="btn" onclick="anim2.reset()">Reset</button>
+          </div>
+          <div class="stats-row">
+            <div class="stat-card">
+              <div class="stat-label">Naive</div>
+              <div class="stat-value" style="color:#f5576c;" id="naive-size">0 MB</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">Packfile</div>
+              <div class="stat-value" style="color:#3ec6a8;" id="packfile-size">0 MB</div>
+            </div>
+          </div>
+        </section>
+        <section>
+          <h3>Naive vs Production</h3>
+          <div class="comparison">
+            <div class="comparison-side naive">
+              <div class="comparison-title" style="color:#f5576c;">❌ Naive Storage</div>
+              <ul>
+                <li>Full snapshot per commit</li>
+                <li>No deduplication</li>
+                <li>No compression</li>
+                <li>100K commits = 10-100GB</li>
+              </ul>
+            </div>
+            <div class="comparison-side production">
+              <div class="comparison-title" style="color:#3ec6a8;">✓ Packfile</div>
+              <ul>
+                <li>Delta compression</li>
+                <li>Content-addressable</li>
+                <li>Binary diff algorithm</li>
+                <li>100K commits = ~1GB</li>
+              </ul>
+            </div>
+          </div>
+        </section>
+        <section>
+          <div class="stats-row">
+            <div class="stat-card">
+              <div class="stat-label">Naive</div>
+              <div class="stat-value" style="color:#f5576c;">10 GB</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">Packfile</div>
+              <div class="stat-value" style="color:#3ec6a8;">1 GB</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">Savings</div>
+              <div class="stat-value">90%</div>
+            </div>
+          </div>
+        </section>
+      </section>
+
+      <!-- ============ ACT 2.5: Content-Addressable Storage ============ -->
+      <section>
+        <section>
+          <h2>Act 2.5: Content-Addressable Storage</h2>
+          <h3 style="color:#059669;">The Magic of Hashing ✨</h3>
+        </section>
+        <section>
+          <p class="act-intro">
+            <strong>The Core Insight:</strong> Git doesn't store files by name—it stores by <em>content hash</em>.<br><br>
+            If you commit the same <code>README.md</code> 1000 times across branches, Git stores it <strong>once</strong>.
+          </p>
+        </section>
+        <section>
+          <div class="feynman-why">
+            <strong>Why does this matter?</strong><br>
+            This is why Git is so space-efficient. It's not magic—it's hashing and deduplication!
+          </div>
+        </section>
+        <section>
+          <h3>📊 Blob Collapsing</h3>
+          <div class="animation-canvas" id="canvas2b"></div>
+          <div class="control-panel">
+            <button class="btn" onclick="anim2b.addDuplicateFiles()">Add Duplicate Files</button>
+            <button class="btn success" onclick="anim2b.deduplicate()">Apply Content-Addressable</button>
+            <button class="btn" onclick="anim2b.reset()">Reset</button>
+          </div>
+          <div class="stats-row">
+            <div class="stat-card">
+              <div class="stat-label">Files Added</div>
+              <div class="stat-value" id="files-added">0</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">Unique Blobs</div>
+              <div class="stat-value" style="color:#3ec6a8;" id="blobs-stored">0</div>
+            </div>
+          </div>
+        </section>
+        <section>
+          <h3>File-Based vs Content-Addressable</h3>
+          <div class="comparison">
+            <div class="comparison-side naive">
+              <div class="comparison-title" style="color:#f5576c;">❌ File-Based</div>
+              <ul>
+                <li>Store by path/name</li>
+                <li>Same content = multiple copies</li>
+                <li>1000 READMEs = 1000x storage</li>
+              </ul>
+            </div>
+            <div class="comparison-side production">
+              <div class="comparison-title" style="color:#3ec6a8;">✓ Content-Addressable</div>
+              <ul>
+                <li>Store by SHA-1 hash</li>
+                <li>Same content = single blob</li>
+                <li>1000 READMEs = 1x storage</li>
+              </ul>
+            </div>
+          </div>
+        </section>
+        <section>
+          <h3>The Code</h3>
+          <pre><code class="language-python">import hashlib
+
+class ContentAddressableStore:
+    def __init__(self):
+        self.objects = {}  # hash -> content
+    
+    def store(self, content):
+        hash_id = hashlib.sha1(content.encode()).hexdigest()
+        
+        if hash_id not in self.objects:
+            self.objects[hash_id] = content  # Store once
+        
+        return hash_id  # Same content = same hash
+
+# Magic: 1000 identical files → 1 storage blob
+store = ContentAddressableStore()
+for i in range(1000):
+    hash_id = store.store("# README\nSame content")
+    
+print(len(store.objects))  # Output: 1 (not 1000!)</code></pre>
+        </section>
+      </section>
+
+      <!-- ============ ACT 3: Cycle Detection ============ -->
+      <section>
+        <section>
+          <h2>Act 3: Scale Break #2</h2>
+          <h3 style="color:#ef4444;">Corruption & Cycles 🔄</h3>
+        </section>
+        <section>
+          <div class="scale-break">
+            <strong>⚠️ The Problem</strong><br>
+            Disk corruption or malicious edits can create cycles in commit history.<br>
+            Without detection, <code>git log</code> runs forever, consuming infinite memory.
+          </div>
+        </section>
+        <section>
+          <div class="feynman-why">
+            <strong>Why does this matter?</strong><br>
+            A single bad pointer can bring down your repo. Cycle detection is a real-world safeguard, not just a coding trick.
+          </div>
+        </section>
+        <section>
+          <h3>📊 Cycle Detection Demo</h3>
+          <div class="animation-canvas" id="canvas3"></div>
+          <div class="control-panel">
+            <button class="btn" onclick="anim3.createValidChain()">Create Valid Chain</button>
+            <button class="btn secondary" onclick="anim3.injectCycle()">Inject Cycle ⚠️</button>
+            <button class="btn success" onclick="anim3.detectCycle()">Run Floyd's</button>
+            <button class="btn" onclick="anim3.reset()">Reset</button>
+          </div>
+          <div id="cycle-result" class="result-box"></div>
+        </section>
+        <section>
+          <h3>Floyd's Cycle Detection</h3>
+          <p style="font-size:0.85em;">Two pointers (slow/fast). Slow moves 1 step, fast moves 2 steps. If they meet → cycle exists.</p>
+          <pre><code class="language-python">def validate_no_cycles(head):
+    if not head:
+        return True
+    
+    slow = fast = head
+    
+    while fast and fast.parent:
+        slow = slow.parent           # Move 1 step
+        fast = fast.parent.parent    # Move 2 steps
+        
+        if slow is fast:
+            raise SystemError("Cycle detected!")
+    
+    return True  # No cycle found</code></pre>
+        </section>
+        <section>
+          <h3>Production Implementation</h3>
+          <pre><code class="language-python">class GitIntegrityChecker:
+    def validate_commit_dag(self, head):
+        # Floyd's cycle detection for commit DAG
+        slow = fast = head
+        while fast and fast.parent:
+            slow = slow.parent
+            fast = fast.parent.parent
+            if slow is fast:
+                raise SystemError("Cycle detected!")
+        return True
+
+    def run_fsck(self, repo):
+        # Validate all refs and report issues
+        for ref in repo.refs:
+            try:
+                self.validate_commit_dag(ref.head)
+            except SystemError as e:
+                print(f"[ERROR] {ref.name}: {e}")
+        print("Integrity check complete.")</code></pre>
+        </section>
+      </section>
+
+      <!-- ============ ACT 3.5: Memory Bounds ============ -->
+      <section>
+        <section>
+          <h2>Act 3.5: Scale Break #3</h2>
+          <h3 style="color:#f59e42;">Unbounded Memory Growth 📈</h3>
+        </section>
+        <section>
+          <div class="scale-break">
+            <strong>⚠️ The Problem</strong><br>
+            Without memory limits, <code>git log --all</code> on huge repos loads entire history into RAM.<br>
+            100K commits × 10KB = 1GB RAM. 10M commits = system crash.
+          </div>
+        </section>
+        <section>
+          <div class="feynman-why">
+            <strong>Why does this matter?</strong><br>
+            If you don't control memory, your code won't scale. This is the difference between a toy and a tool used by millions.
+          </div>
+        </section>
+        <section>
+          <h3>📊 Memory Growth Demo</h3>
+          <div class="animation-canvas" id="canvas3b"></div>
+          <div class="control-panel">
+            <button class="btn secondary" onclick="anim3b.startUnbounded()">Load Without Limits</button>
+            <button class="btn success" onclick="anim3b.startBounded()">Load With Streaming</button>
+            <button class="btn" onclick="anim3b.reset()">Reset</button>
+          </div>
+          <div id="memory-result" class="result-box"></div>
+        </section>
+        <section>
+          <h3>Unbounded vs Bounded</h3>
+          <div class="comparison">
+            <div class="comparison-side naive">
+              <div class="comparison-title" style="color:#f5576c;">❌ Load All Into Memory</div>
+              <ul>
+                <li>Read entire history</li>
+                <li>Store all commits in RAM</li>
+                <li>OOM on large repos</li>
+              </ul>
+            </div>
+            <div class="comparison-side production">
+              <div class="comparison-title" style="color:#3ec6a8;">✓ Streaming + Pagination</div>
+              <ul>
+                <li>Load commits on-demand</li>
+                <li>Fixed memory window</li>
+                <li>LRU cache eviction</li>
+              </ul>
+            </div>
+          </div>
+        </section>
+        <section>
+          <div class="stats-row">
+            <div class="stat-card">
+              <div class="stat-label">Unbounded Peak</div>
+              <div class="stat-value" style="color:#f5576c;">8 GB</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">Bounded Peak</div>
+              <div class="stat-value" style="color:#3ec6a8;">256 MB</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">Memory Saved</div>
+              <div class="stat-value">97%</div>
+            </div>
+          </div>
+        </section>
+      </section>
+
+      <!-- ============ ACT 4: Engineering Layers ============ -->
+      <section>
+        <section>
+          <h2>Act 4: The Transformation</h2>
+          <h3 style="color:#10b981;">15 Lines → 300+ Lines 🏗️</h3>
+        </section>
+        <section>
+          <p class="act-intro">
+            The algorithm stays the same. What changes is <strong>everything around it</strong>.<br><br>
+            Watch as we add production layers: persistence, validation, optimization, monitoring.
+          </p>
+        </section>
+        <section>
+          <div class="feynman-why">
+            <strong>Why does this matter?</strong><br>
+            Real-world code is more than algorithms. It's about reliability, speed, and safety at scale.
+          </div>
+        </section>
+        <section>
+          <h3>📊 Layer Cake Animation</h3>
+          <div class="animation-canvas" id="canvas4"></div>
+          <div class="control-panel">
+            <button class="btn success" onclick="anim4.startAnimation()">Build Layers</button>
+            <button class="btn" onclick="anim4.reset()">Reset</button>
+          </div>
+        </section>
+        <section>
+          <h3>Naive vs Production</h3>
+          <div class="comparison">
+            <div class="comparison-side naive">
+              <div class="comparison-title" style="color:#f5576c;">Naive (15 lines)</div>
+              <ul>
+                <li>✓ Works for demo</li>
+                <li>❌ No persistence</li>
+                <li>❌ No validation</li>
+                <li>❌ No error handling</li>
+                <li>❌ No optimization</li>
+              </ul>
+            </div>
+            <div class="comparison-side production">
+              <div class="comparison-title" style="color:#3ec6a8;">Production (300+ lines)</div>
+              <ul>
+                <li>✓ Content-addressable</li>
+                <li>✓ Cycle detection</li>
+                <li>✓ Packfile compression</li>
+                <li>✓ Binary search indexes</li>
+                <li>✓ Metrics & observability</li>
+              </ul>
+            </div>
+          </div>
+        </section>
+        <section>
+          <div class="stats-row">
+            <div class="stat-card">
+              <div class="stat-label">Code Growth</div>
+              <div class="stat-value">20x</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">Layers</div>
+              <div class="stat-value">4</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">Real Git</div>
+              <div class="stat-value">500K+</div>
+            </div>
+          </div>
+        </section>
+      </section>
+
+      <!-- ============ ACT 4.5: Binary Search Race ============ -->
+      <section>
+        <section>
+          <h2>Act 4.5: Scale Break #4</h2>
+          <h3 style="color:#3b82f6;">Search Speed 🏎️</h3>
+        </section>
+        <section>
+          <div class="scale-break">
+            <strong>⚠️ The Problem</strong><br>
+            Finding a commit in 100K objects with linear search = O(n) = 100K checks.<br>
+            With binary search in sorted .idx files = O(log n) = 17 checks.<br>
+            <strong>That's a 5,882x speedup!</strong>
+          </div>
+        </section>
+        <section>
+          <div class="feynman-why">
+            <strong>Why does this matter?</strong><br>
+            Speed isn't just about user experience—it's about making large-scale collaboration possible.
+          </div>
+        </section>
+        <section>
+          <h3>📊 Search Race</h3>
+          <div class="animation-canvas" id="canvas4b"></div>
+          <div class="control-panel">
+            <button class="btn success" onclick="anim4b.startRace()">Start Race!</button>
+            <button class="btn" onclick="anim4b.reset()">Reset</button>
+          </div>
+          <div class="stats-row">
+            <div class="stat-card">
+              <div class="stat-label">Linear</div>
+              <div class="stat-value" style="color:#f5576c;" id="linear-checks">0</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">Binary</div>
+              <div class="stat-value" style="color:#3ec6a8;" id="binary-checks">0</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">Speedup</div>
+              <div class="stat-value" id="speedup-factor">0x</div>
+            </div>
+          </div>
+          <div id="race-result" class="result-box"></div>
+        </section>
+        <section>
+          <h3>Linear vs Binary Search</h3>
+          <div class="comparison">
+            <div class="comparison-side naive">
+              <div class="comparison-title" style="color:#f5576c;">❌ Linear Search</div>
+              <ul>
+                <li>Check every object</li>
+                <li>Time: O(n)</li>
+                <li>100K objects = 100K checks</li>
+              </ul>
+            </div>
+            <div class="comparison-side production">
+              <div class="comparison-title" style="color:#3ec6a8;">✓ Binary Search (.idx)</div>
+              <ul>
+                <li>Sorted index file</li>
+                <li>Time: O(log n)</li>
+                <li>100K objects = 17 checks</li>
+              </ul>
+            </div>
+          </div>
+        </section>
+        <section>
+          <h3>The Code</h3>
+          <pre><code class="language-python">def find_object_linear(objects, target_hash):
+    # O(n) - check every object
+    for obj in objects:
+        if obj.hash == target_hash:
+            return obj
+    return None
+
+def find_object_binary(idx_file, target_hash):
+    # O(log n) - binary search in sorted .idx
+    left, right = 0, len(idx_file) - 1
+    
+    while left <= right:
+        mid = (left + right) // 2
+        if idx_file[mid].hash == target_hash:
+            return idx_file[mid]
+        elif idx_file[mid].hash < target_hash:
+            left = mid + 1
+        else:
+            right = mid - 1
+    return None
+
+# 100,000 objects: Linear = 100K, Binary = 17 checks</code></pre>
+        </section>
+        <section>
+          <div class="stats-row">
+            <div class="stat-card">
+              <div class="stat-label">Linear</div>
+              <div class="stat-value" style="color:#f5576c;">100K</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">Binary</div>
+              <div class="stat-value" style="color:#3ec6a8;">17</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">Speedup</div>
+              <div class="stat-value">5,882x</div>
+            </div>
+          </div>
+        </section>
+      </section>
+
+      <!-- ============ ACT 5: The Final Transformation ============ -->
+      <section>
+        <section>
+          <h2>Act 5: The Final Transformation</h2>
+          <h3 style="color:#a21caf;">What Distinguishes Levels 🎓</h3>
+        </section>
+        <section>
+          <blockquote style="font-size:0.95em;">
+            <strong>Junior engineer:</strong> "Does it work?"<br>
+            <strong>Senior engineer:</strong> "Does it scale?"<br>
+            <strong>Staff engineer:</strong> "What breaks first, and how do we design for it?"
+          </blockquote>
+        </section>
+        <section>
+          <div class="feynman-why">
+            <strong>Why does this matter?</strong><br>
+            The leap from code to product is engineering. This is how ideas change the world.
+          </div>
+        </section>
+        <section>
+          <h3>📊 The Evolution</h3>
+          <div class="animation-canvas" id="canvas5"></div>
+          <div class="control-panel">
+            <button class="btn success" onclick="anim5.startEvolution()">Watch Evolution</button>
+            <button class="btn" onclick="anim5.reset()">Reset</button>
+          </div>
+        </section>
+        <section>
+          <h3>The Journey</h3>
+          <p class="act-intro">
+            The algorithm is just the beginning. Production systems require:<br><br>
+            <strong style="color:#667eea;">Persistence</strong> — Content-addressable storage with atomic writes<br>
+            <strong style="color:#764ba2;">Memory</strong> — Delta compression and packfiles<br>
+            <strong style="color:#f093fb;">Corruption</strong> — Floyd's cycle detection and invariant checking<br>
+            <strong style="color:#4facfe;">Speed</strong> — Binary search indexes for O(log n) lookups
+          </p>
+        </section>
+        <section>
+          <h3>Takeaway</h3>
+          <p class="act-intro" style="font-size:1.1em;">
+            The algorithm stayed the same.<br>
+            <strong style="color:#facc15;">The engineering discipline made it real.</strong>
+          </p>
+          <div class="stats-row">
+            <div class="stat-card">
+              <div class="stat-label">LeetCode</div>
+              <div class="stat-value">15</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">Production</div>
+              <div class="stat-value">300+</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">Real Git</div>
+              <div class="stat-value">500K+</div>
+            </div>
+          </div>
+        </section>
+      </section>
+
+      <!-- ============ EPILOGUE ============ -->
+      <section>
+        <section>
+          <h2>Epilogue</h2>
+          <blockquote style="font-size:1.1em;">
+            "We've come full circle."
+          </blockquote>
+        </section>
+        <section>
+          <p class="act-intro" style="font-size:1em;">
+            From a simple linked list to a system used by 100 million developers.<br><br>
+            <strong>The invisible linked list</strong> is everywhere—in every commit, every branch, every merge.<br><br>
+            <em style="color:#4facfe;">Now you see it. Now you understand it.</em>
+          </p>
+        </section>
+        <section>
+          <h3>What's Next?</h3>
+          <p class="act-intro">
+            <strong>Episode 2:</strong> The Invisible Tree — How Git stores your entire codebase<br>
+            <strong>Episode 3:</strong> The Invisible Graph — Branches, merges, and DAGs<br>
+            <strong>Episode 4:</strong> The Invisible Network — Distributed systems and sync
+          </p>
+        </section>
+        <section>
+          <h2>Thank You!</h2>
+          <p style="font-size:1.2em;">🔗 From LeetCode to Production</p>
+          <p style="opacity:0.7;">Press <strong>S</strong> for speaker notes</p>
+        </section>
+      </section>
+
+    </div>
+  </div>
+  <script src="https://cdn.jsdelivr.net/npm/reveal.js/dist/reveal.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/reveal.js/plugin/highlight/highlight.js"></script>
+  <script>
+    // ========== ANIMATION CLASSES ==========
+    
+    // Animation 1: Linked List Pointer Dance
+    class LinkedListAnimation {
+      constructor(canvasId) {
+        this.canvas = document.getElementById(canvasId);
+        this.commits = [];
+        this.commitCount = 0;
+        this.reversed = false;
+      }
+      addCommit() {
+        this.commitCount++;
+        const commit = {
+          id: this.commitCount,
+          x: 80 + (this.commits.length * 120),
+          y: 140
+        };
+        this.commits.push(commit);
+        this.render();
+      }
+      reverseList() {
+        this.reversed = !this.reversed;
+        this.render();
+      }
+      reset() {
+        this.commits = [];
+        this.commitCount = 0;
+        this.reversed = false;
+        if (this.canvas) this.canvas.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;opacity:0.5;">Click "Add Commit" to start</div>';
+      }
+      render() {
+        if (!this.canvas) return;
+        this.canvas.innerHTML = '';
+        // Draw arrows
+        for (let i = 0; i < this.commits.length - 1; i++) {
+          const from = this.commits[i];
+          const to = this.commits[i + 1];
+          if (this.reversed) {
+            this.drawArrow(to.x - 30, to.y, from.x + 30, from.y);
+          } else {
+            this.drawArrow(from.x + 30, from.y, to.x - 30, to.y);
+          }
+        }
+        // Draw nodes
+        this.commits.forEach((commit, idx) => {
+          const node = document.createElement('div');
+          node.className = 'node' + (idx === 0 ? ' highlight' : '');
+          node.style.left = (commit.x - 30) + 'px';
+          node.style.top = (commit.y - 30) + 'px';
+          node.innerHTML = '<div class="label">' + (idx === 0 ? 'HEAD' : 'Commit') + '</div><div class="value">' + commit.id + '</div>';
+          this.canvas.appendChild(node);
+        });
+      }
+      drawArrow(x1, y1, x2, y2) {
+        const arrow = document.createElement('div');
+        arrow.className = 'arrow';
+        const length = Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
+        const angle = Math.atan2(y2 - y1, x2 - x1) * 180 / Math.PI;
+        arrow.style.width = length + 'px';
+        arrow.style.left = x1 + 'px';
+        arrow.style.top = y1 + 'px';
+        arrow.style.transform = 'rotate(' + angle + 'deg)';
+        this.canvas.appendChild(arrow);
+      }
+    }
+
+    // Animation 2: Memory Growth (Snapshot vs Delta)
+    class MemoryAnimation {
+      constructor(canvasId) {
+        this.canvas = document.getElementById(canvasId);
+        this.commitCount = 0;
+        this.isCompressed = false;
+      }
+      addCommits() {
+        this.commitCount += 10;
+        this.render();
+      }
+      applyPackfile() {
+        this.isCompressed = true;
+        this.render();
+      }
+      reset() {
+        this.commitCount = 0;
+        this.isCompressed = false;
+        this.render();
+      }
+      render() {
+        if (!this.canvas) return;
+        const naiveSize = this.commitCount * 10;
+        const packfileSize = this.isCompressed ? Math.ceil(this.commitCount * 0.5) : naiveSize;
+        const naiveHeight = Math.min(240, naiveSize * 1.5);
+        const packfileHeight = Math.min(240, packfileSize * 1.5);
+        
+        this.canvas.innerHTML = '<div style="display:flex;justify-content:space-around;align-items:flex-end;height:100%;padding:20px;">' +
+          '<div style="text-align:center;"><div style="width:100px;height:' + naiveHeight + 'px;background:linear-gradient(180deg,#f5576c 0%,#f093fb 100%);border-radius:8px 8px 0 0;transition:height 0.8s ease;"></div><div style="margin-top:8px;font-weight:bold;color:#f5576c;">Naive</div></div>' +
+          '<div style="text-align:center;"><div style="width:100px;height:' + packfileHeight + 'px;background:linear-gradient(180deg,#4facfe 0%,#00f2fe 100%);border-radius:8px 8px 0 0;transition:height 0.8s ease;"></div><div style="margin-top:8px;font-weight:bold;color:#4facfe;">Packfile</div></div>' +
+          '</div>';
+        
+        const naiveEl = document.getElementById('naive-size');
+        const packEl = document.getElementById('packfile-size');
+        if (naiveEl) naiveEl.textContent = naiveSize + ' MB';
+        if (packEl) packEl.textContent = packfileSize + ' MB';
+      }
+    }
+
+    // Animation 2b: Content-Addressable Storage
+    class ContentAddressableAnimation {
+      constructor(canvasId) {
+        this.canvas = document.getElementById(canvasId);
+        this.filesAdded = 0;
+        this.uniqueBlobs = 0;
+        this.isDeduplicated = false;
+      }
+      addDuplicateFiles() {
+        this.filesAdded += 5;
+        this.uniqueBlobs = this.isDeduplicated ? 3 : this.filesAdded;
+        this.render();
+      }
+      deduplicate() {
+        this.isDeduplicated = true;
+        this.uniqueBlobs = 3;
+        this.render();
+      }
+      reset() {
+        this.filesAdded = 0;
+        this.uniqueBlobs = 0;
+        this.isDeduplicated = false;
+        this.render();
+      }
+      render() {
+        if (!this.canvas) return;
+        const colors = ['#667eea', '#764ba2', '#f093fb'];
+        let filesHTML = '';
+        let blobsHTML = '';
+        
+        for (let i = 0; i < Math.min(this.filesAdded, 15); i++) {
+          const row = Math.floor(i / 5);
+          const col = i % 5;
+          filesHTML += '<div style="width:35px;height:35px;background:' + colors[i % 3] + ';border-radius:4px;position:absolute;left:' + (20 + col * 40) + 'px;top:' + (40 + row * 40) + 'px;opacity:0.8;transition:all 0.5s;"></div>';
+        }
+        
+        for (let i = 0; i < Math.min(this.uniqueBlobs, 15); i++) {
+          const row = Math.floor(i / 5);
+          const col = i % 5;
+          blobsHTML += '<div style="width:40px;height:40px;background:linear-gradient(135deg,' + colors[i % 3] + ',' + colors[i % 3] + 'cc);border-radius:6px;border:2px solid rgba(255,255,255,0.4);position:absolute;right:' + (20 + col * 45) + 'px;top:' + (40 + row * 45) + 'px;box-shadow:0 4px 12px rgba(102,126,234,0.4);transition:all 0.5s;"></div>';
+        }
+        
+        this.canvas.innerHTML = '<div style="display:flex;height:100%;">' +
+          '<div style="width:45%;position:relative;border:2px dashed rgba(245,87,108,0.4);border-radius:8px;margin:10px;"><div style="position:absolute;top:8px;left:8px;font-size:12px;color:#f5576c;font-weight:bold;">Files Added</div>' + filesHTML + '</div>' +
+          '<div style="display:flex;align-items:center;font-size:2em;color:' + (this.isDeduplicated ? '#4facfe' : '#666') + ';">→</div>' +
+          '<div style="width:45%;position:relative;border:2px dashed rgba(79,172,254,0.4);border-radius:8px;margin:10px;"><div style="position:absolute;top:8px;left:8px;font-size:12px;color:#4facfe;font-weight:bold;">Unique Blobs</div>' + blobsHTML + '</div>' +
+          '</div>';
+        
+        const filesEl = document.getElementById('files-added');
+        const blobsEl = document.getElementById('blobs-stored');
+        if (filesEl) filesEl.textContent = this.filesAdded;
+        if (blobsEl) blobsEl.textContent = this.uniqueBlobs;
+      }
+    }
+
+    // Animation 3: Cycle Detection
+    class CycleDetectionAnimation {
+      constructor(canvasId) {
+        this.canvas = document.getElementById(canvasId);
+        this.nodes = [];
+        this.hasCycle = false;
+      }
+      createValidChain() {
+        this.hasCycle = false;
+        this.nodes = [];
+        const positions = [{x:80,y:140},{x:200,y:100},{x:320,y:160},{x:440,y:120},{x:560,y:140}];
+        for (let i = 0; i < 5; i++) {
+          this.nodes.push({ id: i + 1, x: positions[i].x, y: positions[i].y, next: i < 4 ? i + 1 : null });
+        }
+        this.render();
+        this.hideResult();
+      }
+      injectCycle() {
+        if (this.nodes.length < 3) this.createValidChain();
+        this.nodes[this.nodes.length - 1].next = 2;
+        this.hasCycle = true;
+        this.render();
+        this.hideResult();
+      }
+      detectCycle() {
+        if (this.nodes.length === 0) return;
+        const resultDiv = document.getElementById('cycle-result');
+        if (!resultDiv) return;
+        resultDiv.style.display = 'block';
+        if (this.hasCycle) {
+          resultDiv.className = 'result-box error';
+          resultDiv.innerHTML = '<strong>⚠️ CYCLE DETECTED!</strong> Floyd\'s algorithm found corruption. Git would fail with an error.';
+        } else {
+          resultDiv.className = 'result-box success';
+          resultDiv.innerHTML = '<strong>✓ NO CYCLE FOUND</strong> Repository structure is valid.';
+        }
+      }
+      reset() {
+        this.nodes = [];
+        this.hasCycle = false;
+        if (this.canvas) this.canvas.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;opacity:0.5;">Click "Create Valid Chain" to start</div>';
+        this.hideResult();
+      }
+      hideResult() {
+        const resultDiv = document.getElementById('cycle-result');
+        if (resultDiv) resultDiv.style.display = 'none';
+      }
+      render() {
+        if (!this.canvas) return;
+        this.canvas.innerHTML = '';
+        this.nodes.forEach((node, idx) => {
+          const nodeEl = document.createElement('div');
+          nodeEl.className = 'node';
+          nodeEl.style.left = (node.x - 30) + 'px';
+          nodeEl.style.top = (node.y - 30) + 'px';
+          nodeEl.innerHTML = '<div class="label">Node</div><div class="value">' + node.id + '</div>';
+          this.canvas.appendChild(nodeEl);
+          if (node.next !== null) {
+            const nextNode = this.nodes[node.next];
+            this.drawArrow(node.x + 30, node.y, nextNode.x - 30, nextNode.y);
+          }
+        });
+      }
+      drawArrow(x1, y1, x2, y2) {
+        const arrow = document.createElement('div');
+        arrow.className = 'arrow';
+        if (this.hasCycle && x2 < x1) arrow.style.background = '#f5576c';
+        const length = Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
+        const angle = Math.atan2(y2 - y1, x2 - x1) * 180 / Math.PI;
+        arrow.style.width = length + 'px';
+        arrow.style.left = x1 + 'px';
+        arrow.style.top = y1 + 'px';
+        arrow.style.transform = 'rotate(' + angle + 'deg)';
+        this.canvas.appendChild(arrow);
+      }
+    }
+
+    // Animation 3b: Memory Leak
+    class MemoryLeakAnimation {
+      constructor(canvasId) {
+        this.canvas = document.getElementById(canvasId);
+        this.unboundedMemory = 0;
+        this.boundedMemory = 0;
+        this.isAnimating = false;
+        this.mode = null;
+      }
+      startUnbounded() {
+        if (this.isAnimating) return;
+        this.reset();
+        this.isAnimating = true;
+        this.mode = 'unbounded';
+        this.animateUnbounded();
+      }
+      startBounded() {
+        if (this.isAnimating) return;
+        this.reset();
+        this.isAnimating = true;
+        this.mode = 'bounded';
+        this.animateBounded();
+      }
+      animateUnbounded() {
+        if (!this.isAnimating || this.mode !== 'unbounded') return;
+        this.unboundedMemory += 0.4;
+        this.render();
+        if (this.unboundedMemory >= 8) {
+          this.isAnimating = false;
+          const resultDiv = document.getElementById('memory-result');
+          if (resultDiv) {
+            resultDiv.style.display = 'block';
+            resultDiv.className = 'result-box error';
+            resultDiv.innerHTML = '<strong>💥 CRASH - OUT OF MEMORY!</strong> No bounds = system instability.';
+          }
+        } else {
+          setTimeout(() => this.animateUnbounded(), 150);
+        }
+      }
+      animateBounded() {
+        if (!this.isAnimating || this.mode !== 'bounded') return;
+        this.boundedMemory = 256;
+        this.unboundedMemory += 0.4;
+        this.render();
+        if (this.unboundedMemory >= 8) {
+          this.isAnimating = false;
+          const resultDiv = document.getElementById('memory-result');
+          if (resultDiv) {
+            resultDiv.style.display = 'block';
+            resultDiv.className = 'result-box success';
+            resultDiv.innerHTML = '<strong>✓ STABLE</strong> Streaming keeps memory at 256MB while processing 8GB of data.';
+          }
+        } else {
+          setTimeout(() => this.animateBounded(), 150);
+        }
+      }
+      reset() {
+        this.unboundedMemory = 0;
+        this.boundedMemory = 0;
+        this.isAnimating = false;
+        this.mode = null;
+        const resultDiv = document.getElementById('memory-result');
+        if (resultDiv) resultDiv.style.display = 'none';
+        this.render();
+      }
+      render() {
+        if (!this.canvas) return;
+        const unboundedHeight = Math.min(240, this.unboundedMemory * 28);
+        const boundedHeight = this.mode === 'bounded' ? 80 : 0;
+        const unboundedColor = this.unboundedMemory > 6 ? '#f5576c' : this.unboundedMemory > 4 ? '#f093fb' : '#764ba2';
+        
+        this.canvas.innerHTML = '<div style="display:flex;justify-content:space-around;align-items:flex-end;height:100%;padding:20px;">' +
+          '<div style="text-align:center;"><div style="width:100px;height:' + unboundedHeight + 'px;background:linear-gradient(180deg,' + unboundedColor + ',#f093fb);border-radius:8px 8px 0 0;transition:height 0.3s;position:relative;">' + (this.unboundedMemory > 6 ? '<div style="position:absolute;top:5px;left:50%;transform:translateX(-50%);font-size:1.5em;">⚠️</div>' : '') + '</div><div style="margin-top:8px;font-weight:bold;color:#f5576c;">Unbounded</div><div style="color:#f5576c;">' + this.unboundedMemory.toFixed(1) + ' GB</div></div>' +
+          '<div style="text-align:center;"><div style="width:100px;height:' + boundedHeight + 'px;background:linear-gradient(180deg,#4facfe,#00f2fe);border-radius:8px 8px 0 0;transition:height 0.3s;"></div><div style="margin-top:8px;font-weight:bold;color:#4facfe;">Bounded</div><div style="color:#4facfe;">' + this.boundedMemory + ' MB</div></div>' +
+          '</div>';
+      }
+    }
+
+    // Animation 4: Engineering Layers
+    class EngineeringLayersAnimation {
+      constructor(canvasId) {
+        this.canvas = document.getElementById(canvasId);
+        this.layers = [
+          { name: 'Algorithm Core', color: '#667eea', lines: '15 lines' },
+          { name: 'Persistence', color: '#764ba2', lines: '+50 lines' },
+          { name: 'Validation', color: '#f093fb', lines: '+75 lines' },
+          { name: 'Optimization', color: '#4facfe', lines: '+90 lines' },
+          { name: 'Monitoring', color: '#00f2fe', lines: '+75 lines' }
+        ];
+        this.currentLayer = 0;
+        this.isAnimating = false;
+      }
+      startAnimation() {
+        if (this.isAnimating) return;
+        this.reset();
+        this.isAnimating = true;
+        this.currentLayer = 0;
+        this.animateNextLayer();
+      }
+      animateNextLayer() {
+        if (!this.isAnimating || this.currentLayer >= this.layers.length) {
+          this.isAnimating = false;
+          return;
+        }
+        const layer = this.layers[this.currentLayer];
+        const layerEl = document.createElement('div');
+        const yPos = 220 - (this.currentLayer + 1) * 42;
+        layerEl.style.cssText = 'position:absolute;left:50%;transform:translateX(-50%);top:' + yPos + 'px;width:400px;height:38px;background:linear-gradient(135deg,' + layer.color + ',' + layer.color + 'dd);border:1px solid rgba(255,255,255,0.3);border-radius:6px;opacity:0;animation:fadeIn 0.6s ease forwards;display:flex;align-items:center;justify-content:space-between;padding:0 15px;color:#fff;font-size:13px;box-shadow:0 4px 15px rgba(0,0,0,0.3);';
+        layerEl.innerHTML = '<span style="font-weight:bold;">' + layer.name + '</span><span style="opacity:0.8;">' + layer.lines + '</span>';
+        this.canvas.appendChild(layerEl);
+        this.currentLayer++;
+        setTimeout(() => this.animateNextLayer(), 800);
+      }
+      reset() {
+        this.currentLayer = 0;
+        this.isAnimating = false;
+        if (this.canvas) this.canvas.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;opacity:0.5;">Click "Build Layers" to animate</div>';
+      }
+    }
+
+    // Animation 4b: Binary Search Race
+    class BinarySearchAnimation {
+      constructor(canvasId) {
+        this.canvas = document.getElementById(canvasId);
+        this.linearChecks = 0;
+        this.binaryChecks = 0;
+        this.targetPosition = 87432;
+        this.isRacing = false;
+      }
+      startRace() {
+        if (this.isRacing) return;
+        this.reset();
+        this.isRacing = true;
+        this.race();
+      }
+      race() {
+        const linearInterval = setInterval(() => {
+          if (!this.isRacing) { clearInterval(linearInterval); return; }
+          this.linearChecks += 2500;
+          const el = document.getElementById('linear-checks');
+          if (el) el.textContent = this.linearChecks.toLocaleString();
+          if (this.linearChecks >= this.targetPosition) {
+            this.linearChecks = this.targetPosition;
+            clearInterval(linearInterval);
+            this.showResult();
+          }
+          this.render();
+        }, 80);
+        
+        const binaryInterval = setInterval(() => {
+          if (!this.isRacing) { clearInterval(binaryInterval); return; }
+          this.binaryChecks++;
+          const el = document.getElementById('binary-checks');
+          if (el) el.textContent = this.binaryChecks;
+          if (this.binaryChecks >= 17) clearInterval(binaryInterval);
+          this.render();
+        }, 300);
+      }
+      showResult() {
+        this.isRacing = false;
+        const speedup = Math.floor(this.linearChecks / this.binaryChecks);
+        const el = document.getElementById('speedup-factor');
+        if (el) el.textContent = speedup.toLocaleString() + 'x';
+        const resultDiv = document.getElementById('race-result');
+        if (resultDiv) {
+          resultDiv.style.display = 'block';
+          resultDiv.className = 'result-box success';
+          resultDiv.innerHTML = '<strong>🏁 BINARY SEARCH WINS!</strong> ' + speedup.toLocaleString() + 'x faster. This is why Git builds .idx files.';
+        }
+      }
+      reset() {
+        this.linearChecks = 0;
+        this.binaryChecks = 0;
+        this.isRacing = false;
+        const linearEl = document.getElementById('linear-checks');
+        const binaryEl = document.getElementById('binary-checks');
+        const speedupEl = document.getElementById('speedup-factor');
+        const resultDiv = document.getElementById('race-result');
+        if (linearEl) linearEl.textContent = '0';
+        if (binaryEl) binaryEl.textContent = '0';
+        if (speedupEl) speedupEl.textContent = '0x';
+        if (resultDiv) resultDiv.style.display = 'none';
+        this.render();
+      }
+      render() {
+        if (!this.canvas) return;
+        const linearProgress = Math.min(100, (this.linearChecks / this.targetPosition) * 100);
+        const binaryProgress = Math.min(100, (this.binaryChecks / 17) * 100);
+        
+        this.canvas.innerHTML = '<div style="display:flex;flex-direction:column;justify-content:center;height:100%;padding:25px;">' +
+          '<div style="margin-bottom:30px;"><div style="display:flex;justify-content:space-between;margin-bottom:8px;font-size:13px;"><span style="color:#f5576c;font-weight:bold;">🔴 Linear O(n)</span><span style="color:#f5576c;">' + this.linearChecks.toLocaleString() + '</span></div><div style="width:100%;height:30px;background:rgba(255,255,255,0.1);border-radius:15px;overflow:hidden;"><div style="width:' + linearProgress + '%;height:100%;background:linear-gradient(90deg,#f5576c,#f093fb);transition:width 0.2s;display:flex;align-items:center;justify-content:flex-end;padding-right:10px;">' + (linearProgress > 8 ? '🏃' : '') + '</div></div></div>' +
+          '<div><div style="display:flex;justify-content:space-between;margin-bottom:8px;font-size:13px;"><span style="color:#4facfe;font-weight:bold;">🔵 Binary O(log n)</span><span style="color:#4facfe;">' + this.binaryChecks + '</span></div><div style="width:100%;height:30px;background:rgba(255,255,255,0.1);border-radius:15px;overflow:hidden;"><div style="width:' + binaryProgress + '%;height:100%;background:linear-gradient(90deg,#4facfe,#00f2fe);transition:width 0.3s;display:flex;align-items:center;justify-content:flex-end;padding-right:10px;">' + (binaryProgress > 8 ? '🚀' : '') + '</div></div></div>' +
+          '</div>';
+      }
+    }
+
+    // Animation 5: Evolution Summary
+    class EvolutionAnimation {
+      constructor(canvasId) {
+        this.canvas = document.getElementById(canvasId);
+        this.stages = [
+          { icon: '🔗', label: 'Linked List', color: '#667eea' },
+          { icon: '📦', label: 'Packfiles', color: '#764ba2' },
+          { icon: '#️⃣', label: 'Hashing', color: '#f093fb' },
+          { icon: '🔄', label: 'Cycle Detection', color: '#4facfe' },
+          { icon: '📊', label: 'Streaming', color: '#00f2fe' },
+          { icon: '⚡', label: 'Binary Search', color: '#facc15' },
+          { icon: '🎯', label: 'Production Git', color: '#3ec6a8' }
+        ];
+        this.currentStage = 0;
+        this.isAnimating = false;
+      }
+      startEvolution() {
+        if (this.isAnimating) return;
+        this.reset();
+        this.isAnimating = true;
+        this.currentStage = 0;
+        this.animateNextStage();
+      }
+      animateNextStage() {
+        if (!this.isAnimating || this.currentStage >= this.stages.length) {
+          this.isAnimating = false;
+          return;
+        }
+        const stage = this.stages[this.currentStage];
+        const stageEl = document.createElement('div');
+        const xPos = 40 + this.currentStage * 80;
+        stageEl.style.cssText = 'position:absolute;left:' + xPos + 'px;top:50%;transform:translateY(-50%);text-align:center;opacity:0;animation:fadeIn 0.5s ease forwards;';
+        stageEl.innerHTML = '<div style="width:50px;height:50px;border-radius:50%;background:' + stage.color + ';display:flex;align-items:center;justify-content:center;font-size:1.5em;margin:0 auto 8px;box-shadow:0 4px 15px ' + stage.color + '66;">' + stage.icon + '</div><div style="font-size:10px;color:#fff;max-width:70px;">' + stage.label + '</div>';
+        this.canvas.appendChild(stageEl);
+        
+        // Draw connecting line
+        if (this.currentStage > 0) {
+          const line = document.createElement('div');
+          line.style.cssText = 'position:absolute;left:' + (xPos - 25) + 'px;top:50%;width:30px;height:2px;background:#4facfe;transform:translateY(-50%);opacity:0;animation:fadeIn 0.3s ease forwards;';
+          this.canvas.appendChild(line);
+        }
+        
+        this.currentStage++;
+        setTimeout(() => this.animateNextStage(), 500);
+      }
+      reset() {
+        this.currentStage = 0;
+        this.isAnimating = false;
+        if (this.canvas) this.canvas.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;opacity:0.5;">Click "Watch Evolution" to see the journey</div>';
+      }
+    }
+
+    // ========== INITIALIZE ==========
+    let anim1, anim2, anim2b, anim3, anim3b, anim4, anim4b, anim5;
+    
+    Reveal.initialize({
+      hash: true,
+      slideNumber: 'c/t',
+      showSlideNumber: 'all',
+      transition: 'slide',
+      transitionSpeed: 'default',
+      backgroundTransition: 'fade',
+      plugins: [RevealHighlight],
+      navigationMode: 'default',
+      progress: true,
+      controls: true,
+      center: true,
+      keyboard: true
+    });
+
+    // Initialize animations after Reveal is ready
+    Reveal.on('ready', () => {
+      anim1 = new LinkedListAnimation('canvas1');
+      anim2 = new MemoryAnimation('canvas2');
+      anim2b = new ContentAddressableAnimation('canvas2b');
+      anim3 = new CycleDetectionAnimation('canvas3');
+      anim3b = new MemoryLeakAnimation('canvas3b');
+      anim4 = new EngineeringLayersAnimation('canvas4');
+      anim4b = new BinarySearchAnimation('canvas4b');
+      anim5 = new EvolutionAnimation('canvas5');
+      
+      // Set initial states
+      if (anim1) anim1.reset();
+      if (anim2) anim2.render();
+      if (anim2b) anim2b.render();
+      if (anim3) anim3.reset();
+      if (anim3b) anim3b.render();
+      if (anim4) anim4.reset();
+      if (anim4b) anim4b.render();
+      if (anim5) anim5.reset();
+    });
+  </script>
+</body>
+</html>
