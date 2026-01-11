@@ -323,6 +323,76 @@ class MiniGit:
           </div>
           <aside class="notes">Simple, elegant, and efficient. This is the foundation we'll build on.</aside>
         </section>
+        <section>
+          <h3>🔗 How <code>git log</code> Works</h3>
+          <div class="animation-canvas" id="canvas-gitlog"></div>
+          <div class="control-panel">
+            <button class="btn" onclick="gitLogAnim.addCommit()">Make Commit</button>
+            <button class="btn success" onclick="gitLogAnim.runGitLog()">Run git log</button>
+            <button class="btn secondary" onclick="gitLogAnim.reset()">Reset</button>
+          </div>
+          <pre style="margin-top:10px;"><code id="git-log-output" class="language-bash" style="max-height:150px;">$ git log
+# Click "Run git log" to traverse the linked list...</code></pre>
+          <aside class="notes">This is the magic! git log simply traverses from HEAD following parent pointers. Each commit points to its parent, creating the chain.</aside>
+        </section>
+        <section>
+          <h3>The Traversal Algorithm</h3>
+          <pre><code class="language-python">def git_log(head):
+    """Traverse the commit linked list"""
+    current = head  # Start from most recent
+    
+    while current is not None:
+        print(f"commit {current.hash}")
+        print(f"Author: {current.author}")
+        print(f"Date: {current.date}")
+        print(f"\n    {current.message}\n")
+        
+        current = current.parent  # Follow the link!
+    
+# This is literally how git log works!
+# O(n) traversal through the linked list</code></pre>
+          <div class="feynman-why" style="margin-top:15px;">
+            <strong>💡 Key Insight:</strong> Every <code>git log</code>, <code>git blame</code>, and <code>git bisect</code> 
+            traverses this same linked list structure. The parent pointer IS the history.
+          </div>
+        </section>
+
+        <!-- Scale Breaks Ahead Transition -->
+        <section data-background-gradient="linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)">
+          <h3>⚠️ But Wait...</h3>
+          <h2 style="color:#f59e42;">This Needs Work to Scale</h2>
+          <p class="act-intro" style="margin-top:30px;">
+            Our simple linked list is elegant, but production systems face <strong>brutal reality</strong>.
+          </p>
+          
+          <div style="display:flex; gap:15px; justify-content:center; flex-wrap:wrap; margin-top:30px;">
+            <div class="stat-card" style="background:rgba(245,87,108,0.15); border:1px solid #f5576c;">
+              <div class="stat-value" style="color:#f5576c; font-size:1.4em;">💥</div>
+              <div class="stat-label">Memory Explosion</div>
+              <div style="font-size:0.6em; opacity:0.8;">100K commits = 10GB?</div>
+            </div>
+            <div class="stat-card" style="background:rgba(245,158,66,0.15); border:1px solid #f59e42;">
+              <div class="stat-value" style="color:#f59e42; font-size:1.4em;">🔄</div>
+              <div class="stat-label">Duplicate Data</div>
+              <div style="font-size:0.6em; opacity:0.8;">Same file, 1000 copies?</div>
+            </div>
+            <div class="stat-card" style="background:rgba(147,51,234,0.15); border:1px solid #9333ea;">
+              <div class="stat-value" style="color:#9333ea; font-size:1.4em;">🐌</div>
+              <div class="stat-label">Slow Lookups</div>
+              <div style="font-size:0.6em; opacity:0.8;">O(n) for everything?</div>
+            </div>
+            <div class="stat-card" style="background:rgba(239,68,68,0.15); border:1px solid #ef4444;">
+              <div class="stat-value" style="color:#ef4444; font-size:1.4em;">♾️</div>
+              <div class="stat-label">Memory Leaks</div>
+              <div style="font-size:0.6em; opacity:0.8;">Unbounded history?</div>
+            </div>
+          </div>
+
+          <p style="margin-top:35px; font-size:0.85em; color:#4facfe;">
+            Let's see how Git solves each of these <strong>"Scale Breaks"</strong>...
+          </p>
+          <aside class="notes">This is the transition point. We've established the basic structure, now we'll explore each production challenge and how Git elegantly solves them.</aside>
+        </section>
       </section>
 
       <!-- ============ ACT 2: Memory Explosion ============ -->
@@ -965,6 +1035,130 @@ def find_object_binary(idx_file, target_hash):
       }
     }
 
+    // Animation 1b: Git Log Traversal
+    class GitLogAnimation {
+      constructor(canvasId) {
+        this.canvas = document.getElementById(canvasId);
+        this.commits = [];
+        this.commitCount = 0;
+        this.isTraversing = false;
+        this.currentIdx = -1;
+        this.commitMessages = ['Initial commit', 'Add README', 'Fix bug #42', 'Add feature X', 'Refactor core', 'Update docs'];
+      }
+      addCommit() {
+        const msg = this.commitMessages[this.commitCount % this.commitMessages.length];
+        const hash = this.generateHash();
+        this.commits.unshift({ 
+          id: this.commitCount + 1, 
+          hash: hash,
+          message: msg,
+          x: 80 + (this.commits.length * 110),
+          y: 140
+        });
+        // Update positions
+        this.commits.forEach((c, idx) => {
+          c.x = 560 - (idx * 110);
+        });
+        this.commitCount++;
+        this.render();
+        this.updateOutput('');
+      }
+      generateHash() {
+        return Math.random().toString(16).substr(2, 7);
+      }
+      async runGitLog() {
+        if (this.commits.length === 0 || this.isTraversing) return;
+        this.isTraversing = true;
+        let output = '$ git log\\n';
+        
+        for (let i = 0; i < this.commits.length; i++) {
+          this.currentIdx = i;
+          this.render();
+          const c = this.commits[i];
+          output += '\\ncommit ' + c.hash + (i === 0 ? ' (HEAD)' : '') + '\\n';
+          output += '    ' + c.message + '\\n';
+          this.updateOutput(output);
+          await this.sleep(800);
+        }
+        
+        output += '\\n# End of log - traversed ' + this.commits.length + ' commits';
+        this.updateOutput(output);
+        this.currentIdx = -1;
+        this.isTraversing = false;
+        this.render();
+      }
+      sleep(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
+      }
+      updateOutput(text) {
+        const el = document.getElementById('git-log-output');
+        if (el) el.textContent = text.replace(/\\\\n/g, '\\n');
+      }
+      reset() {
+        this.commits = [];
+        this.commitCount = 0;
+        this.isTraversing = false;
+        this.currentIdx = -1;
+        if (this.canvas) this.canvas.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;opacity:0.5;">Click "Make Commit" to create commits, then "Run git log"</div>';
+        this.updateOutput('$ git log\\n# Click "Run git log" to traverse the linked list...');
+      }
+      render() {
+        if (!this.canvas) return;
+        this.canvas.innerHTML = '';
+        
+        // HEAD pointer
+        if (this.commits.length > 0) {
+          const headLabel = document.createElement('div');
+          headLabel.style.cssText = 'position:absolute;left:' + (this.commits[0].x - 20) + 'px;top:60px;color:#f59e42;font-weight:bold;font-size:14px;';
+          headLabel.innerHTML = '↓ HEAD';
+          this.canvas.appendChild(headLabel);
+        }
+        
+        // Draw arrows (parent pointers)
+        for (let i = 0; i < this.commits.length - 1; i++) {
+          const from = this.commits[i];
+          const to = this.commits[i + 1];
+          this.drawArrow(from.x - 30, from.y, to.x + 30, to.y, i === this.currentIdx);
+        }
+        
+        // Draw nodes
+        this.commits.forEach((commit, idx) => {
+          const node = document.createElement('div');
+          const isHighlighted = idx === this.currentIdx;
+          node.className = 'node' + (isHighlighted ? ' highlight' : '');
+          node.style.left = (commit.x - 30) + 'px';
+          node.style.top = (commit.y - 30) + 'px';
+          if (isHighlighted) {
+            node.style.background = 'linear-gradient(135deg, #f59e42 0%, #facc15 100%)';
+          }
+          node.innerHTML = '<div class="label" style="font-size:8px;">' + commit.hash.substr(0,5) + '</div><div class="value" style="font-size:12px;">' + commit.message.substr(0,8) + '</div>';
+          this.canvas.appendChild(node);
+        });
+        
+        // NULL terminator
+        if (this.commits.length > 0) {
+          const nullNode = document.createElement('div');
+          const lastCommit = this.commits[this.commits.length - 1];
+          nullNode.style.cssText = 'position:absolute;left:' + (lastCommit.x - 100) + 'px;top:125px;color:#666;font-size:14px;font-style:italic;';
+          nullNode.innerHTML = '← NULL (no parent)';
+          this.canvas.appendChild(nullNode);
+        }
+      }
+      drawArrow(x1, y1, x2, y2, isActive) {
+        const arrow = document.createElement('div');
+        arrow.className = 'arrow';
+        arrow.style.background = isActive ? '#f59e42' : '#4facfe';
+        arrow.style.height = isActive ? '4px' : '3px';
+        const length = Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
+        const angle = Math.atan2(y2 - y1, x2 - x1) * 180 / Math.PI;
+        arrow.style.width = length + 'px';
+        arrow.style.left = x1 + 'px';
+        arrow.style.top = y1 + 'px';
+        arrow.style.transform = 'rotate(' + angle + 'deg)';
+        this.canvas.appendChild(arrow);
+      }
+    }
+
     // Animation 2: Memory Growth (Snapshot vs Delta)
     class MemoryAnimation {
       constructor(canvasId) {
@@ -1385,7 +1579,7 @@ def find_object_binary(idx_file, target_hash):
     }
 
     // ========== INITIALIZE ==========
-    let anim1, anim2, anim2b, anim3, anim3b, anim4, anim4b, anim5;
+    let anim1, gitLogAnim, anim2, anim2b, anim3, anim3b, anim4, anim4b, anim5;
     
     Reveal.initialize({
       hash: true,
@@ -1405,6 +1599,7 @@ def find_object_binary(idx_file, target_hash):
     // Initialize animations after Reveal is ready
     Reveal.on('ready', () => {
       anim1 = new LinkedListAnimation('canvas1');
+      gitLogAnim = new GitLogAnimation('canvas-gitlog');
       anim2 = new MemoryAnimation('canvas2');
       anim2b = new ContentAddressableAnimation('canvas2b');
       anim3 = new CycleDetectionAnimation('canvas3');
@@ -1415,6 +1610,7 @@ def find_object_binary(idx_file, target_hash):
       
       // Set initial states
       if (anim1) anim1.reset();
+      if (gitLogAnim) gitLogAnim.reset();
       if (anim2) anim2.render();
       if (anim2b) anim2b.render();
       if (anim3) anim3.reset();
