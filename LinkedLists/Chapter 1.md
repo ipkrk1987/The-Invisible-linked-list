@@ -7,9 +7,11 @@
 
 ## The Problem Every Engineer Faces
 
-Every software engineer learns linked lists. Every software engineer uses Git. Yet most never realize they're fundamentally the same thing. LeetCode Problem #206, "Reverse a Linked List," is dismissed as a pointless interview puzzle—but its exact logic runs on millions of computers, forming the backbone of version control.
+Every software engineer learns linked lists. Every software engineer uses Git. Yet most never realize how closely related they are. LeetCode Problem #206, "Reverse a Linked List," is dismissed as a pointless interview puzzle—but its core logic runs on millions of computers.
 
-Today, we're building Git's commit history from this single algorithm, then systematically breaking it to understand why real systems need more than just correct code.
+When you run `git log <branch>`, Git walks a **linked-list-like parent chain**. The full repository history is actually a **DAG (Directed Acyclic Graph)**—commits can have multiple parents (merge commits)—but understanding the single-chain traversal is where we start.
+
+Today, we're building Git's commit history traversal from this single algorithm, then systematically breaking it to understand why real systems need more than just correct code.
 
 ---
 
@@ -36,7 +38,7 @@ def reverse_linked_list(head: ListNode) -> ListNode:
     return prev
 ```
 
-What this teaches: Pointer manipulation. A node knows its successor. Reversal changes direction. Complexity: O(n) time, O(1) space. This is pure algorithmic thinking—and it's absolutely correct.
+What this teaches: Pointer manipulation. A node knows its successor. Reversal changes direction. Complexity: O(n) time, O(1) *extra* space for traversal (storing the full list is O(n)). This is pure algorithmic thinking—and it's absolutely correct.
 
 ---
 
@@ -115,10 +117,12 @@ for i in range(100000):  # 100,000 commits
     repo.commit(f"Commit {i}")
 
 # Memory usage grows linearly: O(n)
-# Real impact: long-running services can't leak memory
+# Real impact: naive tools that materialize all commits will OOM
 ```
 
-**The Problem:** Our linked list stores every commit forever. Real systems need resource boundaries and cleanup strategies.
+**The Problem:** Our linked list stores every commit in memory forever. Naive tools that materialize commit lists will OOM on large repos.
+
+**How Git handles this:** Git avoids this by streaming traversal and using precomputed commit-graphs. It doesn't load all commits into RAM by default.
 
 ---
 
@@ -131,6 +135,8 @@ repo.head.parent = repo.head  # Create a cycle
 ```
 
 **The Problem:** Public pointers can be manipulated arbitrarily. Real systems need invariant enforcement.
+
+**Note:** Real Git prevents cycles *structurally*—commit hashes include parent hashes, making cycles impossible without breaking hash integrity. But the engineering lesson is universal: never trust pointer structures blindly.
 
 ---
 
@@ -212,7 +218,11 @@ class ValidatedGit(ProductionReadyGit):
         return commit_id
     
     def _validate_no_cycles(self) -> None:
-        """Floyd's cycle detection algorithm - from LeetCode to production!"""
+        """Floyd's cycle detection - classic linked list safety technique.
+        
+        Note: Real Git prevents cycles via content-addressing (commit hash
+        includes parent hash), but this pattern applies to any graph traversal.
+        """
         if not self._head:
             return
         
@@ -383,7 +393,7 @@ class ProductionGit(DocumentedGit):
         # with SHA-1 hash as filename, then pack into packfiles
         current = self._head
         while current:
-            # Compute object hash (simplified - real Git uses SHA-1 of content)
+            # Compute object hash (simplified - real Git uses content hash: historically SHA-1, newer repos support SHA-256)
             content = f"{current.message}\n{current.timestamp}\n"
             if current.parent:
                 parent_content = f"{current.parent.message}\n{current.parent.timestamp}\n"
@@ -488,11 +498,11 @@ class ProductionGit(DocumentedGit):
 
 **Production Improvements Over Pickle:**
 
-1. **Content-addressed storage:** Each commit's hash is derived from its content
+1. **Content-addressed storage:** Each commit's hash is derived from its content (same content = same hash = stored once)
 2. **Compression:** Uses zlib (same as real Git) for space efficiency
-3. **Idempotent writes:** Won't re-write existing objects
-4. **Git-compatible structure:** Objects stored in `.git/objects/ab/cdef123...`
-5. **Delta compression ready:** Structure supports packfile optimization
+3. **Delta compression ready:** Objects are content-addressed, then compressed and delta-packed in packfiles for additional storage efficiency
+4. **Idempotent writes:** Won't re-write existing objects
+5. **Git-compatible structure:** Objects stored in `.git/objects/ab/cdef123...`
 
 ---
 
@@ -630,6 +640,9 @@ feature:              X → Y → Z (1M commits)
 # Question: Find commit B (the merge base)
 # Constraint: Must complete in < 100ms
 # Our current approach: O(n) traversal → 30+ seconds
+#
+# Note: Indexes (commit-graph, bitmap indexes) reduce most common
+# traversals from seconds to milliseconds—but worst-case walks still exist.
 ```
 
 **This is where LeetCode #160 enters production.**

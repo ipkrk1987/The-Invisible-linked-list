@@ -247,16 +247,20 @@
         <section>
           <h2>Prologue: Setting the Stage</h2>
           <blockquote style="font-size:1.3em;color:#4facfe;">
-            "Every time you type <code>git commit</code>, you're walking a linked list."
+            "Every time you type <code>git log</code>, you're walking a linked-list-like parent chain."
           </blockquote>
+          <p style="font-size:0.75em; opacity:0.8; margin-top:20px;">
+            <em>The full repository history is a DAG (Directed Acyclic Graph) — we'll explore merge commits in Episode 2.</em>
+          </p>
         </section>
         <section>
           <div class="act-intro">
             Welcome! Today, we'll journey from a simple interview question to the heart of Git's engineering magic.<br><br>
-            Along the way, you'll see how a humble linked list becomes the backbone of a world-class version control system.<br><br>
+            When you run <code>git log &lt;branch&gt;</code>, Git walks a linked-list-like parent chain.
+            The full history is a DAG, which we'll explore when we talk about merge-base.<br><br>
             <em style="color:#facc15;">Ready to discover the hidden layers beneath your code?</em>
           </div>
-          <aside class="notes">This is the hook: everything in Git is a linked list!</aside>
+          <aside class="notes">Key distinction: branch walk is linked-list-like, full history is a DAG with multiple parents at merge commits.</aside>
         </section>
       </section>
 
@@ -313,7 +317,7 @@ class MiniGit:
               <div class="stat-value">O(n)</div>
             </div>
             <div class="stat-card">
-              <div class="stat-label">Space</div>
+              <div class="stat-label">Traversal Space</div>
               <div class="stat-value">O(1)</div>
             </div>
             <div class="stat-card">
@@ -321,7 +325,10 @@ class MiniGit:
               <div class="stat-value">15</div>
             </div>
           </div>
-          <aside class="notes">Simple, elegant, and efficient. This is the foundation we'll build on.</aside>
+          <p style="font-size:0.7em; opacity:0.8; margin-top:15px;">
+            <em>Traversal uses O(1) extra memory; storing the full history is O(n).</em>
+          </p>
+          <aside class="notes">Simple, elegant, and efficient. Note the distinction: iterator is O(1), but if you materialize all commits, that's O(n).</aside>
         </section>
         <section>
           <h3>🔗 How <code>git log</code> Works</h3>
@@ -486,6 +493,9 @@ class MiniGit:
             <strong>The Core Insight:</strong> Git doesn't store files by name—it stores by <em>content hash</em>.<br><br>
             If you commit the same <code>README.md</code> 1000 times across branches, Git stores it <strong>once</strong>.
           </p>
+          <p style="font-size:0.75em; opacity:0.8; margin-top:20px;">
+            <em>Objects are content-addressed, then compressed and delta-packed for additional storage efficiency.</em>
+          </p>
         </section>
         <section>
           <div class="feynman-why">
@@ -526,10 +536,11 @@ class MiniGit:
             <div class="comparison-side production">
               <div class="comparison-title" style="color:#3ec6a8;">✓ Content-Addressable</div>
               <ul>
-                <li>Store by SHA-1 hash</li>
+                <li>Store by content hash*</li>
                 <li>Same content = single blob</li>
                 <li>1000 READMEs = 1x storage</li>
               </ul>
+              <p style="font-size:0.6em; opacity:0.7; margin-top:8px;">*Historically SHA-1, newer repos support SHA-256</p>
             </div>
           </div>
         </section>
@@ -562,19 +573,19 @@ print(len(store.objects))  # Output: 1 (not 1000!)</code></pre>
       <section>
         <section>
           <h2>Act 3: Scale Break #2</h2>
-          <h3 style="color:#ef4444;">Corruption & Cycles 🔄</h3>
+          <h3 style="color:#ef4444;">Structural Integrity 🔄</h3>
         </section>
         <section>
           <div class="scale-break">
-            <strong>⚠️ The Problem</strong><br>
-            Disk corruption or malicious edits can create cycles in commit history.<br>
-            Without detection, <code>git log</code> runs forever, consuming infinite memory.
+            <strong>⚠️ The Engineering Lesson</strong><br>
+            In naive linked list implementations, cycles can cause infinite loops.<br>
+            Git avoids this <em>structurally</em>: commit hashes include parent hashes, making cycles impossible without breaking hash integrity.
           </div>
         </section>
         <section>
           <div class="feynman-why">
-            <strong>Why does this matter?</strong><br>
-            A single bad pointer can bring down your repo. Cycle detection is a real-world safeguard, not just a coding trick.
+            <strong>Why learn cycle detection anyway?</strong><br>
+            It's a classic linked-list safety technique. Git enforces the DAG invariant via content-addressing, but the <em>engineering lesson</em> is universal: <strong>never trust pointer structures blindly</strong>.
           </div>
         </section>
         <section>
@@ -590,8 +601,9 @@ print(len(store.objects))  # Output: 1 (not 1000!)</code></pre>
         </section>
         <section>
           <h3>Floyd's Cycle Detection</h3>
-          <p style="font-size:0.85em;">Two pointers (slow/fast). Slow moves 1 step, fast moves 2 steps. If they meet → cycle exists.</p>
-          <pre><code class="language-python">def validate_no_cycles(head):
+          <p style="font-size:0.85em;">Classic algorithm: Two pointers (slow/fast). If they meet → cycle exists.</p>
+          <pre><code class="language-python"># Classic cycle detection for any linked structure
+def validate_no_cycles(head):
     if not head:
         return True
     
@@ -604,7 +616,10 @@ print(len(store.objects))  # Output: 1 (not 1000!)</code></pre>
         if slow is fast:
             raise SystemError("Cycle detected!")
     
-    return True  # No cycle found</code></pre>
+    return True  # No cycle found
+
+# Note: Git prevents cycles via content-addressing,
+# but this pattern applies to any graph traversal</code></pre>
         </section>
         <section>
           <h3>Production Implementation</h3>
@@ -639,14 +654,15 @@ print(len(store.objects))  # Output: 1 (not 1000!)</code></pre>
         <section>
           <div class="scale-break">
             <strong>⚠️ The Problem</strong><br>
-            Without memory limits, <code>git log --all</code> on huge repos loads entire history into RAM.<br>
+            Naive tools that materialize commit lists into memory will OOM on large repos.<br>
             100K commits × 10KB = 1GB RAM. 10M commits = system crash.
           </div>
         </section>
         <section>
           <div class="feynman-why">
             <strong>Why does this matter?</strong><br>
-            If you don't control memory, your code won't scale. This is the difference between a toy and a tool used by millions.
+            Git avoids this by streaming traversal and using precomputed commit-graphs.<br>
+            If <em>you</em> build tools on Git, you need the same discipline — or your code won't scale.
           </div>
         </section>
         <section>
@@ -784,7 +800,8 @@ print(len(store.objects))  # Output: 1 (not 1000!)</code></pre>
         <section>
           <div class="feynman-why">
             <strong>Why does this matter?</strong><br>
-            Speed isn't just about user experience—it's about making large-scale collaboration possible.
+            Indexes reduce most common traversals from seconds to milliseconds.<br>
+            <em>But worst-case walks still exist</em> — commit-graph helps some queries, bitmap indexes help reachability, yet pathological cases remain.
           </div>
         </section>
         <section>
@@ -907,7 +924,7 @@ def find_object_binary(idx_file, target_hash):
             The algorithm is just the beginning. Production systems require:<br><br>
             <strong style="color:#667eea;">Persistence</strong> — Content-addressable storage with atomic writes<br>
             <strong style="color:#764ba2;">Memory</strong> — Delta compression and packfiles<br>
-            <strong style="color:#f093fb;">Corruption</strong> — Floyd's cycle detection and invariant checking<br>
+            <strong style="color:#f093fb;">Integrity</strong> — Structural guarantees via content-addressing<br>
             <strong style="color:#4facfe;">Speed</strong> — Binary search indexes for O(log n) lookups
           </p>
         </section>
@@ -944,8 +961,8 @@ def find_object_binary(idx_file, target_hash):
         </section>
         <section>
           <p class="act-intro" style="font-size:1em;">
-            From a simple linked list to a system used by 100 million developers.<br><br>
-            <strong>The invisible linked list</strong> is everywhere—in every commit, every branch, every merge.<br><br>
+            From a simple linked list traversal to a system used by 100 million developers.<br><br>
+            <strong>The parent-pointer chain</strong> is everywhere—in every <code>git log</code>, every branch walk, every bisect.<br><br>
             <em style="color:#4facfe;">Now you see it. Now you understand it.</em>
           </p>
         </section>
@@ -953,7 +970,7 @@ def find_object_binary(idx_file, target_hash):
           <h3>What's Next?</h3>
           <p class="act-intro">
             <strong>Episode 2:</strong> The Invisible Tree — How Git stores your entire codebase<br>
-            <strong>Episode 3:</strong> The Invisible Graph — Branches, merges, and DAGs<br>
+            <strong>Episode 3:</strong> The Invisible Graph — Branches, merges, and the full DAG<br>
             <strong>Episode 4:</strong> The Invisible Network — Distributed systems and sync
           </p>
         </section>
