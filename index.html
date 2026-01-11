@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>From LeetCode to Production</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+        }
+        .container {
+            text-align: center;
+            padding: 40px;
+            max-width: 800px;
+        }
+        h1 {
+            font-size: 3em;
+            margin-bottom: 10px;
+            background: linear-gradient(90deg, #4facfe, #00f2fe);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .subtitle {
+            font-size: 1.4em;
+            opacity: 0.8;
+            margin-bottom: 50px;
+        }
+        .episodes {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            margin-top: 40px;
+        }
+        .episode-card {
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 16px;
+            padding: 30px;
+            text-decoration: none;
+            color: #fff;
+            transition: all 0.3s ease;
+            display: block;
+        }
+        .episode-card:hover {
+            background: rgba(79, 172, 254, 0.2);
+            border-color: #4facfe;
+            transform: translateY(-5px);
+            box-shadow: 0 10px 40px rgba(79, 172, 254, 0.3);
+        }
+        .episode-card h2 {
+            font-size: 1.5em;
+            margin-bottom: 10px;
+            color: #4facfe;
+        }
+        .episode-card p {
+            opacity: 0.8;
+            line-height: 1.6;
+        }
+        .badge {
+            display: inline-block;
+            background: linear-gradient(90deg, #4facfe, #00f2fe);
+            color: #000;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.8em;
+            font-weight: bold;
+            margin-top: 15px;
+        }
+        .version-links {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-top: 20px;
+        }
+        .version-link {
+            padding: 10px 20px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+        .version-link.primary {
+            background: linear-gradient(90deg, #4facfe, #00f2fe);
+            color: #000;
+        }
+        .version-link.secondary {
+            background: rgba(255,255,255,0.1);
+            color: #fff;
+            border: 1px solid rgba(255,255,255,0.3);
+        }
+        .version-link:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(79, 172, 254, 0.4);
+        }
+        .footer {
+            margin-top: 60px;
+            opacity: 0.6;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔗 From LeetCode to Production</h1>
+        <p class="subtitle">How interview algorithms become real-world systems</p>
+        
+        <div class="episodes">
+            <div class="episode-card">
+                <h2>Episode 1: The Invisible Linked List</h2>
+                <p>
+                    Discover how a simple LeetCode problem becomes the backbone of Git—
+                    the version control system used by 100 million developers worldwide.
+                    Journey through scale breaks, compression, cycle detection, and more.
+                </p>
+                <span class="badge">✨ Interactive Animations</span>
+                
+                <div class="version-links">
+                    <a href="episode1_revealjs.html" class="version-link primary">
+                        📊 Slide Presentation
+                    </a>
+                    <a href="episode1_animations.html" class="version-link secondary">
+                        🎬 Full Animation Version
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p>Use arrow keys to navigate slides • Press S for speaker notes • Press F for fullscreen</p>
+        </div>
+    </div>
+</body>
+</html>
