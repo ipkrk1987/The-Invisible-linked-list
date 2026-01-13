@@ -1,0 +1,2038 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Episode 2: Finding the Merge Base</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js/dist/reveal.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js/dist/theme/black.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js/plugin/highlight/monokai.css">
+  <style>
+    .reveal { font-family: 'Segoe UI', 'Arial', sans-serif; }
+    .reveal h1, .reveal h2, .reveal h3 { text-transform: none; }
+    .feynman-why {
+      background: rgba(255,255,200,0.95);
+      border-left: 6px solid #facc15;
+      border-radius: 10px;
+      margin: 24px auto;
+      padding: 18px 22px;
+      font-size: 0.85em;
+      box-shadow: 0 2px 12px 0 rgba(250,204,21,0.20);
+      color: #7c4700;
+      max-width: 85%;
+      text-align: left;
+    }
+    .scale-break {
+      background: rgba(255,245,230,0.95);
+      border-left: 6px solid #f59e42;
+      border-radius: 10px;
+      margin: 18px auto;
+      padding: 16px 22px;
+      font-size: 0.85em;
+      box-shadow: 0 2px 12px 0 rgba(245,158,66,0.15);
+      color: #7c4700;
+      max-width: 85%;
+      text-align: left;
+    }
+    .comparison {
+      display: flex;
+      gap: 20px;
+      justify-content: center;
+      margin: 20px 0;
+      font-size: 0.7em;
+    }
+    .comparison-side {
+      padding: 18px;
+      border-radius: 10px;
+      width: 45%;
+      text-align: left;
+    }
+    .comparison-side.naive {
+      background: rgba(255,100,100,0.15);
+      border: 2px solid #f5576c;
+    }
+    .comparison-side.production {
+      background: rgba(100,255,200,0.15);
+      border: 2px solid #3ec6a8;
+    }
+    .comparison-title {
+      font-weight: bold;
+      margin-bottom: 12px;
+      font-size: 1.1em;
+    }
+    .stats-row {
+      display: flex;
+      gap: 20px;
+      justify-content: center;
+      margin: 20px 0;
+    }
+    .stat-card {
+      background: rgba(255,255,255,0.1);
+      border-radius: 10px;
+      padding: 15px 25px;
+      text-align: center;
+    }
+    .stat-value {
+      font-size: 1.8em;
+      font-weight: bold;
+      color: #4facfe;
+    }
+    .stat-label {
+      font-size: 0.75em;
+      opacity: 0.8;
+    }
+    .reveal pre {
+      font-size: 0.55em;
+      width: 90%;
+      margin: 0 auto;
+    }
+    .reveal pre code {
+      max-height: 400px;
+    }
+    .act-intro {
+      font-size: 0.9em;
+      opacity: 0.9;
+      max-width: 80%;
+      margin: 0 auto;
+      line-height: 1.6;
+    }
+    blockquote {
+      font-style: italic;
+      border-left: 4px solid #4facfe;
+      padding-left: 20px;
+      margin: 20px auto;
+      max-width: 80%;
+    }
+    /* Animation Canvas Styles */
+    .animation-canvas {
+      width: 90%;
+      height: 280px;
+      background: rgba(255,255,255,0.08);
+      border-radius: 12px;
+      position: relative;
+      overflow: hidden;
+      margin: 15px auto;
+      border: 1px solid rgba(255,255,255,0.15);
+    }
+    .control-panel {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      margin: 15px 0;
+      flex-wrap: wrap;
+    }
+    .btn {
+      padding: 8px 18px;
+      background: rgba(79, 172, 254, 0.2);
+      border: 1.5px solid #4facfe;
+      border-radius: 8px;
+      color: #4facfe;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+      transition: all 0.2s ease;
+    }
+    .btn:hover {
+      background: rgba(79, 172, 254, 0.35);
+      transform: translateY(-1px);
+    }
+    .btn.secondary {
+      background: rgba(245, 158, 66, 0.2);
+      border-color: #f59e42;
+      color: #f59e42;
+    }
+    .btn.secondary:hover {
+      background: rgba(245, 158, 66, 0.35);
+    }
+    .btn.success {
+      background: rgba(62, 198, 168, 0.2);
+      border-color: #3ec6a8;
+      color: #3ec6a8;
+    }
+    .btn.success:hover {
+      background: rgba(62, 198, 168, 0.35);
+    }
+    .btn.danger {
+      background: rgba(245, 87, 108, 0.2);
+      border-color: #f5576c;
+      color: #f5576c;
+    }
+    .btn.danger:hover {
+      background: rgba(245, 87, 108, 0.35);
+    }
+    /* Performance Table */
+    .perf-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 20px 0;
+      font-size: 0.8em;
+    }
+    .perf-table th, .perf-table td {
+      padding: 12px;
+      text-align: left;
+      border-bottom: 1px solid rgba(255,255,255,0.2);
+    }
+    .perf-table th {
+      background: rgba(79, 172, 254, 0.2);
+      font-weight: bold;
+    }
+    .perf-table tr:hover {
+      background: rgba(255,255,255,0.05);
+    }
+    /* Storage Layer Visualization */
+    .storage-layer {
+      background: rgba(255,255,255,0.1);
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 8px;
+      padding: 10px;
+      margin: 8px 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.8em;
+    }
+    .storage-layer.fast {
+      border-color: #3ec6a8;
+      background: rgba(62, 198, 168, 0.1);
+    }
+    .storage-layer.slow {
+      border-color: #f5576c;
+      background: rgba(245, 87, 108, 0.1);
+    }
+    .latency-badge {
+      background: rgba(255,255,255,0.2);
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 0.9em;
+      font-weight: bold;
+    }
+    /* Bloom Filter Bits */
+    .bloom-bits {
+      display: grid;
+      grid-template-columns: repeat(16, 1fr);
+      gap: 2px;
+      margin: 10px 0;
+      max-width: 400px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    .bit {
+      width: 20px;
+      height: 20px;
+      border: 1px solid rgba(255,255,255,0.3);
+      border-radius: 3px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      transition: all 0.3s ease;
+    }
+    .bit.set {
+      background: #4facfe;
+      color: #000;
+      border-color: #4facfe;
+    }
+    .bit.highlight {
+      box-shadow: 0 0 10px #facc15;
+      border-color: #facc15;
+    }
+    /* Architecture Layers */
+    .arch-layer {
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 8px;
+      padding: 12px;
+      margin: 4px 0;
+      text-align: center;
+      transition: all 0.5s ease;
+      opacity: 0.3;
+    }
+    .arch-layer.active {
+      opacity: 1;
+      background: rgba(79, 172, 254, 0.1);
+      border-color: #4facfe;
+    }
+    .layer-title {
+      font-weight: bold;
+      color: #4facfe;
+      margin-bottom: 4px;
+    }
+    .layer-desc {
+      font-size: 0.8em;
+      opacity: 0.8;
+    }
+  </style>
+</head>
+<body>
+  <div class="reveal">
+    <div class="slides">
+
+      <!-- ============ TITLE ============ -->
+      <section>
+        <h1>🔗 Finding the Merge Base</h1>
+        <p style="font-size:1.2em;opacity:0.8;">From LeetCode #160 to 100M Commits</p>
+        <p style="font-size:0.9em;color:#4facfe;">Episode 2: The Invisible Linked List</p>
+        <aside class="notes">Welcome to Episode 2! Every git merge solves a graph problem. Today we'll see how it scales from textbook to production.</aside>
+      </section>
+
+      <!-- ============ ACT 1: Problem Statement ============ -->
+      <section>
+        <section>
+          <h2>Opening Hook</h2>
+          <blockquote style="font-size:1.1em;color:#4facfe;">
+            "Every time you run <code>git merge main</code>, Git solves a graph theory problem that would take 50 seconds with a naive algorithm. At Google scale, that same problem spans 100 million commits. It still completes in under 200ms. Let's see how."
+          </blockquote>
+          <aside class="notes">This is our hook - we're going from textbook algorithms to hyperscale production systems.</aside>
+        </section>
+
+        <section>
+          <h3>What Git Actually Does</h3>
+          <div style="text-align:left; max-width:80%; margin:0 auto;">
+            <p><strong>You run:</strong> <code style="color:#4facfe;">git merge main</code></p>
+            <br>
+            <p><strong>Git does:</strong></p>
+            <ol style="line-height:1.8;">
+              <li><span style="color:#facc15;">Find merge-base</span> (common ancestor) <strong>← TODAY'S FOCUS</strong></li>
+              <li>Three-way diff: base → yours, base → theirs</li>
+              <li>Combine changes, flag conflicts</li>
+              <li>Create merge commit</li>
+            </ol>
+          </div>
+          <p style="margin-top:30px;"><strong style="color:#f59e42;">Key point:</strong> Without the merge base, Git can't tell the difference between a change and a deletion.</p>
+          <aside class="notes">The merge-base is step 1 of every merge. Everything else depends on it.</aside>
+        </section>
+
+        <section>
+          <h3>The DAG Reality</h3>
+          <div class="animation-canvas" id="canvas-dag"></div>
+          <div class="control-panel">
+            <button class="btn" onclick="dagAnim.showLinkedList()">Show Linked List</button>
+            <button class="btn secondary" onclick="dagAnim.revealDAG()">Reveal DAG</button>
+            <button class="btn warning" onclick="dagAnim.highlightMergeBase()">Highlight Merge-Base</button>
+            <button class="btn" onclick="dagAnim.reset()">Reset</button>
+          </div>
+          <p style="font-size:0.75em; margin-top:15px;">
+            <em>Git's history is a <strong>DAG</strong> (Directed Acyclic Graph), not a simple linked list. But when walking a single branch, we traverse a linked-list-like parent chain.</em>
+          </p>
+          <aside class="notes">This earns credibility immediately - we acknowledge the DAG structure while showing how branch walks are linked-list-like.</aside>
+        </section>
+
+        <section>
+          <h3>Why Merge Base Matters</h3>
+          <div style="font-size:0.8em; text-align:left; max-width:85%; margin:0 auto;">
+            <div style="background:rgba(255,255,255,0.1); padding:20px; border-radius:8px; margin:10px 0;">
+              <strong style="color:#4facfe;">Base (merge-base):</strong> <code>"hello world"</code>
+            </div>
+            <div style="background:rgba(245,158,66,0.1); padding:20px; border-radius:8px; margin:10px 0;">
+              <strong style="color:#f59e42;">Theirs (main):</strong> <code>"hello beautiful world"</code> <span style="color:#3ec6a8;">← added "beautiful"</span>
+            </div>
+            <div style="background:rgba(62,198,168,0.1); padding:20px; border-radius:8px; margin:10px 0;">
+              <strong style="color:#3ec6a8;">Ours (feature):</strong> <code>"hello world!"</code> <span style="color:#f59e42;">← added "!"</span>
+            </div>
+            <div style="background:rgba(250,204,21,0.1); padding:20px; border-radius:8px; margin:10px 0;">
+              <strong style="color:#facc15;">Result:</strong> <code>"hello beautiful world!"</code> <span style="color:#4facfe;">← both changes merged!</span>
+            </div>
+          </div>
+          <div class="feynman-why" style="margin-top:20px;">
+            <strong>Without merge base:</strong> You'd have to manually compare every line. Conflicts become unsolvable.
+          </div>
+          <aside class="notes">This shows why merge-base isn't just academic - it's essential for three-way merging.</aside>
+        </section>
+      </section>
+
+      <!-- ============ ACT 2: The LeetCode Foundation ============ -->
+      <section>
+        <section>
+          <h2>Act 2: The LeetCode Foundation</h2>
+          <h3>LeetCode #160 — Intersection of Two Linked Lists</h3>
+          <div class="animation-canvas" id="canvas-intersection"></div>
+          <div class="control-panel">
+            <button class="btn" onclick="intersectionAnim.createLists()">Create Lists</button>
+            <button class="btn secondary" onclick="intersectionAnim.highlightIntersection()">Show Intersection</button>
+            <button class="btn" onclick="intersectionAnim.reset()">Reset</button>
+          </div>
+          <p class="act-intro">
+            This is <em>exactly</em> the merge-base problem! Two branches that diverged from a common commit share a "tail" of history.
+          </p>
+          <aside class="notes">The connection: Git commits form linked lists through parent pointers. Finding merge-base = finding intersection.</aside>
+        </section>
+
+        <section>
+          <h3>The Naive O(n²) Approach</h3>
+          <pre><code class="language-python"># For each node in A, check every node in B
+def find_intersection_naive(headA, headB):
+    currentA = headA
+    while currentA:
+        currentB = headB
+        while currentB:                    # Inner loop!
+            if currentA is currentB:
+                return currentA
+            currentB = currentB.next
+        currentA = currentA.next
+    return None
+
+# 100K commits × 50K commits = 5 billion comparisons
+# At 10 nanoseconds each = 50 seconds. UNACCEPTABLE.</code></pre>
+          <div class="stats-row" style="margin-top:20px;">
+            <div class="stat-card">
+              <div class="stat-label">Time Complexity</div>
+              <div class="stat-value" style="color:#f5576c;">O(n²)</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">100K commits</div>
+              <div class="stat-value" style="color:#f5576c;">50 sec</div>
+            </div>
+          </div>
+          <aside class="notes">This is the brute force approach. Notice it's quadratic - that's death at scale.</aside>
+        </section>
+
+        <section>
+          <h3>The Elegant O(n+m) Solution</h3>
+          <div class="animation-canvas" id="canvas-alignment"></div>
+          <div class="control-panel">
+            <button class="btn" onclick="alignmentAnim.measureLengths()">1. Measure Lengths</button>
+            <button class="btn secondary" onclick="alignmentAnim.alignPointers()">2. Align Pointers</button>
+            <button class="btn success" onclick="alignmentAnim.walkTogether()">3. Walk Together</button>
+            <button class="btn" onclick="alignmentAnim.reset()">Reset</button>
+          </div>
+          <aside class="notes">Watch the three phases: measure, align, walk. This is the algorithmic breakthrough.</aside>
+        </section>
+
+        <section>
+          <h3>The Code</h3>
+          <pre><code class="language-python">def find_intersection_aligned(headA, headB):
+    """O(n+m) time, O(1) space - the elegant solution."""
+    # Step 1: Measure lengths
+    lenA = get_length(headA)  # O(n)
+    lenB = get_length(headB)  # O(m)
+    
+    # Step 2: Align starting points
+    if lenA > lenB:
+        headA = skip_nodes(headA, lenA - lenB)
+    else:
+        headB = skip_nodes(headB, lenB - lenA)
+    
+    # Step 3: Walk together until they meet
+    while headA and headB:
+        if headA is headB:
+            return headA  # Found intersection!
+        headA = headA.next
+        headB = headB.next
+    
+    return None</code></pre>
+          <div class="feynman-why" style="margin-top:15px;">
+            <strong>Key insight:</strong> If lists share a tail, aligning them by length puts both pointers equidistant from intersection.
+          </div>
+        </section>
+
+        <section>
+          <h3>Algorithmic Victory!</h3>
+          <table class="perf-table">
+            <thead>
+              <tr>
+                <th>Metric</th>
+                <th>Naive O(n²)</th>
+                <th>Aligned Walk</th>
+                <th>Improvement</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>Time Complexity</strong></td>
+                <td style="color:#f5576c;">O(n × m)</td>
+                <td style="color:#3ec6a8;">O(n + m)</td>
+                <td style="color:#facc15;">Linear!</td>
+              </tr>
+              <tr>
+                <td><strong>Space Complexity</strong></td>
+                <td>O(1)</td>
+                <td>O(1)</td>
+                <td>Same</td>
+              </tr>
+              <tr>
+                <td><strong>100K commits</strong></td>
+                <td style="color:#f5576c;">50 seconds</td>
+                <td style="color:#3ec6a8;">150 ms</td>
+                <td style="color:#facc15;">333x faster</td>
+              </tr>
+            </tbody>
+          </table>
+          <p style="margin-top:20px;"><strong style="color:#f59e42;">But production has complications...</strong></p>
+          <aside class="notes">We've achieved algorithmic efficiency, but real Git has storage, distribution, and scale challenges.</aside>
+        </section>
+      </section>
+
+      <!-- ============ ACT 3: Scale Break #1 - Storage Reality ============ -->
+      <section>
+        <section>
+          <h2>Act 3: Scale Break #1</h2>
+          <h3>The Storage Reality</h3>
+          <div class="git-repo">
+            🔍 Linux Kernel Repository
+            <div class="git-stats">
+              <span>1.2M commits</span>
+              <span>76K contributors</span>
+              <span>30-year history</span>
+            </div>
+          </div>
+          <div class="storage-hierarchy">
+            <div class="storage-layer" style="background:#2d5d31;">RAM: 200ms</div>
+            <div class="storage-layer" style="background:#5d4d2d;">SSD: 2ms</div>
+            <div class="storage-layer" style="background:#5d2d2d;">Network: 20-100ms</div>
+          </div>
+          <p class="scale-warning">
+            <strong>Reality check:</strong> Commits aren't in memory. They're scattered across storage hierarchy.
+          </p>
+          <aside class="notes">The algorithmic solution assumes O(1) node access. In Git, each "node access" might be a disk read.</aside>
+        </section>
+
+        <section>
+          <h3>Hidden Disk I/O Costs</h3>
+          <div class="animation-canvas" id="canvas-diskaccess"></div>
+          <div class="control-panel">
+            <button class="btn" onclick="diskAnim.showNavigation()">Show Navigation</button>
+            <button class="btn secondary" onclick="diskAnim.highlightDisk()">Highlight Disk Reads</button>
+            <button class="btn warning" onclick="diskAnim.countOperations()">Count I/O</button>
+            <button class="btn" onclick="diskAnim.reset()">Reset</button>
+          </div>
+          <div class="disk-counter" id="disk-counter" style="display:none;">
+            <strong>Disk Reads:</strong> <span id="read-count">0</span>
+            <div class="cost-breakdown">
+              Each commit: ~4KB • SSD latency: ~0.1ms • Network: ~50ms
+            </div>
+          </div>
+          <aside class="notes">Watch the red flashes - each is a potential disk read. In distributed Git, that could be network fetch.</aside>
+        </section>
+
+        <section>
+          <h3>The Performance Cliff</h3>
+          <table class="perf-table">
+            <thead>
+              <tr>
+                <th>Scenario</th>
+                <th>Commits Touched</th>
+                <th>Local SSD</th>
+                <th>Network Fetch</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>LeetCode ideal</strong></td>
+                <td>10-20 nodes</td>
+                <td style="color:#3ec6a8;">2ms</td>
+                <td style="color:#3ec6a8;">10ms</td>
+              </tr>
+              <tr>
+                <td><strong>Feature branch</strong></td>
+                <td>50-200 commits</td>
+                <td style="color:#facc15;">20ms</td>
+                <td style="color:#facc15;">2 seconds</td>
+              </tr>
+              <tr>
+                <td><strong>Release branch</strong></td>
+                <td>1,000-5,000</td>
+                <td style="color:#f59e42;">500ms</td>
+                <td style="color:#f59e42;">4 minutes</td>
+              </tr>
+              <tr>
+                <td><strong>Ancient history</strong></td>
+                <td>50,000+</td>
+                <td style="color:#f5576c;">5 seconds</td>
+                <td style="color:#f5576c;">45 minutes</td>
+              </tr>
+            </tbody>
+          </table>
+          <p style="margin-top:20px; color:#f5576c;">
+            <strong>Scale breaks the algorithm!</strong> Network latency dominates.
+          </p>
+          <aside class="notes">This is where theoretical computer science meets systems engineering. Network makes linear search prohibitive.</aside>
+        </section>
+
+        <section>
+          <h3>Solution: Batched I/O + Bidirectional BFS</h3>
+          <div class="animation-canvas" id="canvas-bidirectional"></div>
+          <div class="control-panel">
+            <button class="btn" onclick="bidirectionalAnim.startSearch()">Start Search</button>
+            <button class="btn secondary" onclick="bidirectionalAnim.showFronts()">Show Fronts</button>
+            <button class="btn success" onclick="bidirectionalAnim.meetInMiddle()">Meet in Middle</button>
+            <button class="btn" onclick="bidirectionalAnim.reset()">Reset</button>
+          </div>
+          <div class="approach-comparison">
+            <div class="approach">
+              <h4>Linear Traversal</h4>
+              <div class="approach-stats">Path length: n steps</div>
+            </div>
+            <div class="approach">
+              <h4>Bidirectional BFS</h4>
+              <div class="approach-stats">Path length: √n steps</div>
+            </div>
+          </div>
+          <aside class="notes">Two pointers explore simultaneously, meeting in the middle. Plus batch disk reads for each "front".</aside>
+        </section>
+
+        <section>
+          <h3>Engineering Win</h3>
+          <div class="feynman-why">
+            <strong>Why bidirectional search works:</strong>
+            <br>If branches diverged D commits ago, linear search touches ~D commits.
+            <br>Bidirectional search touches ~√D commits.
+            <br>For 10,000 commit divergence: 10,000 vs 100 commits!
+          </div>
+          <table class="perf-table" style="margin-top:20px;">
+            <thead>
+              <tr>
+                <th>Divergence</th>
+                <th>Linear Walk</th>
+                <th>Bidirectional</th>
+                <th>Network Savings</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>100 commits</td>
+                <td>100 reads</td>
+                <td style="color:#3ec6a8;">20 reads</td>
+                <td style="color:#3ec6a8;">80% less</td>
+              </tr>
+              <tr>
+                <td>1,000 commits</td>
+                <td>1,000 reads</td>
+                <td style="color:#3ec6a8;">64 reads</td>
+                <td style="color:#3ec6a8;">94% less</td>
+              </tr>
+              <tr>
+                <td>10,000 commits</td>
+                <td>10,000 reads</td>
+                <td style="color:#3ec6a8;">200 reads</td>
+                <td style="color:#3ec6a8;">98% less</td>
+              </tr>
+            </tbody>
+          </table>
+          <p style="margin-top:15px; color:#f59e42;"><strong>But this is still not enough for hyperscale...</strong></p>
+          <aside class="notes">Bidirectional search + batching gets us far, but repositories with millions of commits need precomputation.</aside>
+        </section>
+      </section>
+
+      <!-- ============ ACT 4: Scale Break #2 - Commit-Graph ============ -->
+      <section>
+        <section>
+          <h2>Act 4: Scale Break #2</h2>
+          <h3>The Commit-Graph Revolution</h3>
+          <div class="git-architecture">
+            <div class="arch-layer">
+              <div class="layer-title">⚡ commit-graph</div>
+              <div class="layer-desc">Precomputed ancestry metadata</div>
+            </div>
+            <div class="arch-layer">
+              <div class="layer-title">📊 Generation Numbers</div>
+              <div class="layer-desc">O(1) reachability checks</div>
+            </div>
+            <div class="arch-layer">
+              <div class="layer-title">💾 Git Objects</div>
+              <div class="layer-desc">Raw commit data</div>
+            </div>
+          </div>
+          <div class="insight-box">
+            <strong>Key insight:</strong> When traversal is expensive, precompute the paths.
+          </div>
+          <aside class="notes">Git 2.18+ has commit-graph: a precomputed index that makes ancestry queries nearly constant time.</aside>
+        </section>
+
+        <section>
+          <h3>Generation Numbers</h3>
+          <div class="animation-canvas" id="canvas-generations"></div>
+          <div class="control-panel">
+            <button class="btn" onclick="generationAnim.buildGraph()">Build Graph</button>
+            <button class="btn secondary" onclick="generationAnim.assignGenerations()">Assign Generations</button>
+            <button class="btn success" onclick="generationAnim.showQuery()">Query Merge-Base</button>
+            <button class="btn" onclick="generationAnim.reset()">Reset</button>
+          </div>
+          <div class="generation-formula">
+            <code>generation[commit] = max(generation[parent]) + 1</code>
+            <br><small>Generation difference bounds maximum distance.</small>
+          </div>
+          <aside class="notes">Each commit gets a generation number. Higher generation = further from root. This enables early pruning.</aside>
+        </section>
+
+        <section>
+          <h3>O(1) Reachability</h3>
+          <pre><code class="language-c">// Before commit-graph: O(n) traversal
+bool can_reach_slow(commit A, commit B) {
+    while (A) {
+        if (A == B) return true;  // Found it!
+        A = A->parent;            // Walk the chain...
+    }
+    return false;
+}
+
+// With generation numbers: O(1) pruning
+bool can_reach_fast(commit A, commit B) {
+    // If B is "further" from root, A can't reach it
+    if (generation[B] > generation[A]) 
+        return false;  // Impossible!
+    
+    // Only now do expensive traversal
+    return can_reach_slow(A, B);
+}</code></pre>
+          <div class="optimization-insight">
+            <strong>90% of queries eliminated</strong> without any traversal!
+          </div>
+          <aside class="notes">Generation numbers provide early exits. Most reachability queries are negative - this catches them immediately.</aside>
+        </section>
+
+        <section>
+          <h3>Performance Transformation</h3>
+          <table class="perf-table">
+            <thead>
+              <tr>
+                <th>Repository</th>
+                <th>Before Commit-Graph</th>
+                <th>After Commit-Graph</th>
+                <th>Speedup</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>Linux Kernel</strong></td>
+                <td>8.2 seconds</td>
+                <td style="color:#3ec6a8;">0.3 seconds</td>
+                <td style="color:#3ec6a8;">27x faster</td>
+              </tr>
+              <tr>
+                <td><strong>Git (self)</strong></td>
+                <td>1.1 seconds</td>
+                <td style="color:#3ec6a8;">0.04 seconds</td>
+                <td style="color:#3ec6a8;">28x faster</td>
+              </tr>
+              <tr>
+                <td><strong>Windows (internal)</strong></td>
+                <td>45 minutes</td>
+                <td style="color:#3ec6a8;">1.8 minutes</td>
+                <td style="color:#3ec6a8;">25x faster</td>
+              </tr>
+            </tbody>
+          </table>
+          <div class="breakthrough-note">
+            <strong>🎯 Achievement unlocked:</strong> Merge-base queries in under 200ms!
+          </div>
+          <aside class="notes">Real-world results from Git commit-graph feature. These are production improvements at Microsoft, GitHub, etc.</aside>
+        </section>
+      </section>
+
+      <!-- ============ ACT 5: The Distributed Challenge ============ -->
+      <section>
+        <section>
+          <h2>Act 5: The Distributed Challenge</h2>
+          <h3>When 100 Million Commits Attack</h3>
+          <div class="hyperscale-stats">
+            <div class="hyperscale-card">
+              <div class="stat-large">100M+</div>
+              <div class="stat-label">commits</div>
+            </div>
+            <div class="hyperscale-card">
+              <div class="stat-large">500GB</div>
+              <div class="stat-label">raw data</div>
+            </div>
+            <div class="hyperscale-card">
+              <div class="stat-large">50K</div>
+              <div class="stat-label">daily commits</div>
+            </div>
+          </div>
+          <div class="distributed-problem">
+            <strong>The problem:</strong> commit-graph works great locally, but distributed systems can't afford to download 500GB for every query.
+          </div>
+          <aside class="notes">Enterprise monorepos hit this scale. Even commit-graph breaks when the graph itself is too big to transfer.</aside>
+        </section>
+
+        <section>
+          <h3>The Memory Wall</h3>
+          <div class="animation-canvas" id="canvas-memory"></div>
+          <div class="control-panel">
+            <button class="btn" onclick="memoryAnim.showFullGraph()">Load Full Graph</button>
+            <button class="btn warning" onclick="memoryAnim.highlightMemory()">Memory Usage</button>
+            <button class="btn secondary" onclick="memoryAnim.showQuery()">Single Query</button>
+            <button class="btn" onclick="memoryAnim.reset()">Reset</button>
+          </div>
+          <div class="memory-stats" id="memory-stats" style="display:none;">
+            <div class="memory-item">
+              <strong>Full commit-graph:</strong> <span style="color:#f5576c;">8GB RAM</span>
+            </div>
+            <div class="memory-item">
+              <strong>Single query needs:</strong> <span style="color:#3ec6a8;">~50KB</span>
+            </div>
+            <div class="memory-ratio">
+              <strong>Efficiency ratio: 1:160,000</strong> — loading entire ocean to find one fish
+            </div>
+          </div>
+          <aside class="notes">Classic distributed systems problem: global state is expensive, but queries are local.</aside>
+        </section>
+
+        <section>
+          <h3>Enter Bloom Filters</h3>
+          <div class="bloom-intro">
+            <div class="algorithm-card">
+              <h4>🎯 Probabilistic Magic</h4>
+              <ul>
+                <li><strong>False positives:</strong> Maybe</li>
+                <li><strong>False negatives:</strong> Never</li>
+                <li><strong>Space usage:</strong> ~10 bits per item</li>
+              </ul>
+            </div>
+          </div>
+          <div class="bloom-insight">
+            <strong>Perfect for ancestry!</strong>
+            <br>"Is commit X an ancestor of Y?" 
+            <br>→ Bloom filter says "definitely NO" or "probably YES"
+          </div>
+          <aside class="notes">Bloom filters give us a compact way to answer "definitely not an ancestor" for most queries.</aside>
+        </section>
+
+        <section>
+          <h3>Bloom Filter in Action</h3>
+          <div class="animation-canvas" id="canvas-bloom"></div>
+          <div class="control-panel">
+            <button class="btn" onclick="bloomAnim.addCommit()">Add Commit</button>
+            <button class="btn secondary" onclick="bloomAnim.queryAncestor()">Query Ancestor</button>
+            <button class="btn warning" onclick="bloomAnim.showFalsePositive()">False Positive</button>
+            <button class="btn" onclick="bloomAnim.reset()">Reset</button>
+          </div>
+          <div class="bloom-bits" id="bloom-bits">
+            <!-- Bits will be rendered here -->
+          </div>
+          <div class="bloom-stats">
+            <div class="bloom-stat">
+              <span class="stat-label">Filter size:</span>
+              <span class="stat-value">2MB</span>
+            </div>
+            <div class="bloom-stat">
+              <span class="stat-label">False positive rate:</span>
+              <span class="stat-value">1%</span>
+            </div>
+            <div class="bloom-stat">
+              <span class="stat-label">Queries eliminated:</span>
+              <span class="stat-value">99%</span>
+            </div>
+          </div>
+          <aside class="notes">Watch the bit flips. Multiple hash functions set multiple bits. Query checks all bits for an item.</aside>
+        </section>
+      </section>
+
+      <!-- ============ ACT 6: Modern Solution Architecture ============ -->
+      <section>
+        <section>
+          <h2>Act 6: Modern Solution</h2>
+          <h3>The Complete Architecture</h3>
+          <div class="architecture-canvas" id="architecture-canvas">
+            <div class="arch-tier" data-tier="client">
+              <div class="tier-label">CLIENT</div>
+              <div class="tier-components">
+                <div class="component">Bloom Filters</div>
+                <div class="component">Local Cache</div>
+              </div>
+            </div>
+            <div class="arch-tier" data-tier="edge">
+              <div class="tier-label">EDGE</div>
+              <div class="tier-components">
+                <div class="component">Commit-Graph</div>
+                <div class="component">Generation Numbers</div>
+              </div>
+            </div>
+            <div class="arch-tier" data-tier="origin">
+              <div class="tier-label">ORIGIN</div>
+              <div class="tier-components">
+                <div class="component">Full Repository</div>
+                <div class="component">Raw Objects</div>
+              </div>
+            </div>
+          </div>
+          <div class="control-panel">
+            <button class="btn" onclick="archAnim.showQuery()">Show Query</button>
+            <button class="btn secondary" onclick="archAnim.filterLevel()">Bloom Filter</button>
+            <button class="btn warning" onclick="archAnim.edgeLevel()">Edge Processing</button>
+            <button class="btn success" onclick="archAnim.fullResult()">Final Result</button>
+            <button class="btn" onclick="archAnim.reset()">Reset</button>
+          </div>
+          <aside class="notes">Three-tier architecture: Bloom filters eliminate 99% of queries, commit-graph handles the rest, origin server for edge cases.</aside>
+        </section>
+
+        <section>
+          <h3>Query Flow</h3>
+          <div class="query-flow">
+            <div class="flow-step">
+              <div class="step-number">1</div>
+              <div class="step-content">
+                <strong>Client Bloom Filter</strong>
+                <br>2MB download, 99% queries eliminated
+              </div>
+              <div class="step-result success">FAST</div>
+            </div>
+            <div class="flow-step">
+              <div class="step-number">2</div>
+              <div class="step-content">
+                <strong>Edge Commit-Graph</strong>
+                <br>50MB download, generation number pruning
+              </div>
+              <div class="step-result warning">MEDIUM</div>
+            </div>
+            <div class="flow-step">
+              <div class="step-number">3</div>
+              <div class="step-content">
+                <strong>Origin Full Traversal</strong>
+                <br>Only for complex cases (0.01% of queries)
+              </div>
+              <div class="step-result error">SLOW</div>
+            </div>
+          </div>
+          <aside class="notes">Tiered fallback: each level handles what the previous couldn't, with exponentially fewer queries.</aside>
+        </section>
+
+        <section>
+          <h3>Performance Vindication</h3>
+          <table class="perf-table">
+            <thead>
+              <tr>
+                <th>Scale</th>
+                <th>Naive Traversal</th>
+                <th>Bidirectional</th>
+                <th>Commit-Graph</th>
+                <th>Bloom + Graph</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>100K commits</strong></td>
+                <td style="color:#f5576c;">50 sec</td>
+                <td style="color:#f59e42;">5 sec</td>
+                <td style="color:#facc15;">200ms</td>
+                <td style="color:#3ec6a8;">50ms</td>
+              </tr>
+              <tr>
+                <td><strong>1M commits</strong></td>
+                <td style="color:#f5576c;">8 min</td>
+                <td style="color:#f59e42;">2 min</td>
+                <td style="color:#facc15;">800ms</td>
+                <td style="color:#3ec6a8;">80ms</td>
+              </tr>
+              <tr>
+                <td><strong>100M commits</strong></td>
+                <td style="color:#f5576c;">20 hours</td>
+                <td style="color:#f5576c;">4 hours</td>
+                <td style="color:#f59e42;">20 sec</td>
+                <td style="color:#3ec6a8;">200ms</td>
+              </tr>
+            </tbody>
+          </table>
+          <div class="victory-banner">
+            <strong>🎯 MISSION ACCOMPLISHED</strong>
+            <br>From 20 hours to 200 milliseconds — 360,000x improvement!
+          </div>
+          <aside class="notes">This is the power of layered optimization: algorithmic + systems + probabilistic data structures.</aside>
+        </section>
+      </section>
+
+      <!-- ============ ACT 7: The Journey Complete ============ -->
+      <section>
+        <section>
+          <h2>Act 7: The Journey</h2>
+          <h3>From LeetCode to Production</h3>
+          <div class="journey-timeline">
+            <div class="timeline-event">
+              <div class="event-marker">🧮</div>
+              <div class="event-content">
+                <h4>LeetCode #160</h4>
+                <p>Elegant O(n+m) algorithm</p>
+              </div>
+            </div>
+            <div class="timeline-event">
+              <div class="event-marker">💾</div>
+              <div class="event-content">
+                <h4>Storage Reality</h4>
+                <p>Disk I/O makes linear search expensive</p>
+              </div>
+            </div>
+            <div class="timeline-event">
+              <div class="event-marker">🔄</div>
+              <div class="event-content">
+                <h4>Bidirectional BFS</h4>
+                <p>√n complexity + batched operations</p>
+              </div>
+            </div>
+            <div class="timeline-event">
+              <div class="event-marker">⚡</div>
+              <div class="event-content">
+                <h4>Commit-Graph</h4>
+                <p>Precomputation eliminates traversal</p>
+              </div>
+            </div>
+            <div class="timeline-event">
+              <div class="event-marker">🌐</div>
+              <div class="event-content">
+                <h4>Distributed Scale</h4>
+                <p>Bloom filters + tiered architecture</p>
+              </div>
+            </div>
+          </div>
+          <aside class="notes">Each step was forced by scale. This is how algorithms evolve from academic to production.</aside>
+        </section>
+
+        <section>
+          <h3>The Engineering Mindset</h3>
+          <div class="mindset-principles">
+            <div class="principle">
+              <div class="principle-icon">📐</div>
+              <div class="principle-content">
+                <h4>Algorithmic Foundation</h4>
+                <p>Master the fundamentals first — O(n+m) beats O(n²)</p>
+              </div>
+            </div>
+            <div class="principle">
+              <div class="principle-icon">⚖️</div>
+              <div class="principle-content">
+                <h4>Systems Thinking</h4>
+                <p>Consider the full stack — storage, network, memory</p>
+              </div>
+            </div>
+            <div class="principle">
+              <div class="principle-icon">📊</div>
+              <div class="principle-content">
+                <h4>Data Structure Innovation</h4>
+                <p>Trade space for time — precomputation wins at scale</p>
+              </div>
+            </div>
+            <div class="principle">
+              <div class="principle-icon">🎯</div>
+              <div class="principle-content">
+                <h4>Probabilistic Optimization</h4>
+                <p>Accept 1% error for 100x performance gain</p>
+              </div>
+            </div>
+          </div>
+          <aside class="notes">These principles apply beyond Git — any system that faces exponential growth needs this thinking.</aside>
+        </section>
+
+        <section>
+          <h3>What We've Built</h3>
+          <div class="final-architecture">
+            <div class="arch-summary">
+              <div class="summary-layer">
+                <strong>Application Layer:</strong> 200ms response time
+              </div>
+              <div class="summary-layer">
+                <strong>Probabilistic Layer:</strong> Bloom filters (99% elimination)
+              </div>
+              <div class="summary-layer">
+                <strong>Graph Layer:</strong> Generation numbers (O(1) pruning)
+              </div>
+              <div class="summary-layer">
+                <strong>Storage Layer:</strong> Commit-graph (precomputed paths)
+              </div>
+              <div class="summary-layer">
+                <strong>Algorithm Layer:</strong> Bidirectional BFS (√n complexity)
+              </div>
+            </div>
+          </div>
+          <div class="achievement-final">
+            <h4>🎯 Achievement: Hyperscale Merge-Base</h4>
+            <p>
+              <strong>100 million commits</strong> → <strong>200 milliseconds</strong>
+              <br><em>The invisible linked list, optimized for production reality.</em>
+            </p>
+          </div>
+          <aside class="notes">Five layers of optimization, each solving the problems the previous layer couldn't handle.</aside>
+        </section>
+
+        <section>
+          <h3>Thank You</h3>
+          <div class="conclusion">
+            <h4>Next Episode: Tree Algorithms in Hyperscale</h4>
+            <p>How B+ trees became LSM trees when databases hit the storage wall</p>
+            
+            <div class="series-info">
+              <strong>LeetCode to Production</strong> — Season 1
+              <br>📧 <a href="mailto:hello@leetcode2production.com">hello@leetcode2production.com</a>
+              <br>🐙 <a href="https://github.com/ipkrk1987/The-Invisible-linked-list">GitHub: The-Invisible-linked-list</a>
+            </div>
+          </div>
+          <div class="final-quote">
+            <blockquote>
+              "Every production system is a LeetCode problem that grew up and met reality."
+            </blockquote>
+          </div>
+          <aside class="notes">The series continues — each episode takes a fundamental algorithm and shows its production evolution.</aside>
+        </section>
+      </section>
+
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/reveal.js@4/dist/reveal.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/reveal.js@4/plugin/notes/notes.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/reveal.js@4/plugin/highlight/highlight.js"></script>
+  
+  <script>
+    // Initialize Reveal.js
+    Reveal.initialize({
+      hash: true,
+      controls: true,
+      progress: true,
+      center: true,
+      transition: 'slide',
+      
+      plugins: [
+        RevealNotes,
+        RevealHighlight
+      ]
+    });
+
+    // Interactive Animation Controllers
+    const intersectionAnim = {
+      canvas: null,
+      ctx: null,
+      listA: null,
+      listB: null,
+      intersection: null,
+      
+      init() {
+        this.canvas = document.getElementById('canvas-intersection');
+        if (!this.canvas) return;
+        this.canvas.innerHTML = '';
+        const canvas = document.createElement('canvas');
+        canvas.width = 600;
+        canvas.height = 200;
+        canvas.style.background = '#1a1a2e';
+        canvas.style.border = '1px solid #16213e';
+        this.canvas.appendChild(canvas);
+        this.ctx = canvas.getContext('2d');
+      },
+      
+      createLists() {
+        this.init();
+        if (!this.ctx) return;
+        
+        // Clear canvas
+        this.ctx.clearRect(0, 0, 600, 200);
+        
+        // Draw feature branch (top)
+        this.ctx.fillStyle = '#3ec6a8';
+        this.ctx.font = '10px monospace';
+        this.ctx.fillText('feature/login:', 10, 30);
+        
+        const featureCommits = ['f1a2b', 'c3d4e', 'a1b2c', 'm5n6o', 'p7q8r'];
+        for (let i = 0; i < 5; i++) {
+          this.ctx.fillStyle = i < 3 ? '#3ec6a8' : '#facc15';
+          this.ctx.fillRect(80 + i * 60, 40, 50, 30);
+          this.ctx.fillStyle = '#1a1a2e';
+          this.ctx.font = '8px monospace';
+          this.ctx.fillText(featureCommits[i], 85 + i * 60, 60);
+          
+          if (i < 4) {
+            this.ctx.strokeStyle = '#3ec6a8';
+            this.ctx.beginPath();
+            this.ctx.moveTo(130 + i * 60, 55);
+            this.ctx.lineTo(140 + i * 60, 55);
+            this.ctx.stroke();
+          }
+        }
+        
+        // Draw main branch (bottom)
+        this.ctx.fillStyle = '#f59e42';
+        this.ctx.font = '10px monospace';
+        this.ctx.fillText('main:', 10, 130);
+        
+        const mainCommits = ['x9y8z', 'w7v6u', 'a1b2c', 'm5n6o'];
+        for (let i = 0; i < 4; i++) {
+          this.ctx.fillStyle = i < 2 ? '#f59e42' : '#facc15';
+          this.ctx.fillRect(80 + i * 60, 140, 50, 30);
+          this.ctx.fillStyle = '#1a1a2e';
+          this.ctx.font = '8px monospace';
+          this.ctx.fillText(mainCommits[i], 85 + i * 60, 160);
+          
+          if (i < 3) {
+            this.ctx.strokeStyle = '#f59e42';
+            this.ctx.beginPath();
+            this.ctx.moveTo(130 + i * 60, 155);
+            this.ctx.lineTo(140 + i * 60, 155);
+            this.ctx.stroke();
+          }
+        }
+      },
+      
+      highlightIntersection() {
+        if (!this.ctx) this.createLists();
+        
+        // Highlight intersection nodes
+        this.ctx.strokeStyle = '#ff6b6b';
+        this.ctx.lineWidth = 3;
+        
+        // Highlight shared tail in both lists (a1b2c and m5n6o)
+        // Feature branch: positions 2 and 3 (a1b2c, m5n6o)
+        for (let i = 2; i < 4; i++) {
+          this.ctx.strokeRect(78 + i * 60, 38, 54, 34);
+        }
+        // Main branch: positions 2 and 3 (a1b2c, m5n6o) 
+        for (let i = 2; i < 4; i++) {
+          this.ctx.strokeRect(78 + i * 60, 138, 54, 34);
+        }
+        
+        this.ctx.fillStyle = '#ff6b6b';
+        this.ctx.font = '11px monospace';
+        this.ctx.fillText('🔍 Intersection Found!', 400, 100);
+        this.ctx.fillText('Shared history: a1b2c', 400, 120);
+      },
+      
+      reset() {
+        if (this.ctx) {
+          this.ctx.clearRect(0, 0, 600, 200);
+        }
+      }
+    };
+
+    const alignmentAnim = {
+      canvas: null,
+      ctx: null,
+      step: 0,
+      
+      init() {
+        this.canvas = document.getElementById('canvas-alignment');
+        if (!this.canvas) return;
+        this.canvas.innerHTML = '';
+        const canvas = document.createElement('canvas');
+        canvas.width = 600;
+        canvas.height = 250;
+        canvas.style.background = '#1a1a2e';
+        canvas.style.border = '1px solid #16213e';
+        this.canvas.appendChild(canvas);
+        this.ctx = canvas.getContext('2d');
+        this.step = 0;
+        this.drawInitialState();
+      },
+      
+      drawInitialState() {
+        if (!this.ctx) return;
+        this.ctx.clearRect(0, 0, 600, 250);
+        
+        // Draw longer feature branch
+        this.ctx.fillStyle = '#3ec6a8';
+        this.ctx.font = '10px monospace';
+        this.ctx.fillText('feature/login (6 commits):', 10, 30);
+        
+        const featureHashes = ['f1a2', 'c3d4', 'x9y8', 'a1b2', 'm5n6', 'p7q8'];
+        for (let i = 0; i < 6; i++) {
+          this.ctx.fillStyle = i < 2 ? '#3ec6a8' : '#facc15';
+          this.ctx.fillRect(30 + i * 50, 40, 40, 25);
+          this.ctx.fillStyle = '#1a1a2e';
+          this.ctx.font = '8px monospace';
+          this.ctx.fillText(featureHashes[i], 35 + i * 50, 57);
+        }
+        
+        // Draw shorter main branch
+        this.ctx.fillStyle = '#f59e42';
+        this.ctx.font = '10px monospace';
+        this.ctx.fillText('main (4 commits):', 10, 130);
+        
+        const mainHashes = ['w7v6', 'a1b2', 'm5n6', 'p7q8'];
+        for (let i = 0; i < 4; i++) {
+          this.ctx.fillStyle = i < 1 ? '#f59e42' : '#facc15';
+          this.ctx.fillRect(130 + i * 50, 140, 40, 25);
+          this.ctx.fillStyle = '#1a1a2e';
+          this.ctx.font = '8px monospace';
+          this.ctx.fillText(mainHashes[i], 135 + i * 50, 157);
+        }
+      },
+      
+      measureLengths() {
+        this.init();
+        this.ctx.fillStyle = '#facc15';
+        this.ctx.font = '11px monospace';
+        this.ctx.fillText('📏 Measuring...', 400, 50);
+        this.ctx.fillText('feature: 6 commits', 400, 70);
+        this.ctx.fillText('main: 4 commits', 400, 90);
+        this.ctx.fillText('Difference: 2', 400, 110);
+      },
+      
+      alignPointers() {
+        this.measureLengths();
+        
+        // Draw pointer alignment
+        this.ctx.strokeStyle = '#ff6b6b';
+        this.ctx.lineWidth = 2;
+        
+        // Skip first 2 nodes of A
+        this.ctx.setLineDash([5, 5]);
+        this.ctx.beginPath();
+        this.ctx.moveTo(47, 75);
+        this.ctx.lineTo(147, 75);
+        this.ctx.stroke();
+        this.ctx.setLineDash([]);
+        
+        this.ctx.fillStyle = '#ff6b6b';
+        this.ctx.font = '11px monospace';
+        this.ctx.fillText('⬇️ Skip 2 commits', 50, 95);
+        this.ctx.fillText('✅ Branches aligned!', 400, 130);
+      },
+      
+      walkTogether() {
+        this.alignPointers();
+        
+        let step = 0;
+        const maxSteps = 2;  // Should find intersection at a1b2c after 2 steps
+        
+        const animateWalk = () => {
+          if (step >= maxSteps) {
+            // Redraw clean state first
+            this.drawInitialState();
+            this.alignPointers();
+            
+            // Found intersection at a1b2c (3rd from right, index 2 in both arrays)
+            this.ctx.fillStyle = '#ff6b6b';
+            this.ctx.beginPath();
+            this.ctx.arc(205, 52, 12, 0, 2 * Math.PI);  // 3rd position: 130 + 2*50 = 230, but accounting for alignment: 155 + 50 = 205
+            this.ctx.fill();
+            this.ctx.beginPath();
+            this.ctx.arc(205, 152, 12, 0, 2 * Math.PI);
+            this.ctx.fill();
+            
+            this.ctx.fillStyle = '#ff6b6b';
+            this.ctx.font = '11px monospace';
+            this.ctx.fillText('🎯 Found intersection!', 400, 150);
+            this.ctx.fillText('Both at commit a1b2c', 400, 170);
+            this.ctx.fillText('✅ Merge-base found!', 400, 190);
+            return;
+          }
+          
+          // Redraw clean state
+          this.drawInitialState();
+          this.measureLengths();
+          this.alignPointers();
+          
+          // Calculate current position (skip 2 + step for feature, step for main)
+          const featurePos = 155 + step * 50; // Start at aligned position
+          const mainPos = 155 + step * 50;
+          
+          // Draw current pointers
+          this.ctx.fillStyle = '#3ec6a8';
+          this.ctx.beginPath();
+          this.ctx.arc(featurePos, 52, 8, 0, 2 * Math.PI);
+          this.ctx.fill();
+          
+          this.ctx.fillStyle = '#f59e42';
+          this.ctx.beginPath();
+          this.ctx.arc(mainPos, 152, 8, 0, 2 * Math.PI);
+          this.ctx.fill();
+          
+          // Clear text area and show current step
+          this.ctx.fillStyle = '#1a1a2e';
+          this.ctx.fillRect(395, 130, 200, 80);
+          
+          this.ctx.fillStyle = '#facc15';
+          this.ctx.font = '11px monospace';
+          this.ctx.fillText(`👥 Step ${step + 1}: Walking...`, 400, 150);
+          this.ctx.fillText('Checking pointers...', 400, 170);
+          
+          step++;
+          setTimeout(animateWalk, 800);
+        };
+        
+        setTimeout(animateWalk, 300);
+      },
+      
+      reset() {
+        if (this.ctx) {
+          this.ctx.clearRect(0, 0, 600, 250);
+        }
+      }
+    };
+
+    const diskAnim = {
+      canvas: null,
+      ctx: null,
+      diskReads: 0,
+      
+      init() {
+        this.canvas = document.getElementById('canvas-diskaccess');
+        if (!this.canvas) return;
+        this.canvas.innerHTML = '';
+        const canvas = document.createElement('canvas');
+        canvas.width = 600;
+        canvas.height = 200;
+        canvas.style.background = '#1a1a2e';
+        canvas.style.border = '1px solid #16213e';
+        this.canvas.appendChild(canvas);
+        this.ctx = canvas.getContext('2d');
+        this.diskReads = 0;
+        this.drawCommitChain();
+      },
+      
+      drawCommitChain() {
+        if (!this.ctx) return;
+        this.ctx.clearRect(0, 0, 600, 200);
+        
+        this.ctx.fillStyle = '#3ec6a8';
+        this.ctx.font = '12px monospace';
+        this.ctx.fillText('Commit Chain Navigation:', 10, 20);
+        
+        for (let i = 0; i < 8; i++) {
+          this.ctx.fillStyle = '#16213e';
+          this.ctx.fillRect(20 + i * 70, 40, 50, 30);
+          this.ctx.strokeStyle = '#3ec6a8';
+          this.ctx.strokeRect(20 + i * 70, 40, 50, 30);
+          
+          this.ctx.fillStyle = '#3ec6a8';
+          this.ctx.fillText(`C${i}`, 35 + i * 70, 60);
+          
+          if (i < 7) {
+            this.ctx.beginPath();
+            this.ctx.moveTo(70 + i * 70, 55);
+            this.ctx.lineTo(90 + i * 70, 55);
+            this.ctx.stroke();
+          }
+        }
+        
+        this.ctx.fillStyle = '#f59e42';
+        this.ctx.fillText('💾 Storage: SSD (0.1ms) | Network (50ms)', 20, 120);
+      },
+      
+      showNavigation() {
+        this.init();
+      },
+      
+      highlightDisk() {
+        if (!this.ctx) this.init();
+        
+        // Flash red for disk reads
+        let flashCount = 0;
+        const flashInterval = setInterval(() => {
+          if (flashCount >= 8) {
+            clearInterval(flashInterval);
+            document.getElementById('disk-counter').style.display = 'block';
+            document.getElementById('read-count').textContent = this.diskReads;
+            return;
+          }
+          
+          this.ctx.fillStyle = flashCount % 2 ? '#ff6b6b' : '#16213e';
+          this.ctx.fillRect(20 + flashCount * 70, 40, 50, 30);
+          this.ctx.strokeStyle = '#3ec6a8';
+          this.ctx.strokeRect(20 + flashCount * 70, 40, 50, 30);
+          
+          this.ctx.fillStyle = '#ffffff';
+          this.ctx.fillText(`C${flashCount}`, 35 + flashCount * 70, 60);
+          
+          if (flashCount % 2 === 0) this.diskReads++;
+          flashCount++;
+        }, 200);
+      },
+      
+      countOperations() {
+        if (!this.ctx) this.init();
+        this.ctx.fillStyle = '#facc15';
+        this.ctx.font = '14px monospace';
+        this.ctx.fillText(`📊 Total I/O Operations: ${this.diskReads}`, 20, 160);
+        this.ctx.fillText('🔥 Each commit = potential disk read', 20, 180);
+      },
+      
+      reset() {
+        if (this.ctx) {
+          this.ctx.clearRect(0, 0, 600, 200);
+        }
+        document.getElementById('disk-counter').style.display = 'none';
+        this.diskReads = 0;
+      }
+    };
+
+    const bidirectionalAnim = {
+      canvas: null,
+      ctx: null,
+      frontA: 0,
+      frontB: 0,
+      
+      init() {
+        this.canvas = document.getElementById('canvas-bidirectional');
+        if (!this.canvas) return;
+        this.canvas.innerHTML = '';
+        const canvas = document.createElement('canvas');
+        canvas.width = 600;
+        canvas.height = 200;
+        canvas.style.background = '#1a1a2e';
+        canvas.style.border = '1px solid #16213e';
+        this.canvas.appendChild(canvas);
+        this.ctx = canvas.getContext('2d');
+        this.frontA = 0;
+        this.frontB = 9;
+        this.drawCommitPath();
+      },
+      
+      drawCommitPath() {
+        if (!this.ctx) return;
+        this.ctx.clearRect(0, 0, 600, 200);
+        
+        // Draw commit path
+        this.ctx.fillStyle = '#3ec6a8';
+        this.ctx.font = '12px monospace';
+        this.ctx.fillText('Bidirectional Search:', 10, 20);
+        
+        for (let i = 0; i < 10; i++) {
+          this.ctx.fillStyle = '#16213e';
+          this.ctx.fillRect(30 + i * 55, 40, 40, 25);
+          this.ctx.strokeStyle = '#3ec6a8';
+          this.ctx.strokeRect(30 + i * 55, 40, 40, 25);
+          
+          this.ctx.fillStyle = '#3ec6a8';
+          this.ctx.fillText(`${i}`, 45 + i * 55, 57);
+          
+          if (i < 9) {
+            this.ctx.beginPath();
+            this.ctx.moveTo(70 + i * 55, 52);
+            this.ctx.lineTo(85 + i * 55, 52);
+            this.ctx.stroke();
+          }
+        }
+      },
+      
+      startSearch() {
+        this.init();
+        this.ctx.fillStyle = '#3ec6a8';
+        this.ctx.fillText('🔍 Starting from both ends...', 30, 100);
+      },
+      
+      showFronts() {
+        if (!this.ctx) this.init();
+        
+        // Highlight search fronts
+        this.ctx.fillStyle = '#3ec6a8';
+        this.ctx.fillRect(30 + this.frontA * 55, 40, 40, 25);
+        this.ctx.fillStyle = '#f59e42';
+        this.ctx.fillRect(30 + this.frontB * 55, 40, 40, 25);
+        
+        this.ctx.fillStyle = '#ffffff';
+        this.ctx.fillText(`${this.frontA}`, 45 + this.frontA * 55, 57);
+        this.ctx.fillText(`${this.frontB}`, 45 + this.frontB * 55, 57);
+        
+        this.ctx.fillStyle = '#facc15';
+        this.ctx.fillText('🔍 Front A', 30, 120);
+        this.ctx.fillText('🔍 Front B', 400, 120);
+      },
+      
+      meetInMiddle() {
+        this.showFronts();
+        
+        // Animate meeting
+        const animateStep = () => {
+          if (this.frontA >= this.frontB - 1) {
+            this.ctx.fillStyle = '#ff6b6b';
+            this.ctx.fillRect(30 + 4 * 55, 40, 40, 25);
+            this.ctx.fillStyle = '#ffffff';
+            this.ctx.fillText('🎯', 45 + 4 * 55, 57);
+            this.ctx.fillText('✅ Met in middle!', 200, 140);
+            this.ctx.fillText('√n steps vs n steps', 200, 160);
+            return;
+          }
+          
+          this.frontA++;
+          this.frontB--;
+          this.showFronts();
+          setTimeout(animateStep, 500);
+        };
+        
+        setTimeout(animateStep, 300);
+      },
+      
+      reset() {
+        if (this.ctx) {
+          this.ctx.clearRect(0, 0, 600, 200);
+        }
+        this.frontA = 0;
+        this.frontB = 9;
+      }
+    };
+
+    const generationAnim = {
+      canvas: null,
+      ctx: null,
+      commits: [],
+      
+      init() {
+        this.canvas = document.getElementById('canvas-generations');
+        if (!this.canvas) return;
+        this.canvas.innerHTML = '';
+        const canvas = document.createElement('canvas');
+        canvas.width = 600;
+        canvas.height = 250;
+        canvas.style.background = '#1a1a2e';
+        canvas.style.border = '1px solid #16213e';
+        this.canvas.appendChild(canvas);
+        this.ctx = canvas.getContext('2d');
+        this.commits = [];
+      },
+      
+      buildGraph() {
+        this.init();
+        if (!this.ctx) return;
+        
+        // Create DAG structure
+        this.commits = [
+          {x: 50, y: 200, gen: 0, id: 'root'},
+          {x: 150, y: 160, gen: 1, id: 'A'},
+          {x: 150, y: 240, gen: 1, id: 'B'},
+          {x: 250, y: 120, gen: 2, id: 'C'},
+          {x: 250, y: 200, gen: 2, id: 'D'},
+          {x: 350, y: 160, gen: 3, id: 'merge'}
+        ];
+        
+        this.ctx.fillStyle = '#3ec6a8';
+        this.ctx.font = '12px monospace';
+        this.ctx.fillText('Commit Graph Structure:', 10, 20);
+        
+        // Draw connections
+        this.ctx.strokeStyle = '#3ec6a8';
+        this.ctx.lineWidth = 2;
+        
+        const connections = [
+          [0, 1], [0, 2], [1, 3], [2, 4], [3, 5], [4, 5]
+        ];
+        
+        connections.forEach(([from, to]) => {
+          this.ctx.beginPath();
+          this.ctx.moveTo(this.commits[from].x, this.commits[from].y);
+          this.ctx.lineTo(this.commits[to].x, this.commits[to].y);
+          this.ctx.stroke();
+        });
+        
+        // Draw nodes
+        this.commits.forEach(commit => {
+          this.ctx.fillStyle = '#16213e';
+          this.ctx.beginPath();
+          this.ctx.arc(commit.x, commit.y, 20, 0, 2 * Math.PI);
+          this.ctx.fill();
+          this.ctx.strokeStyle = '#3ec6a8';
+          this.ctx.stroke();
+          
+          this.ctx.fillStyle = '#3ec6a8';
+          this.ctx.fillText(commit.id, commit.x - 10, commit.y + 5);
+        });
+      },
+      
+      assignGenerations() {
+        if (!this.ctx) this.buildGraph();
+        
+        // Show generation numbers
+        this.commits.forEach(commit => {
+          this.ctx.fillStyle = '#facc15';
+          this.ctx.fillRect(commit.x + 25, commit.y - 10, 30, 20);
+          this.ctx.fillStyle = '#1a1a2e';
+          this.ctx.fillText(`G${commit.gen}`, commit.x + 30, commit.y + 5);
+        });
+        
+        this.ctx.fillStyle = '#facc15';
+        this.ctx.fillText('📈 Generation Numbers Assigned', 400, 40);
+        this.ctx.fillText('G0 = root, G1 = root+1...', 400, 60);
+      },
+      
+      showQuery() {
+        if (!this.ctx) this.buildGraph();
+        this.assignGenerations();
+        
+        // Highlight query path
+        this.ctx.strokeStyle = '#ff6b6b';
+        this.ctx.lineWidth = 4;
+        this.ctx.beginPath();
+        this.ctx.moveTo(this.commits[3].x, this.commits[3].y); // C
+        this.ctx.lineTo(this.commits[5].x, this.commits[5].y); // merge
+        this.ctx.stroke();
+        
+        this.ctx.fillStyle = '#ff6b6b';
+        this.ctx.fillText('🔍 Query: merge-base(C, D)', 400, 100);
+        this.ctx.fillText('✅ O(1) generation check!', 400, 120);
+        this.ctx.fillText('No traversal needed!', 400, 140);
+      },
+      
+      reset() {
+        if (this.ctx) {
+          this.ctx.clearRect(0, 0, 600, 250);
+        }
+        this.commits = [];
+      }
+    };
+
+    const memoryAnim = {
+      canvas: null,
+      ctx: null,
+      
+      init() {
+        this.canvas = document.getElementById('canvas-memory');
+        if (!this.canvas) return;
+        this.canvas.innerHTML = '';
+        const canvas = document.createElement('canvas');
+        canvas.width = 600;
+        canvas.height = 200;
+        canvas.style.background = '#1a1a2e';
+        canvas.style.border = '1px solid #16213e';
+        this.canvas.appendChild(canvas);
+        this.ctx = canvas.getContext('2d');
+      },
+      
+      showFullGraph() {
+        this.init();
+        if (!this.ctx) return;
+        
+        this.ctx.fillStyle = '#3ec6a8';
+        this.ctx.font = '12px monospace';
+        this.ctx.fillText('100M Commit Repository:', 10, 20);
+        
+        // Draw massive graph representation
+        for (let i = 0; i < 50; i++) {
+          for (let j = 0; j < 15; j++) {
+            this.ctx.fillStyle = '#16213e';
+            this.ctx.fillRect(20 + i * 11, 40 + j * 8, 8, 6);
+            this.ctx.strokeStyle = '#3ec6a8';
+            this.ctx.strokeRect(20 + i * 11, 40 + j * 8, 8, 6);
+          }
+        }
+        
+        this.ctx.fillStyle = '#f59e42';
+        this.ctx.fillText('Full commit-graph: 8GB in memory', 20, 180);
+      },
+      
+      highlightMemory() {
+        if (!this.ctx) this.showFullGraph();
+        
+        // Flash red for memory usage
+        this.ctx.fillStyle = 'rgba(245, 87, 108, 0.3)';
+        this.ctx.fillRect(0, 30, 600, 130);
+        
+        document.getElementById('memory-stats').style.display = 'block';
+        
+        this.ctx.fillStyle = '#ff6b6b';
+        this.ctx.font = '14px monospace';
+        this.ctx.fillText('🚨 MEMORY OVERLOAD', 400, 100);
+      },
+      
+      showQuery() {
+        if (!this.ctx) this.showFullGraph();
+        
+        // Highlight tiny query area
+        this.ctx.strokeStyle = '#facc15';
+        this.ctx.lineWidth = 3;
+        this.ctx.strokeRect(200, 80, 50, 30);
+        
+        this.ctx.fillStyle = '#facc15';
+        this.ctx.font = '14px monospace';
+        this.ctx.fillText('🎯 Single Query Area', 300, 100);
+        this.ctx.fillText('Only needs ~50KB!', 300, 120);
+      },
+      
+      reset() {
+        if (this.ctx) {
+          this.ctx.clearRect(0, 0, 600, 200);
+        }
+        document.getElementById('memory-stats').style.display = 'none';
+      }
+    };
+
+    const bloomAnim = {
+      canvas: null,
+      ctx: null,
+      bits: new Array(32).fill(0),
+      
+      init() {
+        this.canvas = document.getElementById('canvas-bloom');
+        if (!this.canvas) return;
+        this.canvas.innerHTML = '';
+        const canvas = document.createElement('canvas');
+        canvas.width = 600;
+        canvas.height = 200;
+        canvas.style.background = '#1a1a2e';
+        canvas.style.border = '1px solid #16213e';
+        this.canvas.appendChild(canvas);
+        this.ctx = canvas.getContext('2d');
+        this.drawBitArray();
+      },
+      
+      drawBitArray() {
+        if (!this.ctx) return;
+        
+        this.ctx.fillStyle = '#3ec6a8';
+        this.ctx.font = '12px monospace';
+        this.ctx.fillText('Bloom Filter Bit Array:', 10, 20);
+        
+        // Draw bit array
+        for (let i = 0; i < 32; i++) {
+          this.ctx.fillStyle = this.bits[i] ? '#facc15' : '#16213e';
+          this.ctx.fillRect(20 + i * 17, 40, 15, 20);
+          this.ctx.strokeStyle = '#3ec6a8';
+          this.ctx.strokeRect(20 + i * 17, 40, 15, 20);
+          
+          this.ctx.fillStyle = this.bits[i] ? '#1a1a2e' : '#3ec6a8';
+          this.ctx.fillText(this.bits[i].toString(), 25 + i * 17, 55);
+        }
+      },
+      
+      addCommit() {
+        this.init();
+        
+        // Simulate adding commit (set multiple bits)
+        const hash1 = Math.floor(Math.random() * 32);
+        const hash2 = Math.floor(Math.random() * 32);
+        const hash3 = Math.floor(Math.random() * 32);
+        
+        this.bits[hash1] = 1;
+        this.bits[hash2] = 1;
+        this.bits[hash3] = 1;
+        
+        this.drawBitArray();
+        
+        this.ctx.fillStyle = '#3ec6a8';
+        this.ctx.fillText(`➕ Added commit (bits ${hash1}, ${hash2}, ${hash3})`, 20, 100);
+      },
+      
+      queryAncestor() {
+        if (!this.ctx) this.init();
+        
+        // Highlight query bits
+        const queryBits = [5, 12, 23];
+        queryBits.forEach(bit => {
+          this.ctx.strokeStyle = '#ff6b6b';
+          this.ctx.lineWidth = 2;
+          this.ctx.strokeRect(19 + bit * 17, 39, 17, 22);
+        });
+        
+        const allSet = queryBits.every(bit => this.bits[bit]);
+        this.ctx.fillStyle = allSet ? '#3ec6a8' : '#ff6b6b';
+        this.ctx.fillText(`🔍 Query result: ${allSet ? 'MAYBE' : 'DEFINITELY NO'}`, 20, 130);
+      },
+      
+      showFalsePositive() {
+        this.queryAncestor();
+        this.ctx.fillStyle = '#f59e42';
+        this.ctx.fillText('⚠️ 1% chance of false positive', 20, 150);
+        this.ctx.fillText('But NEVER false negative!', 20, 170);
+      },
+      
+      reset() {
+        if (this.ctx) {
+          this.ctx.clearRect(0, 0, 600, 200);
+        }
+        this.bits = new Array(32).fill(0);
+      }
+    };
+
+    const archAnim = {
+      currentLevel: 0,
+      
+      showQuery() {
+        document.querySelectorAll('.arch-tier').forEach(tier => {
+          tier.style.opacity = '0.3';
+        });
+        
+        document.querySelector('.control-panel').style.background = '#16213e';
+        
+        console.log('Showing query flow...');
+        this.currentLevel = 0;
+      },
+      
+      filterLevel() {
+        document.querySelectorAll('.arch-tier').forEach(tier => {
+          tier.style.opacity = '0.3';
+        });
+        
+        const clientTier = document.querySelector('[data-tier="client"]');
+        if (clientTier) {
+          clientTier.style.opacity = '1';
+          clientTier.style.background = '#2d5d31';
+        }
+        
+        console.log('Bloom filter eliminates 99% of queries');
+      },
+      
+      edgeLevel() {
+        document.querySelectorAll('.arch-tier').forEach(tier => {
+          tier.style.opacity = '0.3';
+        });
+        
+        const edgeTier = document.querySelector('[data-tier="edge"]');
+        if (edgeTier) {
+          edgeTier.style.opacity = '1';
+          edgeTier.style.background = '#5d4d2d';
+        }
+        
+        console.log('Edge processes remaining queries with commit-graph');
+      },
+      
+      fullResult() {
+        document.querySelectorAll('.arch-tier').forEach(tier => {
+          tier.style.opacity = '1';
+          tier.style.background = 'transparent';
+        });
+        
+        console.log('Final result: 200ms response time!');
+      },
+      
+      reset() {
+        document.querySelectorAll('.arch-tier').forEach(tier => {
+          tier.style.opacity = '1';
+          tier.style.background = 'transparent';
+        });
+        
+        this.currentLevel = 0;
+      }
+    };
+
+    // Initialize Bloom filter bits display
+    function initBloomBits() {
+      const container = document.getElementById('bloom-bits');
+      if (container) {
+        for (let i = 0; i < 64; i++) {
+          const bit = document.createElement('span');
+          bit.className = 'bloom-bit';
+          bit.textContent = '0';
+          container.appendChild(bit);
+        }
+      }
+    }
+
+    // DAG Animation for ACT 1 - DAG Reality slide
+    const dagAnim = {
+      canvas: null,
+      ctx: null,
+      commits: [],
+      
+      init() {
+        this.canvas = document.getElementById('canvas-dag');
+        if (!this.canvas) return;
+        this.canvas.innerHTML = '';
+        const canvas = document.createElement('canvas');
+        canvas.width = 600;
+        canvas.height = 250;
+        canvas.style.background = '#1a1a2e';
+        canvas.style.border = '1px solid #16213e';
+        this.canvas.appendChild(canvas);
+        this.ctx = canvas.getContext('2d');
+        this.commits = [];
+      },
+      
+      showLinkedList() {
+        this.init();
+        if (!this.ctx) return;
+        
+        this.ctx.fillStyle = '#3ec6a8';
+        this.ctx.font = '14px monospace';
+        this.ctx.fillText('LeetCode Mental Model: Linear Linked List', 10, 25);
+        
+        // Draw simple linked list
+        for (let i = 0; i < 6; i++) {
+          this.ctx.fillStyle = '#16213e';
+          this.ctx.fillRect(50 + i * 80, 50, 60, 35);
+          this.ctx.strokeStyle = '#3ec6a8';
+          this.ctx.strokeRect(50 + i * 80, 50, 60, 35);
+          
+          this.ctx.fillStyle = '#3ec6a8';
+          this.ctx.fillText(`C${i}`, 70 + i * 80, 72);
+          
+          if (i < 5) {
+            // Arrow
+            this.ctx.beginPath();
+            this.ctx.moveTo(110 + i * 80, 67);
+            this.ctx.lineTo(130 + i * 80, 67);
+            this.ctx.stroke();
+            // Arrowhead
+            this.ctx.moveTo(125 + i * 80, 62);
+            this.ctx.lineTo(130 + i * 80, 67);
+            this.ctx.lineTo(125 + i * 80, 72);
+            this.ctx.stroke();
+          }
+        }
+        
+        this.ctx.fillStyle = '#facc15';
+        this.ctx.fillText('Simple, predictable traversal...', 50, 120);
+      },
+      
+      revealDAG() {
+        if (!this.ctx) this.showLinkedList();
+        
+        this.ctx.fillStyle = '#f59e42';
+        this.ctx.font = '14px monospace';
+        this.ctx.fillText('Git Reality: Directed Acyclic Graph (DAG)', 10, 160);
+        
+        // Draw DAG structure
+        const dagCommits = [
+          {x: 100, y: 190, id: 'main'},
+          {x: 200, y: 170, id: 'A'},
+          {x: 200, y: 210, id: 'B'},
+          {x: 300, y: 190, id: 'merge'},
+          {x: 400, y: 190, id: 'C'},
+          {x: 500, y: 190, id: 'HEAD'}
+        ];
+        
+        // Draw connections for DAG
+        const connections = [
+          [0, 1], [0, 2], [1, 3], [2, 3], [3, 4], [4, 5]
+        ];
+        
+        this.ctx.strokeStyle = '#f59e42';
+        this.ctx.lineWidth = 2;
+        
+        connections.forEach(([from, to]) => {
+          this.ctx.beginPath();
+          this.ctx.moveTo(dagCommits[from].x + 25, dagCommits[from].y + 10);
+          this.ctx.lineTo(dagCommits[to].x + 5, dagCommits[to].y + 10);
+          this.ctx.stroke();
+        });
+        
+        // Draw DAG nodes
+        dagCommits.forEach(commit => {
+          this.ctx.fillStyle = '#16213e';
+          this.ctx.fillRect(commit.x, commit.y, 50, 20);
+          this.ctx.strokeStyle = '#f59e42';
+          this.ctx.strokeRect(commit.x, commit.y, 50, 20);
+          
+          this.ctx.fillStyle = '#f59e42';
+          this.ctx.font = '10px monospace';
+          this.ctx.fillText(commit.id, commit.x + 5, commit.y + 14);
+        });
+        
+        this.ctx.fillStyle = '#ff6b6b';
+        this.ctx.font = '12px monospace';
+        this.ctx.fillText('⚠️ Multiple parents, branching, merging!', 300, 230);
+      },
+      
+      highlightMergeBase() {
+        if (!this.ctx) this.revealDAG();
+        
+        // Highlight the merge-base problem
+        this.ctx.strokeStyle = '#ff6b6b';
+        this.ctx.lineWidth = 3;
+        this.ctx.setLineDash([5, 5]);
+        this.ctx.strokeRect(98, 168, 54, 24); // A
+        this.ctx.strokeRect(98, 208, 54, 24); // B
+        this.ctx.setLineDash([]);
+        
+        this.ctx.fillStyle = '#ff6b6b';
+        this.ctx.font = '12px monospace';
+        this.ctx.fillText('🎯 Find common ancestor of A & B', 50, 245);
+        
+        // Arrow pointing to main
+        this.ctx.strokeStyle = '#facc15';
+        this.ctx.lineWidth = 2;
+        this.ctx.beginPath();
+        this.ctx.arc(125, 200, 30, 0, 2 * Math.PI);
+        this.ctx.stroke();
+        
+        this.ctx.fillStyle = '#facc15';
+        this.ctx.fillText('✓', 120, 205);
+      },
+      
+      reset() {
+        if (this.ctx) {
+          this.ctx.clearRect(0, 0, 600, 250);
+        }
+      }
+    };
+
+    // Initialize on load
+    document.addEventListener('DOMContentLoaded', initBloomBits);
+    
+    console.log('Episode 2: Merge-Base - From LeetCode to 100M Commits');
+    console.log('Animation placeholders loaded. Ready for interactive presentation.');
+  </script>
+
+</body>
+</html>
