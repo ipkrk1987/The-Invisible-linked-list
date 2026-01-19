@@ -1,0 +1,2948 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Episode 3: Back, Forward, and Time Travel | LeetCode to Production</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/reveal.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/theme/black.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/monokai.min.css">
+    <style>
+        :root {
+            --browser-blue: #4285f4;
+            --back-green: #34a853;
+            --forward-orange: #fbbc04;
+            --crash-red: #ea4335;
+            --storage-purple: #9c27b0;
+            --recovery-cyan: #00bcd4;
+        }
+        
+        .reveal {
+            font-size: 28px;
+        }
+        
+        .reveal h1 {
+            font-size: 1.8em;
+            color: var(--browser-blue);
+        }
+        
+        .reveal h2 {
+            font-size: 1.4em;
+            color: var(--back-green);
+        }
+        
+        .reveal h3 {
+            font-size: 1.1em;
+            color: var(--forward-orange);
+        }
+        
+        .reveal pre {
+            font-size: 0.45em;
+            width: 100%;
+            box-shadow: 0 0 20px rgba(66, 133, 244, 0.3);
+        }
+        
+        .reveal code {
+            font-family: 'Fira Code', 'Consolas', monospace;
+        }
+        
+        .highlight-box {
+            background: linear-gradient(135deg, rgba(66, 133, 244, 0.2), rgba(52, 168, 83, 0.2));
+            border-left: 4px solid var(--browser-blue);
+            padding: 15px 20px;
+            margin: 15px 0;
+            border-radius: 0 8px 8px 0;
+        }
+        
+        .warning-box {
+            background: linear-gradient(135deg, rgba(234, 67, 53, 0.2), rgba(251, 188, 4, 0.2));
+            border-left: 4px solid var(--crash-red);
+            padding: 15px 20px;
+            margin: 15px 0;
+            border-radius: 0 8px 8px 0;
+        }
+        
+        .success-box {
+            background: linear-gradient(135deg, rgba(52, 168, 83, 0.2), rgba(0, 188, 212, 0.2));
+            border-left: 4px solid var(--back-green);
+            padding: 15px 20px;
+            margin: 15px 0;
+            border-radius: 0 8px 8px 0;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin: 20px 0;
+        }
+        
+        .stat-card {
+            background: rgba(66, 133, 244, 0.1);
+            border: 1px solid var(--browser-blue);
+            border-radius: 8px;
+            padding: 15px;
+            text-align: center;
+        }
+        
+        .stat-number {
+            font-size: 1.8em;
+            font-weight: bold;
+            color: var(--browser-blue);
+        }
+        
+        .stat-label {
+            font-size: 0.7em;
+            color: #aaa;
+        }
+        
+        .comparison-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.6em;
+            margin: 15px 0;
+        }
+        
+        .comparison-table th {
+            background: var(--browser-blue);
+            color: white;
+            padding: 10px;
+        }
+        
+        .comparison-table td {
+            padding: 8px;
+            border: 1px solid #444;
+            text-align: center;
+        }
+        
+        .comparison-table tr:nth-child(even) {
+            background: rgba(255, 255, 255, 0.05);
+        }
+        
+        .good {
+            color: var(--back-green);
+            font-weight: bold;
+        }
+        
+        .bad {
+            color: var(--crash-red);
+        }
+        
+        .architecture-diagram {
+            background: linear-gradient(180deg, #1a1a2e 0%, #16213e 100%);
+            border: 2px solid var(--browser-blue);
+            border-radius: 12px;
+            padding: 15px;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.5em;
+            text-align: left;
+            line-height: 1.4;
+        }
+        
+        .layer {
+            border: 1px solid #444;
+            padding: 8px;
+            margin: 5px 0;
+            border-radius: 6px;
+            transition: all 0.3s ease;
+        }
+        
+        .layer:hover {
+            transform: translateX(5px);
+            border-color: var(--browser-blue);
+        }
+        
+        .layer-nav { border-left: 3px solid var(--browser-blue); }
+        .layer-memory { border-left: 3px solid var(--back-green); }
+        .layer-storage { border-left: 3px solid var(--forward-orange); }
+        .layer-recovery { border-left: 3px solid var(--crash-red); }
+        .layer-quota { border-left: 3px solid var(--storage-purple); }
+        
+        .animation-container {
+            background: #0d1117;
+            border: 2px solid var(--browser-blue);
+            border-radius: 12px;
+            padding: 10px;
+            margin: 10px 0;
+            max-height: 350px;
+            overflow: visible;
+        }
+        
+        .animation-canvas {
+            background: #161b22;
+            border-radius: 8px;
+            display: block;
+            margin: 0 auto;
+        }
+        
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            margin-top: 10px;
+            flex-wrap: wrap;
+            position: relative;
+            z-index: 10;
+        }
+        
+        .controls button {
+            background: linear-gradient(135deg, var(--browser-blue), #1a73e8);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.6em;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        }
+        
+        .controls button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(66, 133, 244, 0.4);
+        }
+        
+        .controls button.back-btn {
+            background: linear-gradient(135deg, var(--back-green), #2e7d32);
+        }
+        
+        .controls button.forward-btn {
+            background: linear-gradient(135deg, var(--forward-orange), #f57c00);
+        }
+        
+        .controls button.crash-btn {
+            background: linear-gradient(135deg, var(--crash-red), #c62828);
+        }
+        
+        .controls button.recovery-btn {
+            background: linear-gradient(135deg, var(--recovery-cyan), #0097a7);
+        }
+        
+        .quote {
+            font-style: italic;
+            font-size: 1.1em;
+            color: var(--forward-orange);
+            border-left: 4px solid var(--forward-orange);
+            padding-left: 20px;
+            margin: 20px 0;
+        }
+        
+        .timeline {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 20px 0;
+            padding: 10px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+        }
+        
+        .timeline-item {
+            text-align: center;
+            flex: 1;
+        }
+        
+        .timeline-dot {
+            width: 12px;
+            height: 12px;
+            background: var(--browser-blue);
+            border-radius: 50%;
+            margin: 0 auto 8px;
+        }
+        
+        .timeline-dot.active {
+            background: var(--back-green);
+            box-shadow: 0 0 10px var(--back-green);
+        }
+        
+        .memory-bar {
+            height: 30px;
+            background: #333;
+            border-radius: 15px;
+            overflow: hidden;
+            margin: 15px 0;
+        }
+        
+        .memory-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--back-green), var(--forward-orange), var(--crash-red));
+            transition: width 1s ease;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            padding-right: 10px;
+            font-size: 0.6em;
+            font-weight: bold;
+        }
+        
+        .fragment.fade-in-then-semi-out.visible:not(.current-fragment) {
+            opacity: 0.5;
+        }
+        
+        .reveal .slides section .fragment.step-fade-in-then-out {
+            opacity: 0;
+            display: none;
+        }
+        
+        .reveal .slides section .fragment.step-fade-in-then-out.current-fragment {
+            opacity: 1;
+            display: block;
+        }
+        
+        .two-column {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            align-items: start;
+        }
+        
+        .code-evolution {
+            position: relative;
+        }
+        
+        .browser-mockup {
+            background: #2d2d2d;
+            border-radius: 8px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+        
+        .browser-toolbar {
+            background: #3d3d3d;
+            padding: 8px 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .browser-dots {
+            display: flex;
+            gap: 6px;
+        }
+        
+        .browser-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+        
+        .browser-dot.red { background: #ff5f56; }
+        .browser-dot.yellow { background: #ffbd2e; }
+        .browser-dot.green { background: #27ca40; }
+        
+        .browser-nav {
+            display: flex;
+            gap: 8px;
+            margin-left: 10px;
+        }
+        
+        .browser-nav button {
+            background: #555;
+            border: none;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.7em;
+        }
+        
+        .browser-nav button:disabled {
+            opacity: 0.3;
+        }
+        
+        .browser-url {
+            flex: 1;
+            background: #555;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            color: white;
+            font-size: 0.7em;
+        }
+        
+        .browser-content {
+            padding: 20px;
+            min-height: 100px;
+            text-align: center;
+            font-size: 0.8em;
+        }
+        
+        .recovery-stages {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            font-size: 0.6em;
+        }
+        
+        .recovery-stage {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 6px;
+            border-left: 3px solid #444;
+        }
+        
+        .recovery-stage.success {
+            border-left-color: var(--back-green);
+        }
+        
+        .recovery-stage.failed {
+            border-left-color: var(--crash-red);
+        }
+        
+        .recovery-stage.active {
+            border-left-color: var(--forward-orange);
+            background: rgba(251, 188, 4, 0.1);
+        }
+        
+        .node-diagram {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 5px;
+            margin: 15px 0;
+            flex-wrap: wrap;
+        }
+        
+        .history-node {
+            background: linear-gradient(135deg, #1e3a5f, #2d5a8c);
+            border: 2px solid var(--browser-blue);
+            border-radius: 8px;
+            padding: 8px 12px;
+            min-width: 80px;
+            text-align: center;
+            font-size: 0.6em;
+            position: relative;
+        }
+        
+        .history-node.current {
+            border-color: var(--back-green);
+            box-shadow: 0 0 15px rgba(52, 168, 83, 0.5);
+        }
+        
+        .history-node.orphaned {
+            opacity: 0.4;
+            border-style: dashed;
+        }
+        
+        .node-arrow {
+            color: var(--browser-blue);
+            font-size: 1.2em;
+        }
+        
+        .node-arrow.back {
+            color: var(--back-green);
+        }
+        
+        .node-arrow.forward {
+            color: var(--forward-orange);
+        }
+    </style>
+</head>
+<body>
+    <div class="reveal">
+        <div class="slides">
+            <!-- Title Slide -->
+            <section>
+                <h1>🌐 Back, Forward, and Time Travel</h1>
+                <h3>How Doubly Linked Lists Power Browser History</h3>
+                <p style="color: #888; margin-top: 30px;">Episode 3 | LeetCode to Production | Season 1</p>
+                <p style="font-size: 0.6em; color: #666;">From interview problem to crash-resilient browser history</p>
+                <aside class="notes">
+                    Every time you click Back or Forward, your browser traverses a doubly linked list.
+                    Today we go from LeetCode #1472 to production browser history with crash recovery.
+                </aside>
+            </section>
+
+            <!-- ACT 1: The Problem Statement -->
+            <section>
+                <section>
+                    <h2>ACT 1: The Problem Statement</h2>
+                    <p style="color: #888;">Browser History Complexity</p>
+                </section>
+
+                <!-- Slide 1: Opening Hook -->
+                <section>
+                    <h3>🎬 The Everyday Magic</h3>
+                    <div class="highlight-box">
+                        <p>You open your browser. Click 50 links. Go back 10. Forward 3.</p>
+                        <p><strong>Your browser crashes.</strong></p>
+                        <p>When it restarts, <span style="color: var(--back-green);">everything is exactly where you left it</span>.</p>
+                    </div>
+                    <p class="fragment">This seems magical, but it's <strong>engineering</strong>.</p>
+                    <p class="fragment">Let's see how.</p>
+                    <aside class="notes">
+                        Hook them with the magic. Everyone has experienced this but never thought about how it works.
+                    </aside>
+                </section>
+
+                <!-- Slide 2: Navigation Demo -->
+                <section>
+                    <h3>📱 Browser Navigation in Action</h3>
+                    <div class="animation-container" style="padding: 8px;">
+                        <canvas id="navCanvas" class="animation-canvas" width="700" height="200" style="cursor: pointer;"></canvas>
+                    </div>
+                    <p class="fragment" style="font-size: 0.65em; color: var(--forward-orange); margin-top: 8px;">
+                        ⚠️ Notice: Visiting a new page <strong>clears forward history</strong>
+                    </p>
+                    <aside class="notes">
+                        Let them play with this. Point out that forward history is cleared on new visit - this isn't obvious!
+                    </aside>
+                </section>
+
+                <!-- Slide 3: Scale Reality -->
+                <section>
+                    <h3>📊 The Scale Reality</h3>
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-number">10+</div>
+                            <div class="stat-label">Tabs open simultaneously</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-number">500+</div>
+                            <div class="stat-label">Pages visited per tab/day</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-number">100KB</div>
+                            <div class="stat-label">Per page (scroll, forms, DOM)</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-number" style="color: var(--crash-red);">500MB</div>
+                            <div class="stat-label">Per session memory!</div>
+                        </div>
+                    </div>
+                    <div class="fragment warning-box" style="font-size: 0.7em;">
+                        <strong>Production Requirements:</strong><br>
+                        Back/Forward: &lt;10ms | Visit: &lt;1ms | Crash Recovery: &lt;3s | Storage Quota: 200MB mobile
+                    </div>
+                    <aside class="notes">
+                        These numbers should shock them. 500MB just for history? That's real production scale.
+                    </aside>
+                </section>
+
+                <!-- Slide 4: What We'll Build -->
+                <section>
+                    <h3>🏗️ What We'll Build Today</h3>
+                    <div class="architecture-diagram">
+                        <div class="layer layer-nav">📍 Navigation Layer: Doubly Linked List</div>
+                        <div class="layer layer-memory fragment">💾 Memory Layer: LRU Cache (100 pages)</div>
+                        <div class="layer layer-storage fragment">🗄️ Storage Layer: SQLite + Paging</div>
+                        <div class="layer layer-recovery fragment">🔧 Recovery Layer: Corruption Detection</div>
+                        <div class="layer layer-quota fragment">📏 Quota Layer: Intelligent Eviction</div>
+                    </div>
+                    <p class="fragment quote" style="font-size: 0.8em;">
+                        "We start with a LeetCode problem. We end with crash-resilient, quota-managed, corruption-proof browser history."
+                    </p>
+                    <aside class="notes">
+                        Preview the journey. Each layer solves a real problem. This isn't academic - it's how real browsers work.
+                    </aside>
+                </section>
+            </section>
+
+            <!-- ACT 2: LeetCode Foundation -->
+            <section>
+                <section>
+                    <h2>ACT 2: The LeetCode Foundation</h2>
+                    <p style="color: #888;">Array vs Doubly Linked List</p>
+                </section>
+
+                <!-- Slide 5: LeetCode Problem -->
+                <section>
+                    <h3>📝 LeetCode #1472: Design Browser History</h3>
+                    <pre><code class="python" data-trim data-line-numbers>
+class BrowserHistory:
+    def __init__(self, homepage: str):
+        """Start on homepage"""
+        pass
+    
+    def visit(self, url: str) -> None:
+        """Visit url from current page. Clears forward history."""
+        pass
+    
+    def back(self, steps: int) -> str:
+        """Move back at most `steps` in history. Return current URL."""
+        pass
+    
+    def forward(self, steps: int) -> str:
+        """Move forward at most `steps` in history. Return current URL."""
+        pass
+                    </code></pre>
+                    <p class="fragment" style="font-size: 0.8em;">Classic interview problem. Let's see two approaches.</p>
+                    <aside class="notes">
+                        Familiar territory for senior engineers. Set up the comparison.
+                    </aside>
+                </section>
+
+                <!-- Slide 6: Array Solution -->
+                <section>
+                    <h3>📦 The Array Solution</h3>
+                    <pre><code class="python" data-trim data-line-numbers="|8|8">
+class BrowserHistoryArray:
+    def __init__(self, homepage: str):
+        self.history = [homepage]
+        self.current = 0
+    
+    def visit(self, url: str) -> None:
+        # Clear forward history (the expensive part!)
+        self.history = self.history[:self.current + 1]  # O(n) slice!
+        self.history.append(url)
+        self.current += 1
+    
+    def back(self, steps: int) -> str:
+        self.current = max(0, self.current - steps)
+        return self.history[self.current]
+    
+    def forward(self, steps: int) -> str:
+        self.current = min(len(self.history) - 1, self.current + steps)
+        return self.history[self.current]
+                    </code></pre>
+                    <div class="fragment warning-box" style="font-size: 0.7em;">
+                        ⚠️ <strong>Hidden cost:</strong> <code>self.history[:self.current + 1]</code> is <span class="bad">O(n)</span> slice operation!
+                    </div>
+                    <aside class="notes">
+                        The slice is the problem. Every visit copies potentially thousands of URLs.
+                    </aside>
+                </section>
+
+                <!-- Slide 7: Doubly Linked List Solution -->
+                <section>
+                    <h3>🔗 The Doubly Linked List Solution</h3>
+                    <pre><code class="python" data-trim data-line-numbers="|3-4|14-20">
+class HistoryNode:
+    def __init__(self, url: str):
+        self.url = url
+        self.prev = None   # ← Back pointer
+        self.next = None   # → Forward pointer
+
+class BrowserHistoryLinkedList:
+    def __init__(self, homepage: str):
+        self.current = HistoryNode(homepage)
+    
+    def visit(self, url: str) -> None:
+        new_node = HistoryNode(url)
+        new_node.prev = self.current
+        self.current.next = new_node
+        self.current = new_node
+        # O(1)! Forward history automatically "orphaned"
+    
+    def back(self, steps: int) -> str:
+        for _ in range(steps):
+            if self.current.prev:
+                self.current = self.current.prev
+        return self.current.url
+                    </code></pre>
+                    <div class="fragment success-box" style="font-size: 0.7em;">
+                        ✅ <strong>O(1) visit!</strong> No copying, just pointer updates. Forward history orphaned automatically.
+                    </div>
+                    <aside class="notes">
+                        The key insight: orphaning forward history is free with linked lists. Just don't follow the old next pointer.
+                    </aside>
+                </section>
+
+                <!-- Slide 8: Complexity Comparison -->
+                <section>
+                    <h3>⚖️ Complexity Comparison</h3>
+                    <table class="comparison-table">
+                        <tr>
+                            <th>Operation</th>
+                            <th>Array</th>
+                            <th>Doubly Linked List</th>
+                        </tr>
+                        <tr>
+                            <td><code>visit()</code></td>
+                            <td class="bad">O(n) slice</td>
+                            <td class="good">O(1) pointer</td>
+                        </tr>
+                        <tr>
+                            <td><code>back(k)</code></td>
+                            <td class="good">O(1) index</td>
+                            <td>O(k) traversal</td>
+                        </tr>
+                        <tr>
+                            <td><code>forward(k)</code></td>
+                            <td class="good">O(1) index</td>
+                            <td>O(k) traversal</td>
+                        </tr>
+                        <tr>
+                            <td>Memory</td>
+                            <td class="good">1 ptr/page</td>
+                            <td>3 ptrs/page</td>
+                        </tr>
+                    </table>
+                    <div class="fragment highlight-box" style="font-size: 0.75em;">
+                        <strong>Key insight:</strong> <code>visit()</code> is called thousands of times. <code>back(k)</code> typically k=1.<br>
+                        <span class="good">O(1) visit wins for browser history!</span>
+                    </div>
+                    <aside class="notes">
+                        Interview problem solved! But wait, production has complications...
+                    </aside>
+                </section>
+
+                <!-- Slide 9: Metadata Reality -->
+                <section>
+                    <h3>📋 The Metadata Reality</h3>
+                    <pre><code class="python" data-trim data-line-numbers>
+class ProductionHistoryNode:
+    """What browsers actually store per page"""
+    
+    def __init__(self, url: str):
+        # Navigation pointers
+        self.url = url
+        self.prev = None
+        self.next = None
+        
+        # Essential metadata
+        self.title = ""
+        self.favicon_url = ""
+        self.timestamp = time.time()
+        self.visit_id = uuid.uuid4()
+        
+        # Page state (the heavy part!)
+        self.scroll_position = (0, 0)
+        self.form_data = {}        # Unsaved form inputs
+        self.dom_snapshot = None   # For "bfcache"
+        self.visit_type = 'typed'  # 'typed', 'link', 'redirect'
+        
+# Memory per node: 50-100KB (not 24 bytes!)
+                    </code></pre>
+                    <p class="fragment" style="color: var(--crash-red); font-size: 0.8em;">
+                        This is where production gets interesting...
+                    </p>
+                    <aside class="notes">
+                        Transition to scale problems. LeetCode solved, now let's see real production challenges.
+                    </aside>
+                </section>
+            </section>
+
+            <!-- ACT 3: Memory Explosion -->
+            <section>
+                <section>
+                    <h2>ACT 3: Scale Break #1</h2>
+                    <p style="color: var(--crash-red);">Memory Explosion</p>
+                </section>
+
+                <!-- Slide 10: Memory Problem -->
+                <section>
+                    <h3>💥 The Memory Problem</h3>
+                    <pre><code class="python" data-trim>
+# Simulate real usage
+browser = BrowserHistory("homepage.com")
+
+for i in range(1000):
+    # Each page stores ~100KB of state
+    page_state = {
+        "dom_snapshot": b"x" * 100_000,  # 100KB
+        "scroll_position": (0, 1234),
+        "form_data": {"email": "user@example.com"},
+    }
+    browser.visit(f"page_{i}.com", page_state)
+
+# Result: 1000 × 100KB = 100MB per tab!
+# With 10 tabs: 1GB of memory just for history!
+                    </code></pre>
+                    <div class="memory-bar fragment">
+                        <div class="memory-fill" style="width: 100%;">1GB RAM 🔥</div>
+                    </div>
+                    <aside class="notes">
+                        1GB just for history! OS starts swapping, system becomes unusable. We need bounds.
+                    </aside>
+                </section>
+
+                <!-- Slide 11: LRU Cache Solution -->
+                <section>
+                    <h3>🗂️ The LRU Cache Solution</h3>
+                    <div class="animation-container" style="padding: 8px;">
+                        <canvas id="lruCanvas" class="animation-canvas" width="700" height="280" style="cursor: pointer;"></canvas>
+                    </div>
+                    <p style="font-size: 0.65em; color: #888;">
+                        100 pages × 100KB = <span class="good">10MB cap</span>, regardless of history length
+                    </p>
+                    <aside class="notes">
+                        LRU cache keeps hot pages in memory, evicts cold ones to disk. Memory bounded!
+                    </aside>
+                </section>
+
+                <!-- Slide 12: Transparent Paging Code -->
+                <section>
+                    <h3>🔄 Transparent Paging</h3>
+                    <pre><code class="python" data-trim data-line-numbers="|5-8|10-22">
+def _load_node(self, visit_id: str) -> HistoryNode:
+    """Load from cache or disk — transparent to caller"""
+    
+    # Check memory cache first (fast path)
+    if visit_id in self.memory_cache:
+        self.memory_cache.move_to_end(visit_id)  # LRU update
+        return self.memory_cache[visit_id]
+    
+    # Cache miss — load from disk (slow path)
+    row = self.db.execute(
+        "SELECT url, title, prev_id, next_id, page_state "
+        "FROM history WHERE visit_id = ?",
+        (visit_id,)
+    ).fetchone()
+    
+    node = HistoryNode(row[0])
+    node.visit_id = visit_id
+    node.page_state = pickle.loads(row[4]) if row[4] else {}
+    
+    # Add to cache (may evict oldest)
+    self._cache_node(visit_id, node)
+    return node
+                    </code></pre>
+                    <p class="fragment" style="font-size: 0.75em;">
+                        User clicks Back 50 times? First 100 are instant (RAM). Beyond that, we load from disk transparently.
+                    </p>
+                    <aside class="notes">
+                        The user never knows the difference. Fast path for recent, disk path for old.
+                    </aside>
+                </section>
+
+                <!-- Slide 13: Memory Bound Achieved -->
+                <section>
+                    <h3>✅ Memory Bound Achieved</h3>
+                    <div class="two-column">
+                        <div class="warning-box" style="font-size: 0.65em;">
+                            <strong>❌ BEFORE (unbounded):</strong>
+                            <ul style="margin: 10px 0;">
+                                <li>10 tabs × 1000 pages × 100KB</li>
+                                <li>= <span class="bad">1GB RAM</span></li>
+                                <li>Browser becomes sluggish</li>
+                                <li>OS starts swapping</li>
+                            </ul>
+                        </div>
+                        <div class="success-box" style="font-size: 0.65em;">
+                            <strong>✅ AFTER (LRU bounded):</strong>
+                            <ul style="margin: 10px 0;">
+                                <li>10 tabs × 100 pages × 100KB</li>
+                                <li>= <span class="good">100MB RAM</span></li>
+                                <li>Older pages on disk (SQLite)</li>
+                                <li>System stays responsive</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <p class="fragment" style="margin-top: 20px;">
+                        ✅ Scale Break #1 Solved: <span class="good">Memory bounded</span>
+                    </p>
+                    <aside class="notes">
+                        First production problem solved. But what happens when the browser crashes?
+                    </aside>
+                </section>
+            </section>
+
+            <!-- ACT 4: Crash Recovery -->
+            <section>
+                <section>
+                    <h2>ACT 4: Scale Break #2</h2>
+                    <p style="color: var(--crash-red);">Crash Recovery</p>
+                </section>
+
+                <!-- Slide 14: Nightmare Scenario -->
+                <section>
+                    <h3>😱 The Nightmare Scenario</h3>
+                    <div class="browser-mockup">
+                        <div class="browser-toolbar">
+                            <div class="browser-dots">
+                                <div class="browser-dot red"></div>
+                                <div class="browser-dot yellow"></div>
+                                <div class="browser-dot green"></div>
+                            </div>
+                            <input class="browser-url" value="compose-email.com" readonly>
+                        </div>
+                        <div class="browser-content" id="crashDemo">
+                            <p>📝 Composing important email...</p>
+                            <p style="font-size: 0.7em; color: #888;">2000 words written, 3 attachments added</p>
+                            <p style="font-size: 0.7em; color: var(--forward-orange);">Haven't clicked Send yet...</p>
+                        </div>
+                    </div>
+                    <div class="fragment">
+                        <button class="crash-btn" onclick="simulateCrash()" style="font-size: 0.8em; padding: 10px 20px;">
+                            💥 SIMULATE CRASH
+                        </button>
+                    </div>
+                    <div id="crashResult" style="display: none;" class="warning-box">
+                        <strong>Power outage! Blue screen!</strong><br>
+                        <span class="bad">ALL WORK LOST! User's email GONE!</span>
+                    </div>
+                    <aside class="notes">
+                        Make this dramatic. Click the crash button. This is what happens without persistence.
+                    </aside>
+                </section>
+
+                <!-- Slide 15: Write-Ahead Logging -->
+                <section>
+                    <h3>📝 Write-Ahead Logging (WAL)</h3>
+                    <pre><code class="python" data-trim data-line-numbers="|5-9|16-22">
+class CrashSafeBrowserHistory:
+    def __init__(self, db_path: str):
+        self.db = sqlite3.connect(db_path)
+        
+        # Enable Write-Ahead Logging!
+        self.db.execute("PRAGMA journal_mode=WAL")
+        
+        # Sync after every write (safety > speed)
+        self.db.execute("PRAGMA synchronous=FULL")
+    
+    def visit(self, url: str, page_state: dict = None) -> str:
+        node = HistoryNode(url)
+        visit_id = str(uuid.uuid4())
+        
+        # Persist BEFORE updating pointers
+        self.db.execute("""
+            INSERT INTO history 
+            (visit_id, url, prev_id, timestamp, page_state)
+            VALUES (?, ?, ?, ?, ?)
+        """, (visit_id, url, self.current_id, time.time(), 
+              pickle.dumps(page_state)))
+        self.db.commit()  # Commit immediately!
+        
+        # Now safe to update in-memory state
+        self.current_id = visit_id
+                    </code></pre>
+                    <p class="fragment highlight-box" style="font-size: 0.7em;">
+                        💡 Write to disk BEFORE updating pointers. If crash happens mid-operation, we lose nothing.
+                    </p>
+                    <aside class="notes">
+                        WAL mode is the key. Atomic writes, durability guaranteed.
+                    </aside>
+                </section>
+
+                <!-- Slide 16: Session Restore Animation -->
+                <section>
+                    <h3>🔄 Session Restore in Action</h3>
+                    <div class="animation-container" style="padding: 8px;">
+                        <canvas id="crashCanvas" class="animation-canvas" width="700" height="260" style="cursor: pointer;"></canvas>
+                    </div>
+                    <aside class="notes">
+                        The wow moment! Crash, then restore. Everything comes back exactly as it was.
+                    </aside>
+                </section>
+
+                <!-- Slide 17: Restore Algorithm -->
+                <section>
+                    <h3>🔧 The Restore Algorithm</h3>
+                    <pre><code class="python" data-trim data-line-numbers="|6-12|14-22">
+def _rebuild_history_chain(self, tab_id: str) -> HistoryNode:
+    """Reconstruct doubly linked list from database"""
+    rows = self.db.execute("""
+        SELECT visit_id, url, title, timestamp, page_state
+        FROM history WHERE tab_id = ?
+        ORDER BY timestamp ASC
+    """, (tab_id,)).fetchall()
+    
+    head = None
+    prev_node = None
+    
+    for visit_id, url, title, timestamp, page_state in rows:
+        node = HistoryNode(url)
+        node.visit_id = visit_id
+        node.page_state = pickle.loads(page_state) if page_state else {}
+        
+        if prev_node:
+            prev_node.next = node
+            node.prev = prev_node
+        else:
+            head = node
+        prev_node = node
+    
+    return head
+                    </code></pre>
+                    <p class="fragment" style="font-size: 0.75em;">
+                        ✅ Scale Break #2 Solved: <span class="good">Crash-safe persistence</span>
+                    </p>
+                    <aside class="notes">
+                        Simple reconstruction. Read from DB, rebuild linked list. Order preserved by timestamp.
+                    </aside>
+                </section>
+            </section>
+
+            <!-- ACT 5: Storage Quotas -->
+            <section>
+                <section>
+                    <h2>ACT 5: Scale Break #3</h2>
+                    <p style="color: var(--storage-purple);">Storage Quotas & Eviction</p>
+                </section>
+
+                <!-- Slide 18: Unbounded Growth -->
+                <section>
+                    <h3>📈 The Unbounded Growth Problem</h3>
+                    <pre><code class="python" data-trim>
+# 6 months of browsing:
+# 180 days × 100 pages/day × 50KB/page = 900MB
+
+# On a phone with 2GB free space:
+# History consumes 45% of available storage!
+
+# User complaint: "Why is my phone out of space?"
+# Answer: Browser history!
+                    </code></pre>
+                    <div class="memory-bar fragment">
+                        <div class="memory-fill" style="width: 45%; background: linear-gradient(90deg, var(--storage-purple), var(--crash-red));">
+                            900MB History 📱
+                        </div>
+                    </div>
+                    <p class="fragment" style="font-size: 0.75em; color: var(--crash-red);">
+                        Users don't expect their browser to eat their storage!
+                    </p>
+                    <aside class="notes">
+                        Real user pain point. Storage fills up silently. We need quotas.
+                    </aside>
+                </section>
+
+                <!-- Slide 19: Storage Quotas -->
+                <section>
+                    <h3>📏 Platform-Specific Quotas</h3>
+                    <pre><code class="python" data-trim data-line-numbers="|3-7|13-18">
+class QuotaEnforcedHistory:
+    # Platform-specific limits
+    QUOTAS = {
+        'mobile': 200_000_000,   # 200MB
+        'tablet': 300_000_000,   # 300MB
+        'desktop': 500_000_000,  # 500MB
+    }
+    
+    def __init__(self, platform: str = 'desktop'):
+        self.max_bytes = self.QUOTAS[platform]
+        self.warning_threshold = self.max_bytes * 0.9
+    
+    def _check_quota(self):
+        current_size = os.path.getsize("history.db")
+        
+        if current_size >= self.max_bytes:
+            self._evict_to_target(self.max_bytes * 0.8)  # Emergency!
+        elif current_size >= self.warning_threshold:
+            self._schedule_eviction()  # Background eviction
+                    </code></pre>
+                    <aside class="notes">
+                        Mobile gets less because storage is precious. Emergency eviction vs background eviction.
+                    </aside>
+                </section>
+
+                <!-- Slide 20: Intelligent Eviction -->
+                <section>
+                    <h3>🧠 Intelligent Eviction</h3>
+                    <pre><code class="python" data-trim data-line-numbers="|9-18">
+def _intelligent_eviction(self, bytes_to_free: int) -> int:
+    """Delete low-value entries first"""
+    
+    scored = []
+    for visit_id, url, age_days, visit_type, size in entries:
+        visit_count = self._count_visits(url)
+        
+        # Value formula:
+        value = (
+            (visit_count * 2) +           # Frequency bonus
+            (10 if visit_type == 'typed' else 0) +  # Explicit nav
+            (-age_days * 0.5) +           # Recency penalty
+            (-size / 100000)              # Size penalty
+        )
+        scored.append((value, visit_id, size))
+    
+    # Sort by value (lowest first) and delete until quota met
+    scored.sort()
+    for value, visit_id, size in scored:
+        if freed >= bytes_to_free: break
+        self._delete_entry(visit_id)
+        freed += size
+                    </code></pre>
+                    <p class="fragment highlight-box" style="font-size: 0.7em;">
+                        💡 Not all history is equal. Typed URLs > frequent sites > redirects > one-time visits
+                    </p>
+                    <aside class="notes">
+                        Smart eviction keeps valuable data. User can still find that page from 3 months ago.
+                    </aside>
+                </section>
+
+                <!-- Slide 21: Eviction Visualization -->
+                <section>
+                    <h3>🗑️ Eviction in Action</h3>
+                    <div class="animation-container" style="padding: 8px;">
+                        <canvas id="evictionCanvas" class="animation-canvas" width="700" height="260" style="cursor: pointer;"></canvas>
+                    </div>
+                    <p class="fragment" style="font-size: 0.7em;">
+                        ✅ Scale Break #3 Solved: <span class="good">Storage bounded with intelligent eviction</span>
+                    </p>
+                    <aside class="notes">
+                        Watch low-value entries get removed first. High-value (typed, frequent) preserved.
+                    </aside>
+                </section>
+            </section>
+
+            <!-- ACT 6: Corruption Recovery -->
+            <section>
+                <section>
+                    <h2>ACT 6: Scale Break #4</h2>
+                    <p style="color: var(--recovery-cyan);">Corruption Recovery</p>
+                </section>
+
+                <!-- Slide 22: Corruption Nightmare -->
+                <section>
+                    <h3>💀 The Corruption Nightmare</h3>
+                    <pre><code class="python" data-trim>
+# Scenario: Crash during database write
+# Result: history.db is corrupted
+
+try:
+    browser = BrowserHistory.load_from_disk()
+except sqlite3.DatabaseError as e:
+    # "database disk image is malformed"
+    
+    # What now?
+    # Option A: Delete everything, start fresh → USER FURIOUS
+    # Option B: Crash browser, refuse to start → UNUSABLE
+    # Option C: Intelligent recovery → PROFESSIONAL
+                    </code></pre>
+                    <p class="fragment" style="font-size: 0.9em;">
+                        Real browsers choose <span class="good">Option C</span>.<br>
+                        <strong>They NEVER fail to start.</strong>
+                    </p>
+                    <aside class="notes">
+                        This is the browser's promise. No matter what, it will start. Always.
+                    </aside>
+                </section>
+
+                <!-- Slide 23: Recovery Strategy -->
+                <section>
+                    <h3>🛡️ The Recovery Strategy</h3>
+                    <pre><code class="python" data-trim data-line-numbers="|5-12">
+class ResilientBrowserHistory:
+    def _open_with_recovery(self) -> sqlite3.Connection:
+        """Try multiple recovery strategies"""
+        
+        strategies = [
+            self._try_normal_open,      # 1. Normal open
+            self._try_integrity_check,  # 2. Check + repair
+            self._try_reindex,          # 3. Rebuild indexes
+            self._try_vacuum,           # 4. Rebuild entire file
+            self._try_salvage,          # 5. Extract what we can
+            self._create_fresh,         # 6. Start fresh (last resort)
+        ]
+        
+        for strategy in strategies:
+            try:
+                conn = strategy()
+                if conn: return conn
+            except Exception as e:
+                logging.warning(f"Recovery strategy failed: {e}")
+                continue
+        
+        return self._create_fresh()  # Should never reach here
+                    </code></pre>
+                    <aside class="notes">
+                        Cascade of strategies. Try easy fixes first, escalate to more aggressive recovery.
+                    </aside>
+                </section>
+
+                <!-- Slide 24: Recovery Animation -->
+                <section>
+                    <h3>🔄 Recovery in Action</h3>
+                    <div class="animation-container">
+                        <canvas id="recoveryCanvas" class="animation-canvas" width="750" height="280"></canvas>
+                        <div class="controls">
+                            <button onclick="recoveryAnim.showCorruption()">Corrupt Database</button>
+                            <button class="recovery-btn" onclick="recoveryAnim.runRecovery()">Run Recovery</button>
+                            <button onclick="recoveryAnim.reset()">Reset</button>
+                        </div>
+                    </div>
+                    <aside class="notes">
+                        Watch the cascade. Each strategy tried, falling back until something works.
+                    </aside>
+                </section>
+
+                <!-- Slide 25: Recovery Guarantee -->
+                <section>
+                    <h3>🏆 The Recovery Guarantee</h3>
+                    <div class="success-box">
+                        <h4 style="margin: 0 0 15px 0; color: var(--back-green);">BROWSER HISTORY RECOVERY GUARANTEE</h4>
+                        <div style="font-size: 0.7em; text-align: left;">
+                            <p>✅ <strong>Browser will ALWAYS start</strong> — Never blocked by corrupted history</p>
+                            <p>✅ <strong>Recovery is automatic</strong> — No user intervention required</p>
+                            <p>✅ <strong>Data loss is minimized</strong> — Salvage extracts recoverable data</p>
+                            <p>✅ <strong>Corruption is logged</strong> — Debug info available for analysis</p>
+                            <p>✅ <strong>Backup preserved</strong> — Corrupted file saved for forensics</p>
+                        </div>
+                    </div>
+                    <p class="fragment" style="font-size: 0.75em;">
+                        ✅ Scale Break #4 Solved: <span class="good">Corruption-proof startup</span>
+                    </p>
+                    <aside class="notes">
+                        This is the professional guarantee. Partial recovery is better than total loss.
+                    </aside>
+                </section>
+            </section>
+
+            <!-- ACT 7: When Doubly Linked Lists Break -->
+            <section>
+                <section>
+                    <h2>ACT 7: When Doubly Linked Lists Break</h2>
+                    <p style="color: #888;">Knowing the limitations</p>
+                </section>
+
+                <!-- Slide 26: Memory Overhead -->
+                <section>
+                    <h3>💾 The Memory Overhead</h3>
+                    <div class="two-column">
+                        <div style="font-size: 0.65em;">
+                            <h4 style="color: var(--back-green);">Array Implementation</h4>
+                            <pre><code class="python" data-trim>
+# Memory per entry:
+# - 1 URL pointer: 8 bytes
+# Total: 8 bytes/entry
+
+# With 1 million entries:
+# Array: 8MB
+                            </code></pre>
+                        </div>
+                        <div style="font-size: 0.65em;">
+                            <h4 style="color: var(--crash-red);">Doubly Linked List</h4>
+                            <pre><code class="python" data-trim>
+# Memory per entry:
+# - 1 URL pointer: 8 bytes
+# - 1 prev pointer: 8 bytes
+# - 1 next pointer: 8 bytes
+# Total: 24 bytes/entry
+
+# With 1 million entries:
+# Linked list: 24MB (3× more!)
+                            </code></pre>
+                        </div>
+                    </div>
+                    <p class="fragment warning-box" style="font-size: 0.7em;">
+                        <strong>3× memory overhead</strong> — Matters when memory is constrained
+                    </p>
+                    <aside class="notes">
+                        The tradeoff. Linked lists use more memory for pointers.
+                    </aside>
+                </section>
+
+                <!-- Slide 27: Cache Locality -->
+                <section>
+                    <h3>🏃 The Cache Locality Problem</h3>
+                    <div class="animation-container" style="padding: 8px;">
+                        <canvas id="cacheCanvas" class="animation-canvas" width="700" height="210" style="cursor: pointer;"></canvas>
+                    </div>
+                    <div class="fragment" style="font-size: 0.65em; margin-top: 8px;">
+                        <span class="good">Array traversal: 10ns per element</span> vs 
+                        <span class="bad">Linked list: 100ns per element</span><br>
+                        <strong>10× slower due to cache misses!</strong>
+                    </div>
+                    <aside class="notes">
+                        CPU prefetching loves arrays. Linked lists cause cache misses.
+                    </aside>
+                </section>
+
+                <!-- Slide 28: Random Access Problem -->
+                <section>
+                    <h3>🎯 The Random Access Problem</h3>
+                    <pre><code class="python" data-trim>
+# User wants to see history entry #500
+
+# Array: O(1)
+entry = history_array[500]  # Instant!
+
+# Doubly linked list: O(n)
+node = head
+for _ in range(500):        # Must traverse 500 nodes!
+    node = node.next
+
+# Real impact:
+# - "Jump to date" feature needs random access
+# - "Search history" feature needs random access
+# - These need O(1) lookup!
+                    </code></pre>
+                    <p class="fragment highlight-box" style="font-size: 0.7em;">
+                        💡 Solution: <strong>Hybrid approach</strong> — Linked list for navigation, SQLite indexes for search
+                    </p>
+                    <aside class="notes">
+                        Real browsers use both. Linked list for Back/Forward, indexes for search.
+                    </aside>
+                </section>
+
+                <!-- Slide 29: Decision Matrix -->
+                <section>
+                    <h3>📊 When NOT to Use Doubly Linked Lists</h3>
+                    <table class="comparison-table" style="font-size: 0.55em;">
+                        <tr>
+                            <th>Requirement</th>
+                            <th>Array</th>
+                            <th>DLL</th>
+                            <th>Real Browsers</th>
+                        </tr>
+                        <tr>
+                            <td>Sequential navigation</td>
+                            <td>Good</td>
+                            <td class="good">Excellent</td>
+                            <td>Linked list</td>
+                        </tr>
+                        <tr>
+                            <td>Memory efficiency</td>
+                            <td class="good">Excellent</td>
+                            <td class="bad">3× overhead</td>
+                            <td>Acceptable</td>
+                        </tr>
+                        <tr>
+                            <td>Cache locality</td>
+                            <td class="good">Excellent</td>
+                            <td class="bad">Poor</td>
+                            <td>Hybrid</td>
+                        </tr>
+                        <tr>
+                            <td>Random access</td>
+                            <td class="good">O(1)</td>
+                            <td class="bad">O(n)</td>
+                            <td>SQLite index</td>
+                        </tr>
+                        <tr>
+                            <td>Insert/delete</td>
+                            <td class="bad">O(n)</td>
+                            <td class="good">O(1)</td>
+                            <td>Linked list</td>
+                        </tr>
+                        <tr>
+                            <td>Search by URL</td>
+                            <td class="bad">O(n)</td>
+                            <td class="bad">O(n)</td>
+                            <td>SQLite FTS</td>
+                        </tr>
+                    </table>
+                    <p class="fragment" style="font-size: 0.75em;">
+                        <strong>Hybrid wins:</strong> Linked list for navigation, indexes for search and random access
+                    </p>
+                    <aside class="notes">
+                        No single data structure is perfect. Real systems combine them.
+                    </aside>
+                </section>
+            </section>
+
+            <!-- EPILOGUE: Complete Architecture -->
+            <section>
+                <section>
+                    <h2>EPILOGUE: The Complete Architecture</h2>
+                    <p style="color: #888;">Putting it all together</p>
+                </section>
+
+                <!-- Slide 30: Full Architecture -->
+                <section>
+                    <h3>🏗️ Production Browser History Architecture</h3>
+                    <div class="architecture-diagram" style="font-size: 0.45em;">
+                        <div class="layer" style="border-left: 3px solid #fff;">
+                            <strong>USER INTERFACE</strong><br>
+                            • Back/Forward → doubly linked list<br>
+                            • History sidebar → SQLite + frecency ranking<br>
+                            • Omnibox → full-text search index
+                        </div>
+                        <div class="layer layer-nav fragment">
+                            <strong>NAVIGATION LAYER (Per-Tab)</strong><br>
+                            • Doubly linked list (current session in RAM)<br>
+                            • Session state (scroll, forms, DOM snapshots)<br>
+                            • Prefetching (likely back/forward pages)
+                        </div>
+                        <div class="layer layer-memory fragment">
+                            <strong>MEMORY MANAGEMENT</strong><br>
+                            • LRU cache (100 recent pages per tab)<br>
+                            • Transparent paging to/from disk<br>
+                            • Memory pressure response
+                        </div>
+                        <div class="layer layer-storage fragment">
+                            <strong>STORAGE LAYER</strong><br>
+                            • SQLite with WAL (crash-safe)<br>
+                            • B-tree indexes (fast lookup)<br>
+                            • Quotas: 200MB mobile, 500MB desktop
+                        </div>
+                        <div class="layer layer-recovery fragment">
+                            <strong>RECOVERY & SEARCH</strong><br>
+                            • Multi-stage corruption recovery<br>
+                            • Full-text search (SQLite FTS5)<br>
+                            • Frecency ranking
+                        </div>
+                    </div>
+                    <aside class="notes">
+                        The complete picture. Each layer solves a specific problem.
+                    </aside>
+                </section>
+
+                <!-- Slide 31: Engineering Mindset -->
+                <section>
+                    <h3>🧠 The Engineering Mindset</h3>
+                    <p class="quote">
+                        "The data structure is the easy part. Making it survive crashes, respect quotas, and recover from corruption — that's engineering."
+                    </p>
+                    <div class="fragment" style="margin-top: 30px;">
+                        <div class="timeline" style="font-size: 0.6em;">
+                            <div class="timeline-item">
+                                <div class="timeline-dot"></div>
+                                <div>LeetCode<br>✓ DLL</div>
+                            </div>
+                            <div class="timeline-item">
+                                <div class="timeline-dot"></div>
+                                <div>+ Memory<br>✓ LRU Cache</div>
+                            </div>
+                            <div class="timeline-item">
+                                <div class="timeline-dot"></div>
+                                <div>+ Crashes<br>✓ WAL</div>
+                            </div>
+                            <div class="timeline-item">
+                                <div class="timeline-dot"></div>
+                                <div>+ Quotas<br>✓ Eviction</div>
+                            </div>
+                            <div class="timeline-item">
+                                <div class="timeline-dot active"></div>
+                                <div>+ Corruption<br>✓ Recovery</div>
+                            </div>
+                        </div>
+                    </div>
+                    <aside class="notes">
+                        This is the journey from interview to production. Each step adds real engineering.
+                    </aside>
+                </section>
+
+                <!-- Slide 32: Key Takeaways -->
+                <section>
+                    <h3>🎯 Key Takeaways</h3>
+                    <div style="font-size: 0.75em; text-align: left;">
+                        <p class="fragment">1️⃣ <strong>Data structures are foundations</strong> — Doubly linked list enables O(1) visit</p>
+                        <p class="fragment">2️⃣ <strong>Memory is finite</strong> — LRU cache bounds usage regardless of history length</p>
+                        <p class="fragment">3️⃣ <strong>Crashes happen</strong> — Write-ahead logging ensures nothing is lost</p>
+                        <p class="fragment">4️⃣ <strong>Storage fills up</strong> — Intelligent eviction keeps valuable data</p>
+                        <p class="fragment">5️⃣ <strong>Corruption occurs</strong> — Recovery strategies ensure browser always starts</p>
+                        <p class="fragment">6️⃣ <strong>Hybrid wins</strong> — Linked list for navigation, indexes for search</p>
+                    </div>
+                    <aside class="notes">
+                        Six key lessons. Each one from production experience.
+                    </aside>
+                </section>
+
+                <!-- Slide 33: Challenge -->
+                <section>
+                    <h3>🤔 Challenge for You</h3>
+                    <div class="highlight-box">
+                        <p style="font-size: 0.9em;">
+                            How would you implement <strong>"Reopen Closed Tab"</strong> that works across browser restarts?
+                        </p>
+                        <p style="font-size: 0.7em; color: #888; margin-top: 15px;">
+                            What data structure would you use for the "recently closed" list?
+                        </p>
+                    </div>
+                    <div class="fragment" style="margin-top: 20px;">
+                        <p style="font-size: 0.75em; color: var(--forward-orange);">
+                            💡 <strong>Hint:</strong> Stack of tabs, but persisted to disk with the same crash-safety guarantees we discussed today.
+                        </p>
+                    </div>
+                    <aside class="notes">
+                        Leave them thinking. This extends what they learned today.
+                    </aside>
+                </section>
+
+                <!-- Slide 34: What's Next -->
+                <section>
+                    <h3>🚀 What's Next</h3>
+                    <div class="highlight-box">
+                        <h4 style="color: var(--browser-blue); margin: 0 0 10px 0;">Episode 4: Time Travel at Scale</h4>
+                        <p style="font-size: 0.8em; margin: 0;">Undo Trees, Redux DevTools, and CRDTs</p>
+                    </div>
+                    <div class="fragment" style="margin-top: 20px; font-size: 0.75em;">
+                        <p>Browser history is <strong>linear</strong>.</p>
+                        <p>But what about <strong>Figma</strong>, where you can undo across multiple objects?</p>
+                        <p>Or <strong>Git</strong>, where you can merge parallel histories?</p>
+                        <p style="color: var(--forward-orange);">That requires <strong>trees</strong>, not lists.</p>
+                        <p>And at collaborative scale, it requires <strong>conflict-free replication</strong>.</p>
+                    </div>
+                    <aside class="notes">
+                        Tease Episode 4. Linear history becomes branching history.
+                    </aside>
+                </section>
+
+                <!-- Final Slide -->
+                <section>
+                    <h2>🌐 Episode 3 Complete</h2>
+                    <p style="font-size: 1.2em; color: var(--browser-blue);">Back, Forward, and Time Travel</p>
+                    <p style="margin-top: 30px; color: #888;">
+                        From LeetCode #1472 to crash-resilient browser history
+                    </p>
+                    <div style="margin-top: 40px;">
+                        <p class="quote" style="font-size: 0.85em;">
+                            "The user doesn't see the doubly linked list. They see their work restored after a crash. That's the engineering that matters."
+                        </p>
+                    </div>
+                    <p style="margin-top: 30px; font-size: 0.7em; color: #666;">
+                        LeetCode to Production | Season 1 | The Invisible Linked List
+                    </p>
+                    <aside class="notes">
+                        End with the quote. Engineering is about user outcomes, not data structures.
+                    </aside>
+                </section>
+            </section>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/reveal.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/plugin/highlight/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/plugin/notes/notes.min.js"></script>
+    
+    <script>
+        // Initialize Reveal.js
+        Reveal.initialize({
+            hash: true,
+            slideNumber: 'c/t',
+            plugins: [RevealHighlight, RevealNotes],
+            transition: 'slide',
+            backgroundTransition: 'fade'
+        });
+
+        // ============================================
+        // ANIMATION 1: Navigation Flow
+        // ============================================
+        const navAnim = {
+            canvas: null,
+            ctx: null,
+            pages: [],
+            currentIndex: 0,
+            pageNames: ['Home', 'News', 'Sports', 'Scores', 'Weather', 'Stocks', 'Email'],
+            buttons: [],
+            
+            init() {
+                this.canvas = document.getElementById('navCanvas');
+                if (!this.canvas) {
+                    console.log('navCanvas not found');
+                    return false;
+                }
+                this.ctx = this.canvas.getContext('2d');
+                if (!this.ctx) {
+                    console.log('navCanvas context failed');
+                    return false;
+                }
+                this.pages = [{name: 'Home', orphaned: false}];
+                this.currentIndex = 0;
+                
+                // Define button positions
+                const btnY = 25;
+                const btnH = 28;
+                const btnW = 90;
+                const gap = 10;
+                const totalW = btnW * 4 + gap * 3;
+                const startX = (this.canvas.width - totalW) / 2;
+                
+                this.buttons = [
+                    { x: startX, y: btnY, w: btnW, h: btnH, label: '← Back', color: '#34a853', action: 'back' },
+                    { x: startX + btnW + gap, y: btnY, w: btnW + 10, h: btnH, label: 'Visit New', color: '#4285f4', action: 'visit' },
+                    { x: startX + btnW * 2 + gap * 2 + 10, y: btnY, w: btnW, h: btnH, label: 'Forward →', color: '#fbbc04', action: 'forward' },
+                    { x: startX + btnW * 3 + gap * 3 + 10, y: btnY, w: btnW - 20, h: btnH, label: 'Reset', color: '#666', action: 'reset' }
+                ];
+                
+                // Add click handler
+                const self = this;
+                this.canvas.onclick = function(e) {
+                    const rect = self.canvas.getBoundingClientRect();
+                    const x = (e.clientX - rect.left) * (self.canvas.width / rect.width);
+                    const y = (e.clientY - rect.top) * (self.canvas.height / rect.height);
+                    
+                    self.buttons.forEach(btn => {
+                        if (x >= btn.x && x <= btn.x + btn.w && y >= btn.y && y <= btn.y + btn.h) {
+                            if (btn.action === 'back') self.doBack();
+                            else if (btn.action === 'visit') self.doVisit();
+                            else if (btn.action === 'forward') self.doForward();
+                            else if (btn.action === 'reset') self.doReset();
+                        }
+                    });
+                };
+                
+                this.draw();
+                return true;
+            },
+            
+            doReset() {
+                this.pages = [{name: 'Home', orphaned: false}];
+                this.currentIndex = 0;
+                this.draw();
+            },
+            
+            reset() {
+                if (!this.ctx) this.init();
+                if (!this.ctx) return;
+                this.doReset();
+            },
+            
+            doVisit() {
+                // Orphan any forward history
+                for (let i = this.currentIndex + 1; i < this.pages.length; i++) {
+                    this.pages[i].orphaned = true;
+                }
+                
+                // Add new page
+                const newPageName = this.pageNames[Math.min(this.pages.filter(p => !p.orphaned).length, this.pageNames.length - 1)];
+                this.pages = this.pages.slice(0, this.currentIndex + 1);
+                this.pages.push({name: newPageName, orphaned: false});
+                this.currentIndex = this.pages.length - 1;
+                this.draw();
+            },
+            
+            visit() {
+                if (!this.ctx) this.init();
+                if (!this.ctx) return;
+                this.doVisit();
+            },
+            
+            doBack() {
+                if (this.currentIndex > 0) {
+                    this.currentIndex--;
+                    this.draw();
+                }
+            },
+            
+            back() {
+                if (!this.ctx) this.init();
+                if (!this.ctx) return;
+                this.doBack();
+            },
+            
+            doForward() {
+                if (this.currentIndex < this.pages.length - 1 && !this.pages[this.currentIndex + 1].orphaned) {
+                    this.currentIndex++;
+                    this.draw();
+                }
+            },
+            
+            forward() {
+                if (!this.ctx) this.init();
+                if (!this.ctx) return;
+                this.doForward();
+            },
+            
+            draw() {
+                if (!this.ctx || !this.canvas) return;
+                const ctx = this.ctx;
+                const canvas = this.canvas;
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                
+                // Draw buttons on canvas
+                this.buttons.forEach(btn => {
+                    // Button background
+                    ctx.fillStyle = btn.color;
+                    ctx.beginPath();
+                    ctx.roundRect(btn.x, btn.y, btn.w, btn.h, 6);
+                    ctx.fill();
+                    
+                    // Button border
+                    ctx.strokeStyle = '#fff';
+                    ctx.lineWidth = 1;
+                    ctx.stroke();
+                    
+                    // Button text
+                    ctx.fillStyle = btn.color === '#fbbc04' ? '#000' : '#fff';
+                    ctx.font = 'bold 11px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(btn.label, btn.x + btn.w/2, btn.y + btn.h/2);
+                });
+                
+                // Draw title below buttons
+                ctx.fillStyle = '#888';
+                ctx.font = '10px Arial';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'alphabetic';
+                ctx.fillText('Browser History (Doubly Linked List)', canvas.width / 2, 68);
+                
+                const activePages = this.pages.filter(p => !p.orphaned);
+                const nodeWidth = 65;
+                const nodeHeight = 35;
+                const spacing = 85;
+                const startX = (canvas.width - (activePages.length * spacing)) / 2 + 30;
+                const y = 115;  // Fixed Y position for nodes
+                
+                // Draw nodes
+                activePages.forEach((page, i) => {
+                    const x = startX + i * spacing;
+                    const isCurrent = i === this.currentIndex;
+                    
+                    // Node box
+                    ctx.fillStyle = isCurrent ? '#1e4620' : '#1e3a5f';
+                    ctx.strokeStyle = isCurrent ? '#34a853' : '#4285f4';
+                    ctx.lineWidth = isCurrent ? 3 : 2;
+                    ctx.beginPath();
+                    ctx.roundRect(x - nodeWidth/2, y - nodeHeight/2, nodeWidth, nodeHeight, 6);
+                    ctx.fill();
+                    ctx.stroke();
+                    
+                    // Page name
+                    ctx.fillStyle = '#fff';
+                    ctx.font = isCurrent ? 'bold 10px Arial' : '10px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(page.name, x, y + 4);
+                    
+                    // Current indicator
+                    if (isCurrent) {
+                        ctx.fillStyle = '#34a853';
+                        ctx.font = '8px Arial';
+                        ctx.fillText('▼ CURRENT', x, y - 25);
+                    }
+                    
+                    // Draw arrows
+                    if (i > 0) {
+                        const prevX = startX + (i - 1) * spacing;
+                        
+                        // Forward arrow (top)
+                        ctx.strokeStyle = '#fbbc04';
+                        ctx.lineWidth = 2;
+                        ctx.beginPath();
+                        ctx.moveTo(prevX + nodeWidth/2 + 5, y - 8);
+                        ctx.lineTo(x - nodeWidth/2 - 5, y - 8);
+                        ctx.stroke();
+                        // Arrow head
+                        ctx.beginPath();
+                        ctx.moveTo(x - nodeWidth/2 - 5, y - 8);
+                        ctx.lineTo(x - nodeWidth/2 - 10, y - 12);
+                        ctx.lineTo(x - nodeWidth/2 - 10, y - 4);
+                        ctx.closePath();
+                        ctx.fillStyle = '#fbbc04';
+                        ctx.fill();
+                        
+                        // Back arrow (bottom)
+                        ctx.strokeStyle = '#34a853';
+                        ctx.beginPath();
+                        ctx.moveTo(x - nodeWidth/2 - 5, y + 8);
+                        ctx.lineTo(prevX + nodeWidth/2 + 5, y + 8);
+                        ctx.stroke();
+                        // Arrow head
+                        ctx.beginPath();
+                        ctx.moveTo(prevX + nodeWidth/2 + 5, y + 8);
+                        ctx.lineTo(prevX + nodeWidth/2 + 10, y + 12);
+                        ctx.lineTo(prevX + nodeWidth/2 + 10, y + 4);
+                        ctx.closePath();
+                        ctx.fillStyle = '#34a853';
+                        ctx.fill();
+                    }
+                });
+                
+                // Draw pointer labels
+                ctx.font = '9px Arial';
+                ctx.fillStyle = '#34a853';
+                ctx.fillText('← prev (Back)', 80, 155);
+                ctx.fillStyle = '#fbbc04';
+                ctx.fillText('next (Forward) →', canvas.width - 80, 155);
+                
+                // Draw info
+                ctx.fillStyle = '#888';
+                ctx.font = '9px Arial';
+                ctx.textAlign = 'left';
+                ctx.fillText(`Pages: ${activePages.length} | Current: ${activePages[this.currentIndex]?.name || 'Home'}`, 20, canvas.height - 8);
+                
+                // Tip
+                ctx.textAlign = 'right';
+                ctx.fillStyle = '#fbbc04';
+                ctx.fillText('Tip: Visit after going back clears forward history!', canvas.width - 20, canvas.height - 8);
+            }
+        };
+
+        // ============================================
+        // ANIMATION 2: LRU Cache
+        // ============================================
+        const lruAnim = {
+            canvas: null,
+            ctx: null,
+            cache: [],
+            disk: [],
+            maxCache: 5,
+            pageCounter: 0,
+            buttons: [],
+            
+            init() {
+                this.canvas = document.getElementById('lruCanvas');
+                if (!this.canvas) return false;
+                this.ctx = this.canvas.getContext('2d');
+                if (!this.ctx) return false;
+                this.cache = [];
+                this.disk = [];
+                this.pageCounter = 0;
+                
+                // Define button positions
+                const btnY = 12;
+                const btnH = 26;
+                const btnW = 100;
+                const gap = 10;
+                const totalW = btnW * 4 + gap * 3;
+                const startX = (this.canvas.width - totalW) / 2;
+                
+                this.buttons = [
+                    { x: startX, y: btnY, w: btnW, h: btnH, label: 'Visit Page', color: '#4285f4', action: 'add' },
+                    { x: startX + btnW + gap, y: btnY, w: btnW + 20, h: btnH, label: 'Access Old Page', color: '#34a853', action: 'access' },
+                    { x: startX + btnW * 2 + gap * 2 + 20, y: btnY, w: btnW + 20, h: btnH, label: 'Trigger Eviction', color: '#ea4335', action: 'evict' },
+                    { x: startX + btnW * 3 + gap * 3 + 40, y: btnY, w: btnW - 30, h: btnH, label: 'Reset', color: '#666', action: 'reset' }
+                ];
+                
+                // Add click handler
+                const self = this;
+                this.canvas.onclick = function(e) {
+                    const rect = self.canvas.getBoundingClientRect();
+                    const x = (e.clientX - rect.left) * (self.canvas.width / rect.width);
+                    const y = (e.clientY - rect.top) * (self.canvas.height / rect.height);
+                    
+                    self.buttons.forEach(btn => {
+                        if (x >= btn.x && x <= btn.x + btn.w && y >= btn.y && y <= btn.y + btn.h) {
+                            if (btn.action === 'add') self.doAddPage();
+                            else if (btn.action === 'access') self.doAccessOld();
+                            else if (btn.action === 'evict') self.doShowEviction();
+                            else if (btn.action === 'reset') self.doReset();
+                        }
+                    });
+                };
+                
+                this.draw();
+                return true;
+            },
+            
+            doReset() {
+                this.cache = [];
+                this.disk = [];
+                this.pageCounter = 0;
+                this.draw();
+            },
+            
+            reset() {
+                if (!this.ctx) this.init();
+                if (!this.ctx) return;
+                this.doReset();
+            },
+            
+            doAddPage() {
+                this.pageCounter++;
+                const page = {id: this.pageCounter, name: `Page ${this.pageCounter}`, size: Math.floor(Math.random() * 50 + 50)};
+                
+                // Add to cache
+                this.cache.push(page);
+                
+                // Evict if over capacity
+                if (this.cache.length > this.maxCache) {
+                    const evicted = this.cache.shift();
+                    this.disk.unshift(evicted);
+                    if (this.disk.length > 8) this.disk.pop();
+                }
+                
+                this.draw();
+            },
+            
+            addPage() {
+                if (!this.ctx) this.init();
+                if (!this.ctx) return;
+                this.doAddPage();
+            },
+            
+            doAccessOld() {
+                if (this.disk.length === 0) return;
+                
+                // Load from disk
+                const page = this.disk.shift();
+                this.cache.push(page);
+                
+                // Evict if needed
+                if (this.cache.length > this.maxCache) {
+                    const evicted = this.cache.shift();
+                    this.disk.unshift(evicted);
+                }
+                
+                this.draw();
+            },
+            
+            accessOld() {
+                if (!this.ctx) this.init();
+                if (!this.ctx) return;
+                this.doAccessOld();
+            },
+            
+            doShowEviction() {
+                // Force eviction
+                for (let i = 0; i < 3 && this.cache.length > 2; i++) {
+                    const evicted = this.cache.shift();
+                    this.disk.unshift(evicted);
+                }
+                if (this.disk.length > 8) this.disk = this.disk.slice(0, 8);
+                this.draw();
+            },
+            
+            showEviction() {
+                if (!this.ctx) this.init();
+                if (!this.ctx) return;
+                this.doShowEviction();
+            },
+            
+            draw() {
+                if (!this.ctx || !this.canvas) return;
+                const ctx = this.ctx;
+                const canvas = this.canvas;
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                
+                // Draw buttons on canvas
+                this.buttons.forEach(btn => {
+                    ctx.fillStyle = btn.color;
+                    ctx.beginPath();
+                    ctx.roundRect(btn.x, btn.y, btn.w, btn.h, 5);
+                    ctx.fill();
+                    ctx.strokeStyle = '#fff';
+                    ctx.lineWidth = 1;
+                    ctx.stroke();
+                    
+                    ctx.fillStyle = '#fff';
+                    ctx.font = 'bold 10px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(btn.label, btn.x + btn.w/2, btn.y + btn.h/2);
+                });
+                
+                // Title
+                ctx.fillStyle = '#888';
+                ctx.font = '10px Arial';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'alphabetic';
+                ctx.fillText('LRU Cache: Memory bounded regardless of history length', canvas.width / 2, 55);
+                
+                // RAM section
+                ctx.fillStyle = '#34a853';
+                ctx.font = 'bold 11px Arial';
+                ctx.textAlign = 'left';
+                ctx.fillText('RAM (LRU Cache)', 30, 80);
+                ctx.fillStyle = '#888';
+                ctx.font = '9px Arial';
+                ctx.fillText(`${this.cache.length}/${this.maxCache} pages`, 30, 95);
+                
+                // Draw cache boxes
+                const boxW = 60;
+                const boxH = 35;
+                for (let i = 0; i < this.maxCache; i++) {
+                    const x = 30 + i * 70;
+                    const y = 105;
+                    
+                    ctx.strokeStyle = this.cache[i] ? '#34a853' : '#333';
+                    ctx.lineWidth = 2;
+                    ctx.fillStyle = this.cache[i] ? '#1e4620' : '#1a1a1a';
+                    ctx.beginPath();
+                    ctx.roundRect(x, y, boxW, boxH, 4);
+                    ctx.fill();
+                    ctx.stroke();
+                    
+                    if (this.cache[i]) {
+                        ctx.fillStyle = '#fff';
+                        ctx.font = '8px Arial';
+                        ctx.textAlign = 'center';
+                        ctx.fillText(this.cache[i].name, x + boxW/2, y + 15);
+                        ctx.fillStyle = '#888';
+                        ctx.fillText(`${this.cache[i].size}KB`, x + boxW/2, y + 27);
+                    }
+                }
+                
+                // Arrow
+                ctx.strokeStyle = '#fbbc04';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(canvas.width / 2, 150);
+                ctx.lineTo(canvas.width / 2, 170);
+                ctx.stroke();
+                ctx.fillStyle = '#fbbc04';
+                ctx.font = '9px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText('Eviction', canvas.width / 2 - 30, 165);
+                
+                // Disk section
+                ctx.fillStyle = '#4285f4';
+                ctx.font = 'bold 11px Arial';
+                ctx.textAlign = 'left';
+                ctx.fillText('Disk (SQLite)', 30, 195);
+                ctx.fillStyle = '#888';
+                ctx.font = '9px Arial';
+                ctx.fillText(`${this.disk.length} pages persisted`, 30, 210);
+                
+                // Draw disk boxes
+                for (let i = 0; i < Math.min(this.disk.length, 8); i++) {
+                    const x = 30 + i * 70;
+                    const y = 220;
+                    
+                    ctx.strokeStyle = '#4285f4';
+                    ctx.lineWidth = 1;
+                    ctx.fillStyle = '#1e3a5f';
+                    ctx.globalAlpha = 0.7;
+                    ctx.beginPath();
+                    ctx.roundRect(x, y, boxW, boxH, 4);
+                    ctx.fill();
+                    ctx.stroke();
+                    ctx.globalAlpha = 1;
+                    
+                    ctx.fillStyle = '#aaa';
+                    ctx.font = '8px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(this.disk[i].name, x + boxW/2, y + 15);
+                    ctx.fillStyle = '#666';
+                    ctx.fillText(`${this.disk[i].size}KB`, x + boxW/2, y + 27);
+                }
+                
+                // Memory usage
+                const ramUsed = this.cache.reduce((sum, p) => sum + p.size, 0);
+                const maxRam = this.maxCache * 100;
+                ctx.fillStyle = '#888';
+                ctx.font = '9px Arial';
+                ctx.textAlign = 'right';
+                ctx.fillText(`RAM: ${ramUsed}KB / ${maxRam}KB max`, canvas.width - 20, canvas.height - 10);
+            }
+        };
+
+        // ============================================
+        // ANIMATION 3: Crash Recovery
+        // ============================================
+        const crashAnim = {
+            canvas: null,
+            ctx: null,
+            state: 'idle', // idle, browsing, crashed, restoring, restored
+            pages: [],
+            animFrame: 0,
+            buttons: [],
+            
+            init() {
+                this.canvas = document.getElementById('crashCanvas');
+                if (!this.canvas) return false;
+                this.ctx = this.canvas.getContext('2d');
+                if (!this.ctx) return false;
+                this.state = 'idle';
+                this.pages = [{name: 'Home', data: 'Welcome'}];
+                this.animFrame = 0;
+                
+                // Define button positions
+                const btnY = 12;
+                const btnH = 26;
+                const btnW = 110;
+                const gap = 10;
+                const totalW = btnW * 4 + gap * 3;
+                const startX = (this.canvas.width - totalW) / 2;
+                
+                this.buttons = [
+                    { x: startX, y: btnY, w: btnW, h: btnH, label: 'Browse Pages', color: '#4285f4', action: 'browse' },
+                    { x: startX + btnW + gap, y: btnY, w: btnW, h: btnH, label: '💥 Crash!', color: '#ea4335', action: 'crash' },
+                    { x: startX + btnW * 2 + gap * 2, y: btnY, w: btnW + 20, h: btnH, label: '🔄 Restore Session', color: '#00bcd4', action: 'restore' },
+                    { x: startX + btnW * 3 + gap * 3 + 20, y: btnY, w: btnW - 40, h: btnH, label: 'Reset', color: '#666', action: 'reset' }
+                ];
+                
+                // Add click handler
+                const self = this;
+                this.canvas.onclick = function(e) {
+                    const rect = self.canvas.getBoundingClientRect();
+                    const x = (e.clientX - rect.left) * (self.canvas.width / rect.width);
+                    const y = (e.clientY - rect.top) * (self.canvas.height / rect.height);
+                    
+                    self.buttons.forEach(btn => {
+                        if (x >= btn.x && x <= btn.x + btn.w && y >= btn.y && y <= btn.y + btn.h) {
+                            if (btn.action === 'browse') self.doBrowse();
+                            else if (btn.action === 'crash') self.doCrash();
+                            else if (btn.action === 'restore') self.doRestore();
+                            else if (btn.action === 'reset') self.doReset();
+                        }
+                    });
+                };
+                
+                this.draw();
+                return true;
+            },
+            
+            doReset() {
+                this.state = 'idle';
+                this.pages = [{name: 'Home', data: 'Welcome'}];
+                this.animFrame = 0;
+                this.draw();
+            },
+            
+            reset() {
+                if (!this.ctx) this.init();
+                if (!this.ctx) return;
+                this.doReset();
+            },
+            
+            doBrowse() {
+                this.state = 'browsing';
+                const pageData = [
+                    {name: 'Email', data: '📝 Composing...'},
+                    {name: 'Compose', data: '2000 words typed'},
+                    {name: 'Draft', data: '3 attachments'}
+                ];
+                
+                let i = 0;
+                const self = this;
+                const addPage = () => {
+                    if (i < pageData.length) {
+                        self.pages.push(pageData[i]);
+                        i++;
+                        self.draw();
+                        setTimeout(addPage, 600);
+                    }
+                };
+                addPage();
+            },
+            
+            browse() {
+                if (!this.ctx) this.init();
+                if (!this.ctx) return;
+                this.doBrowse();
+            },
+            
+            doCrash() {
+                this.state = 'crashed';
+                this.draw();
+            },
+            
+            crash() {
+                if (!this.ctx) this.init();
+                if (!this.ctx) return;
+                this.doCrash();
+            },
+            
+            doRestore() {
+                if (this.state !== 'crashed') return;
+                this.state = 'restoring';
+                this.draw();
+                
+                const self = this;
+                setTimeout(() => {
+                    self.state = 'restored';
+                    self.draw();
+                }, 1500);
+            },
+            
+            restore() {
+                if (!this.ctx) this.init();
+                if (!this.ctx) return;
+                this.doRestore();
+            },
+            
+            draw() {
+                if (!this.ctx || !this.canvas) return;
+                const ctx = this.ctx;
+                const canvas = this.canvas;
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                
+                // Draw buttons on canvas first
+                this.buttons.forEach(btn => {
+                    ctx.fillStyle = btn.color;
+                    ctx.beginPath();
+                    ctx.roundRect(btn.x, btn.y, btn.w, btn.h, 5);
+                    ctx.fill();
+                    ctx.strokeStyle = '#fff';
+                    ctx.lineWidth = 1;
+                    ctx.stroke();
+                    
+                    ctx.fillStyle = '#fff';
+                    ctx.font = 'bold 10px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(btn.label, btn.x + btn.w/2, btn.y + btn.h/2);
+                });
+                
+                ctx.textBaseline = 'alphabetic';
+                
+                if (this.state === 'crashed') {
+                    // Crash screen
+                    ctx.fillStyle = '#0a0a0a';
+                    ctx.fillRect(0, 50, canvas.width, canvas.height - 50);
+                    
+                    ctx.fillStyle = '#ea4335';
+                    ctx.font = 'bold 24px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.fillText('💥 CRASH!', canvas.width / 2, 110);
+                    
+                    ctx.fillStyle = '#888';
+                    ctx.font = '12px Arial';
+                    ctx.fillText('Power outage! Browser terminated!', canvas.width / 2, 150);
+                    ctx.fillText('All unsaved work lost...?', canvas.width / 2, 175);
+                    
+                    ctx.fillStyle = '#00bcd4';
+                    ctx.font = '10px Arial';
+                    ctx.fillText('But wait... SQLite WAL has our data!', canvas.width / 2, 220);
+                    return;
+                }
+                
+                if (this.state === 'restoring') {
+                    ctx.fillStyle = '#0a0a0a';
+                    ctx.fillRect(0, 50, canvas.width, canvas.height - 50);
+                    
+                    ctx.fillStyle = '#00bcd4';
+                    ctx.font = 'bold 18px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.fillText('🔄 Restoring Session...', canvas.width / 2, 110);
+                    
+                    ctx.fillStyle = '#888';
+                    ctx.font = '11px Arial';
+                    ctx.fillText('Reading from sessionstore.sqlite...', canvas.width / 2, 150);
+                    ctx.fillText('Rebuilding doubly linked list...', canvas.width / 2, 175);
+                    ctx.fillText('Restoring page state...', canvas.width / 2, 200);
+                    return;
+                }
+                
+                if (this.state === 'restored') {
+                    // Success header
+                    ctx.fillStyle = '#34a853';
+                    ctx.font = 'bold 14px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.fillText('✅ SESSION RESTORED!', canvas.width / 2, 60);
+                }
+                
+                // Draw browser tabs
+                ctx.fillStyle = '#888';
+                ctx.font = '10px Arial';
+                ctx.textAlign = 'left';
+                ctx.fillText('Browser History:', 20, 85);
+                
+                const nodeWidth = 80;
+                const spacing = 100;
+                const startX = 60;
+                const y = 130;
+                
+                this.pages.forEach((page, i) => {
+                    const x = startX + i * spacing;
+                    const isLast = i === this.pages.length - 1;
+                    
+                    // Node
+                    ctx.fillStyle = isLast ? '#1e4620' : '#1e3a5f';
+                    ctx.strokeStyle = isLast ? '#34a853' : '#4285f4';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.roundRect(x - nodeWidth/2, y - 25, nodeWidth, 50, 6);
+                    ctx.fill();
+                    ctx.stroke();
+                    
+                    ctx.fillStyle = '#fff';
+                    ctx.font = 'bold 10px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(page.name, x, y - 5);
+                    ctx.fillStyle = '#888';
+                    ctx.font = '8px Arial';
+                    ctx.fillText(page.data, x, y + 12);
+                    
+                    // Arrows
+                    if (i > 0) {
+                        ctx.strokeStyle = '#4285f4';
+                        ctx.lineWidth = 1;
+                        ctx.beginPath();
+                        ctx.moveTo(x - nodeWidth/2 - 5, y);
+                        ctx.lineTo(x - nodeWidth/2 - 15, y);
+                        ctx.stroke();
+                    }
+                });
+                
+                // WAL indicator
+                ctx.fillStyle = '#1e3a5f';
+                ctx.strokeStyle = '#00bcd4';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.roundRect(20, 195, canvas.width - 40, 40, 6);
+                ctx.fill();
+                ctx.stroke();
+                
+                ctx.fillStyle = '#00bcd4';
+                ctx.font = 'bold 10px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText('💾 SQLite WAL (Write-Ahead Log)', canvas.width / 2, 215);
+                ctx.fillStyle = '#888';
+                ctx.font = '9px Arial';
+                ctx.fillText(`${this.pages.length} entries persisted | Crash-safe | PRAGMA synchronous=FULL`, canvas.width / 2, 230);
+                
+                // Status
+                ctx.fillStyle = this.state === 'restored' ? '#34a853' : '#888';
+                ctx.font = '9px Arial';
+                ctx.textAlign = 'left';
+                ctx.fillText(`Status: ${this.state.toUpperCase()}`, 20, canvas.height - 10);
+            }
+        };
+
+        // ============================================
+        // ANIMATION 4: Eviction
+        // ============================================
+        const evictionAnim = {
+            canvas: null,
+            ctx: null,
+            entries: [],
+            storageUsed: 0,
+            maxStorage: 500,
+            buttons: [],
+            
+            init() {
+                this.canvas = document.getElementById('evictionCanvas');
+                if (!this.canvas) return false;
+                this.ctx = this.canvas.getContext('2d');
+                if (!this.ctx) return false;
+                this.entries = [];
+                this.storageUsed = 0;
+                
+                // Define button positions
+                const btnY = 12;
+                const btnH = 26;
+                const btnW = 120;
+                const gap = 15;
+                const totalW = btnW * 3 + gap * 2;
+                const startX = (this.canvas.width - totalW) / 2;
+                
+                this.buttons = [
+                    { x: startX, y: btnY, w: btnW, h: btnH, label: 'Fill Storage', color: '#4285f4', action: 'fill' },
+                    { x: startX + btnW + gap, y: btnY, w: btnW + 20, h: btnH, label: 'Trigger Eviction', color: '#ea4335', action: 'evict' },
+                    { x: startX + btnW * 2 + gap * 2 + 20, y: btnY, w: btnW - 40, h: btnH, label: 'Reset', color: '#666', action: 'reset' }
+                ];
+                
+                // Add click handler
+                const self = this;
+                this.canvas.onclick = function(e) {
+                    const rect = self.canvas.getBoundingClientRect();
+                    const x = (e.clientX - rect.left) * (self.canvas.width / rect.width);
+                    const y = (e.clientY - rect.top) * (self.canvas.height / rect.height);
+                    
+                    self.buttons.forEach(btn => {
+                        if (x >= btn.x && x <= btn.x + btn.w && y >= btn.y && y <= btn.y + btn.h) {
+                            if (btn.action === 'fill') self.doFillStorage();
+                            else if (btn.action === 'evict') self.doTriggerEviction();
+                            else if (btn.action === 'reset') self.doReset();
+                        }
+                    });
+                };
+                
+                this.draw();
+                return true;
+            },
+            
+            doReset() {
+                this.entries = [];
+                this.storageUsed = 0;
+                this.draw();
+            },
+            
+            reset() {
+                if (!this.ctx) this.init();
+                if (!this.ctx) return;
+                this.doReset();
+            },
+            
+            doFillStorage() {
+                const types = ['typed', 'link', 'redirect', 'link', 'redirect', 'redirect'];
+                const urls = ['github.com', 'news.com', 'ad-redirect', 'docs.com', 'tracker.io', 'analytics'];
+                
+                for (let i = 0; i < 12; i++) {
+                    const type = types[i % types.length];
+                    const size = type === 'typed' ? 30 : type === 'link' ? 40 : 60;
+                    this.entries.push({
+                        url: urls[i % urls.length],
+                        type: type,
+                        size: size,
+                        visits: type === 'typed' ? 10 : type === 'link' ? 3 : 1,
+                        age: Math.floor(Math.random() * 30)
+                    });
+                    this.storageUsed += size;
+                }
+                this.draw();
+            },
+            
+            fillStorage() {
+                if (!this.ctx) this.init();
+                if (!this.ctx) return;
+                this.doFillStorage();
+            },
+            
+            doTriggerEviction() {
+                if (this.entries.length === 0) return;
+                
+                // Score entries
+                this.entries.forEach(e => {
+                    e.value = (e.visits * 2) + (e.type === 'typed' ? 10 : 0) - (e.age * 0.5) - (e.size / 100);
+                });
+                
+                // Sort by value
+                this.entries.sort((a, b) => a.value - b.value);
+                
+                // Evict lowest value
+                const evictCount = Math.ceil(this.entries.length / 3);
+                for (let i = 0; i < evictCount; i++) {
+                    const removed = this.entries.shift();
+                    this.storageUsed -= removed.size;
+                }
+                
+                this.draw();
+            },
+            
+            triggerEviction() {
+                if (!this.ctx) this.init();
+                if (!this.ctx) return;
+                this.doTriggerEviction();
+            },
+            
+            draw() {
+                if (!this.ctx || !this.canvas) return;
+                const ctx = this.ctx;
+                const canvas = this.canvas;
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                
+                // Draw buttons on canvas first
+                this.buttons.forEach(btn => {
+                    ctx.fillStyle = btn.color;
+                    ctx.beginPath();
+                    ctx.roundRect(btn.x, btn.y, btn.w, btn.h, 5);
+                    ctx.fill();
+                    ctx.strokeStyle = '#fff';
+                    ctx.lineWidth = 1;
+                    ctx.stroke();
+                    
+                    ctx.fillStyle = '#fff';
+                    ctx.font = 'bold 10px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(btn.label, btn.x + btn.w/2, btn.y + btn.h/2);
+                });
+                
+                ctx.textBaseline = 'alphabetic';
+                
+                // Title
+                ctx.fillStyle = '#888';
+                ctx.font = '10px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText('Intelligent Eviction: Low-value entries removed first', canvas.width / 2, 55);
+                
+                // Storage bar
+                const barWidth = canvas.width - 100;
+                const barHeight = 22;
+                const barX = 50;
+                const barY = 68;
+                
+                ctx.fillStyle = '#333';
+                ctx.beginPath();
+                ctx.roundRect(barX, barY, barWidth, barHeight, 5);
+                ctx.fill();
+                
+                const fillPercent = this.storageUsed / this.maxStorage;
+                const fillColor = fillPercent > 0.9 ? '#ea4335' : fillPercent > 0.7 ? '#fbbc04' : '#34a853';
+                ctx.fillStyle = fillColor;
+                ctx.beginPath();
+                ctx.roundRect(barX, barY, barWidth * fillPercent, barHeight, 5);
+                ctx.fill();
+                
+                ctx.fillStyle = '#fff';
+                ctx.font = 'bold 10px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText(`${this.storageUsed}MB / ${this.maxStorage}MB`, barX + barWidth / 2, barY + 15);
+                
+                // Entries
+                const entryH = 26;
+                const entriesPerRow = 6;
+                const entryW = (canvas.width - 60) / entriesPerRow;
+                
+                this.entries.forEach((entry, i) => {
+                    const row = Math.floor(i / entriesPerRow);
+                    const col = i % entriesPerRow;
+                    const x = 30 + col * entryW;
+                    const y = 105 + row * (entryH + 6);
+                    
+                    // Color by type
+                    const colors = {typed: '#34a853', link: '#4285f4', redirect: '#ea4335'};
+                    ctx.fillStyle = colors[entry.type] || '#888';
+                    ctx.globalAlpha = 0.3;
+                    ctx.beginPath();
+                    ctx.roundRect(x, y, entryW - 8, entryH, 4);
+                    ctx.fill();
+                    ctx.globalAlpha = 1;
+                    
+                    ctx.strokeStyle = colors[entry.type] || '#888';
+                    ctx.lineWidth = 1;
+                    ctx.stroke();
+                    
+                    ctx.fillStyle = '#fff';
+                    ctx.font = '8px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(entry.url, x + (entryW - 8) / 2, y + 11);
+                    ctx.fillStyle = '#888';
+                    ctx.font = '7px Arial';
+                    ctx.fillText(`${entry.type} | ${entry.size}MB`, x + (entryW - 8) / 2, y + 21);
+                });
+                
+                // Legend
+                ctx.font = '8px Arial';
+                ctx.textAlign = 'left';
+                ctx.fillStyle = '#34a853';
+                ctx.fillText('● typed (high value)', 30, canvas.height - 8);
+                ctx.fillStyle = '#4285f4';
+                ctx.fillText('● link (medium)', 150, canvas.height - 8);
+                ctx.fillStyle = '#ea4335';
+                ctx.fillText('● redirect (low value)', 250, canvas.height - 8);
+            }
+        };
+
+        // ============================================
+        // ANIMATION 5: Recovery Cascade
+        // ============================================
+        const recoveryAnim = {
+            canvas: null,
+            ctx: null,
+            state: 'healthy',
+            currentStage: -1,
+            stages: [
+                {name: 'Normal open', status: 'pending'},
+                {name: 'Integrity check', status: 'pending'},
+                {name: 'Reindex', status: 'pending'},
+                {name: 'Vacuum', status: 'pending'},
+                {name: 'Salvage', status: 'pending'},
+                {name: 'Fresh start', status: 'pending'}
+            ],
+            
+            init() {
+                this.canvas = document.getElementById('recoveryCanvas');
+                if (!this.canvas) return false;
+                this.ctx = this.canvas.getContext('2d');
+                if (!this.ctx) return false;
+                this.state = 'healthy';
+                this.currentStage = -1;
+                this.stages = [
+                    {name: 'Normal open', status: 'pending'},
+                    {name: 'Integrity check', status: 'pending'},
+                    {name: 'Reindex', status: 'pending'},
+                    {name: 'Vacuum', status: 'pending'},
+                    {name: 'Salvage', status: 'pending'},
+                    {name: 'Fresh start', status: 'pending'}
+                ];
+                this.draw();
+                return true;
+            },
+            
+            reset() {
+                if (!this.ctx) this.init();
+                if (!this.ctx) return;
+                this.state = 'healthy';
+                this.currentStage = -1;
+                this.stages.forEach(s => s.status = 'pending');
+                this.draw();
+            },
+            
+            showCorruption() {
+                if (!this.ctx) this.init();
+                if (!this.ctx) return;
+                this.state = 'corrupted';
+                this.draw();
+            },
+            
+            runRecovery() {
+                if (!this.ctx) this.init();
+                if (!this.ctx) return;
+                if (this.state !== 'corrupted') return;
+                this.state = 'recovering';
+                this.currentStage = 0;
+                
+                const self = this;
+                const runStage = () => {
+                    if (self.currentStage >= self.stages.length) {
+                        self.state = 'recovered';
+                        self.draw();
+                        return;
+                    }
+                    
+                    self.stages[self.currentStage].status = 'active';
+                    self.draw();
+                    
+                    setTimeout(() => {
+                        // Simulate failure for first few stages
+                        if (self.currentStage < 4) {
+                            self.stages[self.currentStage].status = 'failed';
+                        } else {
+                            self.stages[self.currentStage].status = 'success';
+                            self.state = 'recovered';
+                            self.draw();
+                            return;
+                        }
+                        self.currentStage++;
+                        self.draw();
+                        setTimeout(runStage, 400);
+                    }, 600);
+                };
+                
+                runStage();
+            },
+            
+            draw() {
+                if (!this.ctx || !this.canvas) return;
+                const ctx = this.ctx;
+                const canvas = this.canvas;
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                
+                // Database icon
+                const dbX = 80;
+                const dbY = 100;
+                
+                ctx.fillStyle = this.state === 'corrupted' ? '#3d1515' : this.state === 'recovered' ? '#1e4620' : '#1e3a5f';
+                ctx.strokeStyle = this.state === 'corrupted' ? '#ea4335' : this.state === 'recovered' ? '#34a853' : '#4285f4';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.ellipse(dbX, dbY - 30, 40, 15, 0, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.rect(dbX - 40, dbY - 30, 80, 60);
+                ctx.fill();
+                ctx.beginPath();
+                ctx.ellipse(dbX, dbY + 30, 40, 15, 0, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.moveTo(dbX - 40, dbY - 30);
+                ctx.lineTo(dbX - 40, dbY + 30);
+                ctx.moveTo(dbX + 40, dbY - 30);
+                ctx.lineTo(dbX + 40, dbY + 30);
+                ctx.stroke();
+                
+                // DB label
+                ctx.fillStyle = '#fff';
+                ctx.font = 'bold 10px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText('history.db', dbX, dbY + 5);
+                
+                if (this.state === 'corrupted') {
+                    ctx.fillStyle = '#ea4335';
+                    ctx.font = 'bold 12px Arial';
+                    ctx.fillText('💀 CORRUPTED', dbX, dbY + 70);
+                } else if (this.state === 'recovered') {
+                    ctx.fillStyle = '#34a853';
+                    ctx.font = 'bold 12px Arial';
+                    ctx.fillText('✅ RECOVERED', dbX, dbY + 70);
+                }
+                
+                // Recovery stages
+                ctx.fillStyle = '#888';
+                ctx.font = 'bold 11px Arial';
+                ctx.textAlign = 'left';
+                ctx.fillText('Recovery Cascade:', 200, 30);
+                
+                const stageX = 200;
+                const stageStartY = 50;
+                const stageH = 32;
+                
+                this.stages.forEach((stage, i) => {
+                    const y = stageStartY + i * stageH;
+                    
+                    // Background
+                    let bgColor = '#222';
+                    let borderColor = '#444';
+                    let icon = '○';
+                    
+                    if (stage.status === 'active') {
+                        bgColor = '#3d3d15';
+                        borderColor = '#fbbc04';
+                        icon = '◐';
+                    } else if (stage.status === 'failed') {
+                        bgColor = '#3d1515';
+                        borderColor = '#ea4335';
+                        icon = '✗';
+                    } else if (stage.status === 'success') {
+                        bgColor = '#1e4620';
+                        borderColor = '#34a853';
+                        icon = '✓';
+                    }
+                    
+                    ctx.fillStyle = bgColor;
+                    ctx.strokeStyle = borderColor;
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.roundRect(stageX, y, 200, stageH - 4, 4);
+                    ctx.fill();
+                    ctx.stroke();
+                    
+                    ctx.fillStyle = borderColor;
+                    ctx.font = '12px Arial';
+                    ctx.textAlign = 'left';
+                    ctx.fillText(icon, stageX + 10, y + 19);
+                    
+                    ctx.fillStyle = '#fff';
+                    ctx.font = '10px Arial';
+                    ctx.fillText(`${i + 1}. ${stage.name}`, stageX + 30, y + 19);
+                });
+                
+                // Arrow from DB to stages
+                if (this.state === 'recovering' || this.state === 'recovered') {
+                    ctx.strokeStyle = '#fbbc04';
+                    ctx.lineWidth = 2;
+                    ctx.setLineDash([5, 3]);
+                    ctx.beginPath();
+                    ctx.moveTo(dbX + 45, dbY);
+                    ctx.lineTo(stageX - 10, dbY);
+                    ctx.stroke();
+                    ctx.setLineDash([]);
+                }
+                
+                // Title
+                ctx.fillStyle = '#888';
+                ctx.font = '10px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText('Multi-stage corruption recovery: Browser NEVER fails to start', canvas.width / 2, canvas.height - 10);
+            }
+        };
+
+        // ============================================
+        // ANIMATION 6: Cache Locality
+        // ============================================
+        const cacheAnim = {
+            canvas: null,
+            ctx: null,
+            mode: 'idle',
+            step: 0,
+            arrayAddrs: [],
+            linkedAddrs: [],
+            buttons: [],
+            
+            init() {
+                this.canvas = document.getElementById('cacheCanvas');
+                if (!this.canvas) return false;
+                this.ctx = this.canvas.getContext('2d');
+                if (!this.ctx) return false;
+                
+                // Generate addresses
+                this.arrayAddrs = [];
+                for (let i = 0; i < 8; i++) {
+                    this.arrayAddrs.push(0x1000 + i * 8);
+                }
+                // Random addresses for linked list
+                this.linkedAddrs = [0x1000, 0x7F00, 0x2300, 0x9100, 0x0400, 0x5600, 0x8200, 0x3700];
+                
+                // Define button positions
+                const btnY = 10;
+                const btnH = 26;
+                const btnW = 130;
+                const gap = 15;
+                const totalW = btnW * 3 + gap * 2;
+                const startX = (this.canvas.width - totalW) / 2;
+                
+                this.buttons = [
+                    { x: startX, y: btnY, w: btnW, h: btnH, label: 'Array Access', color: '#34a853', action: 'array' },
+                    { x: startX + btnW + gap, y: btnY, w: btnW + 20, h: btnH, label: 'Linked List Access', color: '#ea4335', action: 'linkedlist' },
+                    { x: startX + btnW * 2 + gap * 2 + 20, y: btnY, w: btnW - 50, h: btnH, label: 'Reset', color: '#666', action: 'reset' }
+                ];
+                
+                // Add click handler
+                const self = this;
+                this.canvas.onclick = function(e) {
+                    const rect = self.canvas.getBoundingClientRect();
+                    const x = (e.clientX - rect.left) * (self.canvas.width / rect.width);
+                    const y = (e.clientY - rect.top) * (self.canvas.height / rect.height);
+                    
+                    self.buttons.forEach(btn => {
+                        if (x >= btn.x && x <= btn.x + btn.w && y >= btn.y && y <= btn.y + btn.h) {
+                            if (btn.action === 'array') self.doShowArray();
+                            else if (btn.action === 'linkedlist') self.doShowLinkedList();
+                            else if (btn.action === 'reset') self.doReset();
+                        }
+                    });
+                };
+                
+                this.mode = 'idle';
+                this.step = 0;
+                this.draw();
+                return true;
+            },
+            
+            doReset() {
+                this.mode = 'idle';
+                this.step = 0;
+                this.draw();
+            },
+            
+            reset() {
+                if (!this.ctx) this.init();
+                if (!this.ctx) return;
+                this.doReset();
+            },
+            
+            doShowArray() {
+                this.mode = 'array';
+                this.step = 0;
+                this.animate();
+            },
+            
+            showArray() {
+                if (!this.ctx) this.init();
+                if (!this.ctx) return;
+                this.doShowArray();
+            },
+            
+            doShowLinkedList() {
+                this.mode = 'linkedlist';
+                this.step = 0;
+                this.animate();
+            },
+            
+            showLinkedList() {
+                if (!this.ctx) this.init();
+                if (!this.ctx) return;
+                this.doShowLinkedList();
+            },
+            
+            animate() {
+                if (!this.ctx) return;
+                this.draw();
+                const self = this;
+                if (this.step < 8) {
+                    this.step++;
+                    setTimeout(() => self.animate(), 200);
+                }
+            },
+            
+            draw() {
+                if (!this.ctx || !this.canvas) return;
+                const ctx = this.ctx;
+                const canvas = this.canvas;
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                
+                // Draw buttons on canvas first
+                this.buttons.forEach(btn => {
+                    ctx.fillStyle = btn.color;
+                    ctx.beginPath();
+                    ctx.roundRect(btn.x, btn.y, btn.w, btn.h, 5);
+                    ctx.fill();
+                    ctx.strokeStyle = '#fff';
+                    ctx.lineWidth = 1;
+                    ctx.stroke();
+                    
+                    ctx.fillStyle = '#fff';
+                    ctx.font = 'bold 10px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(btn.label, btn.x + btn.w/2, btn.y + btn.h/2);
+                });
+                
+                ctx.textBaseline = 'alphabetic';
+                
+                // Title
+                ctx.fillStyle = '#888';
+                ctx.font = '10px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText('Memory Access Patterns: CPU Cache Behavior', canvas.width / 2, 52);
+                
+                const boxW = 70;
+                const boxH = 32;
+                const startX = 50;
+                
+                // Array section
+                ctx.fillStyle = '#34a853';
+                ctx.font = 'bold 10px Arial';
+                ctx.textAlign = 'left';
+                ctx.fillText('Array (Contiguous)', startX, 72);
+                
+                for (let i = 0; i < 8; i++) {
+                    const x = startX + i * (boxW + 5);
+                    const y = 80;
+                    const isAccessed = this.mode === 'array' && i < this.step;
+                    
+                    ctx.fillStyle = isAccessed ? '#1e4620' : '#1a1a1a';
+                    ctx.strokeStyle = isAccessed ? '#34a853' : '#333';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.roundRect(x, y, boxW, boxH, 4);
+                    ctx.fill();
+                    ctx.stroke();
+                    
+                    ctx.fillStyle = isAccessed ? '#34a853' : '#666';
+                    ctx.font = '8px monospace';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(`0x${this.arrayAddrs[i].toString(16).toUpperCase()}`, x + boxW/2, y + 13);
+                    ctx.fillText(`Page ${i}`, x + boxW/2, y + 25);
+                }
+                
+                // Linked list section
+                ctx.fillStyle = '#ea4335';
+                ctx.font = 'bold 10px Arial';
+                ctx.textAlign = 'left';
+                ctx.fillText('Linked List (Scattered)', startX, 132);
+                
+                for (let i = 0; i < 8; i++) {
+                    const x = startX + i * (boxW + 5);
+                    const y = 140;
+                    const isAccessed = this.mode === 'linkedlist' && i < this.step;
+                    
+                    ctx.fillStyle = isAccessed ? '#3d1515' : '#1a1a1a';
+                    ctx.strokeStyle = isAccessed ? '#ea4335' : '#333';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.roundRect(x, y, boxW, boxH, 4);
+                    ctx.fill();
+                    ctx.stroke();
+                    
+                    ctx.fillStyle = isAccessed ? '#ea4335' : '#666';
+                    ctx.font = '8px monospace';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(`0x${this.linkedAddrs[i].toString(16).toUpperCase()}`, x + boxW/2, y + 13);
+                    ctx.fillText(`Node ${i}`, x + boxW/2, y + 25);
+                }
+                
+                // Stats
+                if (this.mode !== 'idle') {
+                    const cacheHits = this.mode === 'array' ? this.step : Math.floor(this.step * 0.2);
+                    const cacheMisses = this.step - cacheHits;
+                    
+                    ctx.fillStyle = this.mode === 'array' ? '#34a853' : '#ea4335';
+                    ctx.font = 'bold 11px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(
+                        this.mode === 'array' 
+                            ? `✓ Cache hits: ${cacheHits} | Prefetch effective!` 
+                            : `✗ Cache misses: ${cacheMisses} | Random access penalty!`,
+                        canvas.width / 2, 195
+                    );
+                }
+            }
+        };
+
+        // Polyfill for roundRect (for older browsers)
+        if (!CanvasRenderingContext2D.prototype.roundRect) {
+            CanvasRenderingContext2D.prototype.roundRect = function(x, y, w, h, r) {
+                if (typeof r === 'number') {
+                    r = {tl: r, tr: r, br: r, bl: r};
+                } else {
+                    r = {...{tl: 0, tr: 0, br: 0, bl: 0}, ...r};
+                }
+                this.moveTo(x + r.tl, y);
+                this.lineTo(x + w - r.tr, y);
+                this.quadraticCurveTo(x + w, y, x + w, y + r.tr);
+                this.lineTo(x + w, y + h - r.br);
+                this.quadraticCurveTo(x + w, y + h, x + w - r.br, y + h);
+                this.lineTo(x + r.bl, y + h);
+                this.quadraticCurveTo(x, y + h, x, y + h - r.bl);
+                this.lineTo(x, y + r.tl);
+                this.quadraticCurveTo(x, y, x + r.tl, y);
+                this.closePath();
+                return this;
+            };
+        }
+
+        // Crash demo function
+        function simulateCrash() {
+            const result = document.getElementById('crashResult');
+            const demo = document.getElementById('crashDemo');
+            demo.innerHTML = '<p style="color: #ea4335;">💥 CRASH! 💥</p>';
+            result.style.display = 'block';
+        }
+
+        // Initialize all animations
+        function initAllAnimations() {
+            // Small delay to ensure canvas elements are rendered
+            setTimeout(() => {
+                navAnim.init();
+                lruAnim.init();
+                crashAnim.init();
+                evictionAnim.init();
+                recoveryAnim.init();
+                cacheAnim.init();
+            }, 100);
+        }
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', initAllAnimations);
+
+        // Initialize all animations when Reveal is ready
+        Reveal.on('ready', initAllAnimations);
+        
+        // Re-init animations when slide changes (with delay for nested slides)
+        Reveal.on('slidechanged', (event) => {
+            setTimeout(() => {
+                navAnim.init();
+                lruAnim.init();
+                crashAnim.init();
+                evictionAnim.init();
+                recoveryAnim.init();
+                cacheAnim.init();
+            }, 50);
+        });
+    </script>
+</body>
+</html>
