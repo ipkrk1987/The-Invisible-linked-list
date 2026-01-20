@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Episode 7: Ring Buffers – The Season Finale</title>
+    <title>Episode 7: Ring Buffers – When Data Never Stops</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/reset.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/reveal.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/theme/black.min.css">
@@ -106,7 +106,6 @@
         .badge-green { background: var(--success); color: #000; }
         .badge-red { background: var(--danger); color: #fff; }
         .badge-yellow { background: var(--warning); color: #000; }
-        .badge-purple { background: var(--accent); color: #000; }
         blockquote {
             background: rgba(79, 172, 254, 0.1);
             border-left: 4px solid var(--primary);
@@ -134,43 +133,6 @@
             gap: 30px;
             align-items: start;
         }
-        .ring-visual {
-            width: 250px;
-            height: 250px;
-            border: 4px solid var(--primary);
-            border-radius: 50%;
-            position: relative;
-            margin: 20px auto;
-        }
-        .ring-slot {
-            position: absolute;
-            width: 30px;
-            height: 30px;
-            background: rgba(255,255,255,0.1);
-            border: 2px solid var(--secondary);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 0.8em;
-        }
-        .pointer {
-            color: var(--warning);
-            font-weight: bold;
-        }
-        .season-card {
-            background: rgba(255,255,255,0.05);
-            border-radius: 12px;
-            padding: 15px;
-            margin: 10px 0;
-            border-left: 4px solid var(--primary);
-        }
-        .finale-glow {
-            animation: glow 2s ease-in-out infinite alternate;
-        }
-        @keyframes glow {
-            from { text-shadow: 0 0 10px var(--primary), 0 0 20px var(--primary); }
-            to { text-shadow: 0 0 20px var(--secondary), 0 0 40px var(--secondary); }
-        }
     </style>
 </head>
 <body>
@@ -178,15 +140,13 @@
         <div class="slides">
             <!-- Title Slide -->
             <section>
-                <h1 class="finale-glow">⭕ Episode 7: Ring Buffers</h1>
-                <h3>When Data Never Stops — The Season Finale</h3>
+                <h1>⭕ Episode 7: Ring Buffers</h1>
+                <h3>When Data Never Stops — Bounded Queues & Producer-Consumer</h3>
                 <p style="opacity: 0.7; margin-top: 40px;">Season 1: The Invisible Linked List</p>
                 <div style="margin-top: 40px;">
-                    <span class="badge badge-blue">Circular Buffer</span>
+                    <span class="badge badge-blue">Circular Queue</span>
                     <span class="badge badge-green">Producer-Consumer</span>
-                    <span class="badge badge-yellow">Streaming</span>
-                    <span class="badge badge-purple">Kafka</span>
-                    <span class="badge badge-red">FINALE</span>
+                    <span class="badge badge-yellow">LeetCode #622</span>
                 </div>
             </section>
 
@@ -201,250 +161,58 @@
                 </section>
 
                 <section>
-                    <h2>The Infinite Stream Problem</h2>
+                    <h2>Six Episodes In — What We've Mastered</h2>
                     <div class="highlight-box">
-                        <p>📈 Stock tickers: 10,000 prices/second, forever</p>
-                        <p>📹 Video streaming: 60 frames/second, 2-hour movie</p>
-                        <p>📊 Server logs: 100,000 events/second, 24/7</p>
-                        <p>🎮 Game telemetry: Player actions, millisecond precision</p>
+                        <p>📜 Episode 1-2: Storing linear history (Git)</p>
+                        <p>🔄 Episode 3: Navigating bidirectionally (Browser)</p>
+                        <p>⏪ Episode 4: Time travel (Undo/Redo)</p>
+                        <p>🧠 Episode 5: Deciding what to keep (LRU)</p>
+                        <p>🌐 Episode 6: Distributing across systems (CDN)</p>
+                    </div>
+                    <p class="fragment" style="color: var(--secondary); font-size: 1.2em; margin-top: 20px;">
+                        All assume data <strong>eventually stops arriving</strong>. What if it doesn't?
+                    </p>
+                </section>
+
+                <section>
+                    <h2>Real-World Infinite Streams</h2>
+                    <div class="highlight-box">
+                        <p>📈 <strong>Stock tickers:</strong> 100,000 trades/second</p>
+                        <p>📹 <strong>Video streaming:</strong> 60 fps × 8MB/frame = 480MB/s</p>
+                        <p>📊 <strong>Server logs:</strong> 10,000 lines/sec × 1,000 servers</p>
+                        <p>🌐 <strong>Network packets:</strong> 1,000,000 packets/sec on 10Gbps</p>
                     </div>
                     <p class="fragment" style="color: var(--danger); font-size: 1.2em;">
-                        You can't store infinite data. You need bounded buffers.
+                        You can't store infinite data. You need <strong>bounded buffers</strong>.
                     </p>
                 </section>
 
                 <section>
-                    <h2>Bounded Queue: The Foundation</h2>
-                    <pre><code class="language-python">class BoundedQueue:
-    def __init__(self, capacity):
-        self.buffer = [None] * capacity
-        self.head = 0  # Next read position
-        self.tail = 0  # Next write position
-        self.size = 0
-        self.capacity = capacity
-    
-    def enqueue(self, item):
-        if self.size == self.capacity:
-            raise BufferFull()
-        self.buffer[self.tail] = item
-        self.tail = (self.tail + 1) % self.capacity  # Wrap around!
-        self.size += 1
-    
-    def dequeue(self):
-        if self.size == 0:
-            raise BufferEmpty()
-        item = self.buffer[self.head]
-        self.head = (self.head + 1) % self.capacity  # Wrap around!
-        self.size -= 1
-        return item</code></pre>
-                </section>
-
-                <section>
-                    <h2>The Ring Buffer Insight</h2>
-                    <pre><code class="language-text">Linear view (wasteful):
-[A][B][C][_][_][_][_][_] → grows forever
-
-Ring view (bounded):
-     head
-       ↓
-    ┌──────────┐
-    │ [D][E][_]│
-    │          │
-    │ [_][A][B]│
-    └──────────┘
-          ↑
-        tail
-
-Overwrites oldest when full - O(1) always!</code></pre>
-                </section>
-            </section>
-
-            <!-- Act 2: Production Ring Buffer -->
-            <section>
-                <section>
-                    <h2>Act 2: Production Ring Buffer</h2>
-                    <h3>Lock-Free for High Performance</h3>
-                </section>
-
-                <section>
-                    <h2>Single Producer, Single Consumer</h2>
-                    <pre><code class="language-python">class SPSCRingBuffer:
-    """Single Producer, Single Consumer - no locks needed!"""
-    
-    def __init__(self, capacity):
-        # Capacity must be power of 2 for fast modulo
-        assert capacity & (capacity - 1) == 0
-        self.buffer = [None] * capacity
-        self.mask = capacity - 1  # For bitwise AND instead of modulo
-        self.head = 0  # Consumer reads here
-        self.tail = 0  # Producer writes here
-    
-    def push(self, item):
-        if self.tail - self.head == len(self.buffer):
-            return False  # Buffer full
-        self.buffer[self.tail & self.mask] = item
-        self.tail += 1  # No wrap needed - let it overflow
-        return True</code></pre>
-                </section>
-
-                <section>
-                    <h2>Why Power of 2?</h2>
-                    <div class="comparison-grid">
-                        <div class="comparison-box bad">
-                            <h3>❌ Modulo (slow)</h3>
-                            <pre><code class="language-python">index = counter % capacity
-# Division is expensive
-# ~20 CPU cycles</code></pre>
-                        </div>
-                        <div class="comparison-box good">
-                            <h3>✅ Bitwise AND (fast)</h3>
-                            <pre><code class="language-python">index = counter & (capacity - 1)
-# Single instruction
-# ~1 CPU cycle</code></pre>
-                        </div>
+                    <h2>Why Unbounded Queues Kill Systems</h2>
+                    <pre><code class="language-python">queue = []
+while True:
+    data = receive_data()      # 100,000/sec
+    queue.append(data)
+    process(queue.pop(0))      # Takes 0.00002 seconds</code></pre>
+                    <div class="fragment warning-box">
+                        <p><strong>The Math:</strong></p>
+                        <p>Producer: 100,000 items/sec</p>
+                        <p>Consumer: 90,000 items/sec (slightly slower!)</p>
+                        <p>Net accumulation: 10,000 items/sec</p>
+                        <p>After 1 hour: <strong>36,000,000 items → OOM!</strong></p>
                     </div>
-                    <p class="fragment success-box">
-                        <strong>20× faster</strong> at millions of operations per second!
-                    </p>
-                </section>
-
-                <section>
-                    <h2>Real World: Logging Buffer</h2>
-                    <pre><code class="language-python">class LoggingBuffer:
-    """Production logging with overflow protection."""
-    
-    def __init__(self, capacity=10000):
-        self.buffer = SPSCRingBuffer(capacity)
-        self.dropped_count = 0
-        self.flush_thread = Thread(target=self._flush_loop)
-    
-    def log(self, level, message):
-        entry = LogEntry(time.time(), level, message)
-        if not self.buffer.push(entry):
-            self.dropped_count += 1  # Don't block producer!
-    
-    def _flush_loop(self):
-        batch = []
-        while True:
-            while entry := self.buffer.pop():
-                batch.append(entry)
-                if len(batch) >= 100:
-                    self._write_batch(batch)
-                    batch = []
-            time.sleep(0.01)  # Yield CPU</code></pre>
                 </section>
             </section>
 
-            <!-- Act 3: Video Streaming -->
+            <!-- Act 2: Ring Buffer Theory -->
             <section>
                 <section>
-                    <h2>Act 3: Video Streaming</h2>
-                    <h3>Jitter Buffers & Smooth Playback</h3>
+                    <h2>Act 2: Ring Buffer Theory</h2>
+                    <h3>The Elegant Solution</h3>
                 </section>
 
                 <section>
-                    <h2>The Jitter Problem</h2>
-                    <pre><code class="language-text">Network reality (packets arrive unevenly):
-Time:     0    50   80   150   160   250ms
-Packet:   1    2    3    4     5     6
-
-Playback needs (constant rate):
-Time:     0    33   66   100   133   166ms
-Frame:    1    2    3    4     5     6
-
-Solution: Buffer absorbs jitter!</code></pre>
-                </section>
-
-                <section>
-                    <h2>Jitter Buffer Implementation</h2>
-                    <pre><code class="language-python">class JitterBuffer:
-    """Smooths network jitter for video playback."""
-    
-    def __init__(self, target_latency_ms=100, max_size=30):
-        self.buffer = RingBuffer(max_size)
-        self.target_latency_ms = target_latency_ms
-        self.playback_time = None
-    
-    def receive_frame(self, frame, timestamp):
-        """Called when network delivers a frame."""
-        self.buffer.push((frame, timestamp))
-    
-    def get_next_frame(self):
-        """Called every 16.67ms for 60fps playback."""
-        if self.buffer.size < 3:
-            return None  # Buffering...
-        
-        frame, timestamp = self.buffer.pop()
-        return frame</code></pre>
-                </section>
-
-                <section>
-                    <h2>Adaptive Bitrate Streaming</h2>
-                    <pre><code class="language-python">class AdaptiveBitratePlayer:
-    """Like YouTube's auto quality adjustment."""
-    
-    quality_levels = [
-        (360, 500_000),   # 360p, 500 Kbps
-        (720, 2_000_000), # 720p, 2 Mbps
-        (1080, 5_000_000) # 1080p, 5 Mbps
-    ]
-    
-    def adjust_quality(self):
-        buffer_health = self.buffer.size / self.buffer.capacity
-        
-        if buffer_health < 0.3:
-            self.quality = max(0, self.quality - 1)
-            # Buffer draining, reduce quality
-        elif buffer_health > 0.7:
-            self.quality = min(2, self.quality + 1)
-            # Buffer healthy, try higher quality</code></pre>
-                </section>
-            </section>
-
-            <!-- Act 4: Kafka-Style Distributed Logs -->
-            <section>
-                <section>
-                    <h2>Act 4: Kafka-Style Distributed Logs</h2>
-                    <h3>Ring Buffer at Global Scale</h3>
-                </section>
-
-                <section>
-                    <h2>The Distributed Log</h2>
-                    <pre><code class="language-text">Partition = Giant Ring Buffer on Disk
-
-    offset: 0    1    2    3    4    5    6    7
-           [A]  [B]  [C]  [D]  [E]  [F]  [G]  [H]
-                      ↑              ↑
-                 Consumer 1     Consumer 2
-                 (slow)         (fast)
-
-Key insight: Multiple consumers, independent progress!</code></pre>
-                </section>
-
-                <section>
-                    <h2>Kafka Partition Implementation</h2>
-                    <pre><code class="language-python">class KafkaStylePartition:
-    def __init__(self, retention_bytes=1024**3):  # 1GB
-        self.log = []
-        self.offset = 0
-        self.retention_bytes = retention_bytes
-        self.consumer_offsets = {}  # consumer_id -> offset
-    
-    def append(self, message):
-        entry = LogEntry(self.offset, time.time(), message)
-        self.log.append(entry)
-        self.offset += 1
-        self._maybe_compact()
-        return entry.offset
-    
-    def consume(self, consumer_id, batch_size=100):
-        offset = self.consumer_offsets.get(consumer_id, 0)
-        messages = self.log[offset:offset + batch_size]
-        return messages</code></pre>
-                </section>
-
-                <section>
-                    <h2>Backpressure Strategies</h2>
+                    <h2>Bounded Queue Strategies</h2>
                     <table>
                         <tr>
                             <th>Strategy</th>
@@ -452,161 +220,366 @@ Key insight: Multiple consumers, independent progress!</code></pre>
                             <th>Use Case</th>
                         </tr>
                         <tr>
+                            <td><strong>Block producer</strong></td>
+                            <td>Wait until space</td>
+                            <td>Critical data (finance)</td>
+                        </tr>
+                        <tr>
                             <td><strong>Drop oldest</strong></td>
-                            <td>Overwrite head</td>
-                            <td>Metrics, logs</td>
+                            <td>Overwrite oldest</td>
+                            <td>Time-series (metrics)</td>
                         </tr>
                         <tr>
                             <td><strong>Drop newest</strong></td>
-                            <td>Reject new writes</td>
-                            <td>Commands</td>
+                            <td>Reject new item</td>
+                            <td>When history matters</td>
                         </tr>
                         <tr>
-                            <td><strong>Block producer</strong></td>
-                            <td>Wait for space</td>
-                            <td>Critical data</td>
+                            <td><strong>Sample</strong></td>
+                            <td>Keep every Nth</td>
+                            <td>High-volume analytics</td>
                         </tr>
                         <tr>
-                            <td><strong>Resize buffer</strong></td>
-                            <td>Grow capacity</td>
-                            <td>Temporary spikes</td>
+                            <td><strong>Backpressure</strong></td>
+                            <td>Signal upstream</td>
+                            <td>Distributed systems</td>
                         </tr>
                     </table>
+                </section>
+
+                <section>
+                    <h2>Ring Buffer: The Core Insight</h2>
+                    <pre><code class="language-text">Linear view (wasteful):
+[A][B][C][_][_][_][_][_] → needs reallocation
+
+Ring view (bounded):
+     tail (read)
+       ↓
+    ┌──[A]──[B]──┐
+    │            │
+   [_]          [C]
+    │            │
+    └──[_]──[_]──┘
+          ↑
+        head (write)
+
+When head reaches end → wrap to beginning!</code></pre>
+                </section>
+
+                <section>
+                    <h2>Ring Buffer Mathematics</h2>
+                    <pre><code class="language-text">Capacity: 8
+Buffer: [A, B, C, D, _, _, _, _]
+         ^              ^
+        tail           head
+        (read)         (write)</code></pre>
+                    <div class="highlight-box">
+                        <p><strong>Key Invariants:</strong></p>
+                        <p>1. <code>head</code> points to next write position</p>
+                        <p>2. <code>tail</code> points to next read position</p>
+                        <p>3. Size: <code>(head - tail + capacity) % capacity</code></p>
+                        <p>4. Full when: <code>(head + 1) % capacity == tail</code></p>
+                    </div>
+                </section>
+
+                <section>
+                    <h2>The Magic: Wrap-Around</h2>
+                    <pre><code class="language-text">After writing E, F, G, H, I:
+
+[I, B, C, D, E, F, G, H]
+    ^
+   tail
+ ^
+head (wrapped around!)
+
+After reading B, C, D:
+
+[I, _, _, _, E, F, G, H]
+             ^
+            tail
+ ^
+head</code></pre>
+                    <p class="fragment success-box">
+                        <strong>O(1) push, O(1) pop, fixed memory forever!</strong>
+                    </p>
+                </section>
+
+                <section>
+                    <h2>Ring Buffer Complexity</h2>
+                    <table>
+                        <tr>
+                            <th>Operation</th>
+                            <th>Ring Buffer</th>
+                            <th>Dynamic Array</th>
+                        </tr>
+                        <tr>
+                            <td>Read (pop)</td>
+                            <td>O(1)</td>
+                            <td>O(1)</td>
+                        </tr>
+                        <tr>
+                            <td>Write (push)</td>
+                            <td>O(1)</td>
+                            <td>O(1) amortized</td>
+                        </tr>
+                        <tr>
+                            <td>Memory</td>
+                            <td><strong>O(capacity)</strong></td>
+                            <td>O(n) unbounded</td>
+                        </tr>
+                        <tr>
+                            <td>Allocation</td>
+                            <td><strong>O(0) runtime</strong></td>
+                            <td>O(n) resizes</td>
+                        </tr>
+                    </table>
+                    <p class="fragment" style="color: var(--success);">
+                        <strong>Bonus:</strong> Cache-friendly — sequential memory access!
+                    </p>
+                </section>
+
+                <section>
+                    <h2>Little's Law — Queue Sizing</h2>
+                    <div class="highlight-box">
+                        <p style="font-size: 1.5em;"><strong>L = λ × W</strong></p>
+                        <p>L = Average items in queue</p>
+                        <p>λ = Arrival rate (items/sec)</p>
+                        <p>W = Processing time (sec/item)</p>
+                    </div>
+                    <div class="fragment">
+                        <p><strong>Example:</strong> 1000 req/sec, 0.01 sec processing</p>
+                        <p>L = 1000 × 0.01 = <strong>10 items average</strong></p>
+                        <p style="color: var(--secondary);">Buffer capacity = L × 2-3 (for variance)</p>
+                    </div>
                 </section>
             </section>
 
-            <!-- Season 1 Retrospective -->
+            <!-- Act 3: Implementation -->
             <section>
                 <section>
-                    <h2 class="finale-glow">🎬 Season 1 Complete!</h2>
-                    <p style="font-size: 1.3em; color: var(--secondary);">
-                        The Invisible Linked List
+                    <h2>Act 3: Ring Buffer Implementation</h2>
+                    <h3>From LeetCode to Production</h3>
+                </section>
+
+                <section>
+                    <h2>LeetCode #622: Design Circular Queue</h2>
+                    <pre><code class="language-python">class MyCircularQueue:
+    def __init__(self, k: int):
+        self.capacity = k
+        self.queue = [None] * k
+        self.head = 0
+        self.tail = 0
+        self.size = 0
+    
+    def enQueue(self, value: int) -> bool:
+        if self.isFull():
+            return False
+        self.queue[self.tail] = value
+        self.tail = (self.tail + 1) % self.capacity
+        self.size += 1
+        return True
+    
+    def deQueue(self) -> bool:
+        if self.isEmpty():
+            return False
+        self.head = (self.head + 1) % self.capacity
+        self.size -= 1
+        return True</code></pre>
+                    <p class="fragment" style="color: var(--secondary);">
+                        This is the interview question. Now let's see production...
                     </p>
                 </section>
 
                 <section>
-                    <h2>The Journey</h2>
-                    <div class="season-card" style="border-left-color: var(--primary);">
-                        <strong>Episode 1:</strong> Singly Linked Lists → Git Commits
-                    </div>
-                    <div class="season-card" style="border-left-color: var(--secondary);">
-                        <strong>Episode 2:</strong> List Intersection → Git Merge-Base
-                    </div>
-                    <div class="season-card" style="border-left-color: var(--success);">
-                        <strong>Episode 3:</strong> Doubly Linked Lists → Browser History
-                    </div>
-                    <div class="season-card" style="border-left-color: var(--warning);">
-                        <strong>Episode 4:</strong> Immutable Structures → Time Travel
-                    </div>
-                    <div class="season-card" style="border-left-color: var(--danger);">
-                        <strong>Episode 5:</strong> LRU Cache → Browser & Redis
-                    </div>
-                    <div class="season-card" style="border-left-color: var(--accent);">
-                        <strong>Episode 6:</strong> Distributed Caching → Global CDNs
-                    </div>
-                    <div class="season-card" style="border-left-color: #fff;">
-                        <strong>Episode 7:</strong> Ring Buffers → Streaming Systems
+                    <h2>Production RingBuffer</h2>
+                    <pre><code class="language-python">class RingBuffer:
+    def __init__(self, capacity: int):
+        self.capacity = capacity
+        self.buffer = [None] * capacity
+        self.head = 0  # Next write position
+        self.tail = 0  # Next read position
+        self.size = 0
+    
+    def push(self, item) -> bool:
+        if self.size == self.capacity:
+            return False  # Buffer full
+        self.buffer[self.head] = item
+        self.head = (self.head + 1) % self.capacity
+        self.size += 1
+        return True
+    
+    def pop(self):
+        if self.size == 0:
+            return None
+        item = self.buffer[self.tail]
+        self.buffer[self.tail] = None  # Clear reference (GC)
+        self.tail = (self.tail + 1) % self.capacity
+        self.size -= 1
+        return item</code></pre>
+                </section>
+
+                <section>
+                    <h2>OverwritingRingBuffer</h2>
+                    <pre><code class="language-python">class OverwritingRingBuffer(RingBuffer):
+    """Always succeeds — overwrites oldest when full."""
+    
+    def push(self, item) -> bool:
+        if self.size == self.capacity:
+            # Overwrite oldest: advance tail too
+            self.buffer[self.head] = item
+            self.head = (self.head + 1) % self.capacity
+            self.tail = (self.tail + 1) % self.capacity
+            # size stays the same
+        else:
+            self.buffer[self.head] = item
+            self.head = (self.head + 1) % self.capacity
+            self.size += 1
+        return True  # Always succeeds!</code></pre>
+                    <div class="fragment highlight-box">
+                        <strong>Use cases:</strong> Metrics, logs, real-time analytics — recent data matters most
                     </div>
                 </section>
 
                 <section>
-                    <h2>The Pattern</h2>
-                    <pre><code class="language-text">LeetCode Problem
-      ↓
-Understand the core algorithm
-      ↓
-See it in real systems
-      ↓
-Scale breaks assumptions
-      ↓
-Production patterns emerge
-      ↓
-🎯 You now think like a systems engineer!</code></pre>
+                    <h2>Thread-Safe BoundedBlockingQueue</h2>
+                    <pre><code class="language-python">class BoundedBlockingQueue:
+    def __init__(self, capacity):
+        self.queue = collections.deque()
+        self.capacity = capacity
+        self.lock = threading.Lock()
+        self.not_empty = threading.Condition(self.lock)
+        self.not_full = threading.Condition(self.lock)
+    
+    def put(self, item, timeout=None):
+        with self.not_full:
+            while len(self.queue) == self.capacity:
+                self.not_full.wait(timeout)  # Block!
+            self.queue.append(item)
+            self.not_empty.notify()
+    
+    def get(self, timeout=None):
+        with self.not_empty:
+            while not self.queue:
+                self.not_empty.wait(timeout)  # Block!
+            item = self.queue.popleft()
+            self.not_full.notify()
+            return item</code></pre>
                 </section>
 
                 <section>
-                    <h2>Quick Reference Card</h2>
-                    <table style="font-size: 0.6em;">
-                        <tr>
-                            <th>LeetCode</th>
-                            <th>Production</th>
-                            <th>Key Insight</th>
-                        </tr>
-                        <tr>
-                            <td>Reverse Linked List</td>
-                            <td>Git commits</td>
-                            <td>Immutable history</td>
-                        </tr>
-                        <tr>
-                            <td>List Intersection</td>
-                            <td>Git merge-base</td>
-                            <td>Find common ancestor</td>
-                        </tr>
-                        <tr>
-                            <td>Design Browser History</td>
-                            <td>Navigation stack</td>
-                            <td>Bidirectional traversal</td>
-                        </tr>
-                        <tr>
-                            <td>Copy List w/ Random</td>
-                            <td>Persistent data</td>
-                            <td>Structural sharing</td>
-                        </tr>
-                        <tr>
-                            <td>LRU Cache</td>
-                            <td>Redis, CDN</td>
-                            <td>O(1) eviction</td>
-                        </tr>
-                        <tr>
-                            <td>Consistent Hashing</td>
-                            <td>Distributed cache</td>
-                            <td>Minimal remapping</td>
-                        </tr>
-                        <tr>
-                            <td>Circular Buffer</td>
-                            <td>Kafka, streaming</td>
-                            <td>Bounded infinite</td>
-                        </tr>
-                    </table>
+                    <h2>Producer-Consumer Pattern</h2>
+                    <pre><code class="language-python">class ProducerConsumerSystem:
+    def __init__(self, buffer_capacity=1000):
+        self.buffer = BoundedBlockingQueue(buffer_capacity)
+        self.running = False
+    
+    def _producer_worker(self, source):
+        while self.running:
+            item = source.get_next()
+            try:
+                self.buffer.put(item, timeout=0.1)
+            except Full:
+                self.dropped += 1  # Track drops
+    
+    def _consumer_worker(self, processor):
+        while self.running:
+            item = self.buffer.get(timeout=1.0)
+            if item:
+                processor.process(item)</code></pre>
+                    <p class="fragment success-box">
+                        <strong>This pattern is everywhere:</strong> Web servers, databases, log processors, video encoders
+                    </p>
+                </section>
+            </section>
+
+            <!-- Act 4: Production Systems -->
+            <section>
+                <section>
+                    <h2>Act 4: Production Logging & Metrics</h2>
                 </section>
 
                 <section>
-                    <h2>What You've Mastered</h2>
+                    <h2>LogBufferSystem</h2>
+                    <pre><code class="language-python">class LogBufferSystem:
+    def __init__(self, buffer_capacity=10000, flush_threshold=1000):
+        self.buffer = OverwritingRingBuffer(buffer_capacity)
+        self.batch = []
+        self.flush_threshold = flush_threshold
+    
+    def log(self, level, message, **kwargs):
+        entry = {
+            'timestamp': time.time(),
+            'level': level,
+            'message': message,
+            **kwargs
+        }
+        self.buffer.push(entry)
+        self.batch.append(entry)
+        
+        if len(self.batch) >= self.flush_threshold:
+            self._flush_batch()</code></pre>
+                    <div class="fragment highlight-box">
+                        <strong>Key insight:</strong> Batch writes are 100× more efficient than individual writes!
+                    </div>
+                </section>
+
+                <section>
+                    <h2>MetricsBuffer for Time-Series</h2>
+                    <pre><code class="language-python">class MetricsBuffer:
+    def __init__(self, window_seconds=300, resolution_ms=1000):
+        # 5 minutes @ 1-second resolution = 300 buckets
+        self.window_size = window_seconds * 1000 // resolution_ms
+        self.buffer = OverwritingRingBuffer(self.window_size)
+        self.current_bucket = {}
+    
+    def record(self, metric_name, value):
+        bucket_time = self._current_bucket_time()
+        
+        if bucket_time != self.bucket_start:
+            self._flush_bucket()
+        
+        # Aggregate in current bucket
+        if metric_name not in self.current_bucket:
+            self.current_bucket[metric_name] = {'sum': 0, 'count': 0}
+        self.current_bucket[metric_name]['sum'] += value
+        self.current_bucket[metric_name]['count'] += 1</code></pre>
+                    <p class="fragment" style="color: var(--secondary);">
+                        <strong>Used in:</strong> Prometheus, StatsD, DataDog agents
+                    </p>
+                </section>
+
+                <section>
+                    <h2>Key Takeaways</h2>
                     <div class="highlight-box">
-                        <p>✅ Linked lists are everywhere (just invisible)</p>
-                        <p>✅ LeetCode patterns map to real systems</p>
-                        <p>✅ Scale changes everything</p>
-                        <p>✅ Trade-offs are the essence of engineering</p>
-                        <p>✅ The algorithm is the same—the engineering explodes</p>
+                        <p>1. <strong>Fixed size</strong> — No memory growth, ever</p>
+                        <p>2. <strong>Wrap-around</strong> — Head and tail chase each other</p>
+                        <p>3. <strong>O(1) everything</strong> — Push, pop, no allocations</p>
+                        <p>4. <strong>Choose your strategy</strong> — Block, drop, or backpressure</p>
+                    </div>
+                    <div class="fragment success-box">
+                        <p><strong>Production patterns:</strong></p>
+                        <p>• Logging: Overwriting buffer + batch flush</p>
+                        <p>• Metrics: Time-bucketed aggregation</p>
+                        <p>• Queues: Producer-consumer with blocking</p>
                     </div>
                 </section>
+            </section>
 
+            <!-- Epilogue -->
+            <section>
                 <section>
-                    <h2>Season 2 Preview</h2>
-                    <blockquote>
-                        "Season 1 showed linked lists hiding everywhere.
-                        Season 2 reveals trees growing in every system..."
+                    <h2>Next Episode: Streaming & Kafka</h2>
+                    <div class="highlight-box">
+                        <p>📹 <strong>Video streaming</strong> with jitter buffers</p>
+                        <p>📊 <strong>Kafka-style</strong> distributed logs</p>
+                        <p>⚡ <strong>Backpressure</strong> strategies at scale</p>
+                        <p>🎬 <strong>Season 1 Finale</strong> — Complete retrospective</p>
+                    </div>
+                    <blockquote class="fragment" style="margin-top: 30px;">
+                        "Ring buffers are the foundation. Kafka scales them to trillions of messages per day. 
+                        And video players use them to make your Netflix buttery smooth."
                     </blockquote>
-                    <div class="highlight-box fragment">
-                        <p>🌲 Binary Search Trees → Database Indexes</p>
-                        <p>🔄 AVL/Red-Black → Self-Balancing Storage</p>
-                        <p>📁 B-Trees → Filesystem Design</p>
-                        <p>🌐 Tries → Autocomplete & Routing</p>
-                    </div>
-                </section>
-
-                <section>
-                    <h1 class="finale-glow">Thank You!</h1>
-                    <p style="font-size: 1.5em; margin-top: 40px;">
-                        Season 1: The Invisible Linked List
-                    </p>
-                    <p style="opacity: 0.7; margin-top: 20px;">
-                        From LeetCode to Production
-                    </p>
-                    <div style="margin-top: 40px;">
-                        <span class="badge badge-blue">🎓 Learning Complete</span>
-                        <span class="badge badge-green">🚀 Ready for Season 2</span>
-                    </div>
+                    <p style="font-size: 1.5em; margin-top: 30px;">See you in Episode 8! 🚀</p>
                 </section>
             </section>
 
