@@ -1147,4 +1147,56 @@ A: Inject faults! Corrupt random bytes in database file, kill process mid-write,
 
 ---
 
+## Episode Metadata
+
+**Prerequisites**: 
+- Episode 1-2 (singly linked lists fundamentals)
+- Basic database concepts
+
+**Key Terms Introduced**:
+- Doubly linked list
+- LRU cache
+- Write-ahead logging (WAL)
+- Session restore
+- Storage quotas
+- Corruption recovery
+
+**Connections to Other Episodes**:
+- Episode 1-2: Singly linked list → doubly linked list evolution
+- Episode 4: Immutable structures for undo history (teased)
+- Episode 5: LRU cache deep dive (introduced here for memory management)
+- Episode 6: Distributed history sync across devices
+
+**Real-World Systems Referenced**:
+- Chrome/Firefox browser history
+- SQLite database
+- Session restore systems
+
+---
+
+## Production Code Repository Structure
+
+```
+episode3-browser-history/
+├── basic/
+│   ├── browser_history_array.py    # Array-based solution
+│   ├── browser_history_dll.py      # Doubly linked list solution
+│   └── test_basic.py
+├── production/
+│   ├── paged_history.py            # PagedBrowserHistory with LRU
+│   ├── crash_safe_history.py       # CrashSafeBrowserHistory
+│   ├── quota_enforced_history.py   # QuotaEnforcedHistory
+│   ├── resilient_history.py        # ResilientBrowserHistory
+│   └── test_production.py
+├── recovery/
+│   ├── session_restore.py          # Session restoration
+│   ├── corruption_recovery.py      # Multi-stage recovery
+│   └── test_recovery.py
+└── benchmarks/
+    ├── array_vs_dll.py             # Performance comparison
+    └── memory_usage.py             # Memory profiling
+```
+
+---
+
 *"The user doesn't see the doubly linked list. They see their work restored after a crash. That's the engineering that matters."*

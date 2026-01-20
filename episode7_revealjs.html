@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Episode 7: Ring Buffers – The Season Finale</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/reset.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/reveal.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/theme/black.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/styles/monokai.min.css">
+    <style>
+        :root {
+            --primary: #4facfe;
+            --secondary: #00f2fe;
+            --accent: #f093fb;
+            --warning: #ffeaa7;
+            --danger: #ff6b6b;
+            --success: #00b894;
+            --bg-dark: #1a1a2e;
+        }
+        .reveal {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+        }
+        .reveal h1, .reveal h2, .reveal h3 {
+            text-transform: none;
+            font-weight: 700;
+        }
+        .reveal h1 {
+            font-size: 2.2em;
+            background: linear-gradient(90deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .reveal h2 {
+            font-size: 1.6em;
+            color: var(--primary);
+        }
+        .reveal h3 {
+            font-size: 1.3em;
+            color: var(--secondary);
+        }
+        .reveal pre {
+            width: 100%;
+            font-size: 0.5em;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+            border-radius: 12px;
+        }
+        .reveal code {
+            font-family: 'Fira Code', 'Consolas', monospace;
+        }
+        .highlight-box {
+            background: rgba(79, 172, 254, 0.1);
+            border: 2px solid var(--primary);
+            border-radius: 12px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .warning-box {
+            background: rgba(255, 107, 107, 0.1);
+            border: 2px solid var(--danger);
+            border-radius: 12px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .success-box {
+            background: rgba(0, 184, 148, 0.1);
+            border: 2px solid var(--success);
+            border-radius: 12px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .comparison-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin: 20px 0;
+        }
+        .comparison-box {
+            background: rgba(255,255,255,0.05);
+            border-radius: 12px;
+            padding: 20px;
+        }
+        .comparison-box.bad {
+            border: 2px solid var(--danger);
+        }
+        .comparison-box.good {
+            border: 2px solid var(--success);
+        }
+        .stat-number {
+            font-size: 2.5em;
+            font-weight: 800;
+            background: linear-gradient(90deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.7em;
+            font-weight: 600;
+            margin: 0 5px;
+        }
+        .badge-blue { background: var(--primary); color: #000; }
+        .badge-green { background: var(--success); color: #000; }
+        .badge-red { background: var(--danger); color: #fff; }
+        .badge-yellow { background: var(--warning); color: #000; }
+        .badge-purple { background: var(--accent); color: #000; }
+        blockquote {
+            background: rgba(79, 172, 254, 0.1);
+            border-left: 4px solid var(--primary);
+            padding: 20px;
+            font-style: italic;
+            border-radius: 0 12px 12px 0;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.7em;
+        }
+        th, td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        th {
+            background: rgba(79, 172, 254, 0.2);
+            color: var(--primary);
+        }
+        .two-column {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            align-items: start;
+        }
+        .ring-visual {
+            width: 250px;
+            height: 250px;
+            border: 4px solid var(--primary);
+            border-radius: 50%;
+            position: relative;
+            margin: 20px auto;
+        }
+        .ring-slot {
+            position: absolute;
+            width: 30px;
+            height: 30px;
+            background: rgba(255,255,255,0.1);
+            border: 2px solid var(--secondary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8em;
+        }
+        .pointer {
+            color: var(--warning);
+            font-weight: bold;
+        }
+        .season-card {
+            background: rgba(255,255,255,0.05);
+            border-radius: 12px;
+            padding: 15px;
+            margin: 10px 0;
+            border-left: 4px solid var(--primary);
+        }
+        .finale-glow {
+            animation: glow 2s ease-in-out infinite alternate;
+        }
+        @keyframes glow {
+            from { text-shadow: 0 0 10px var(--primary), 0 0 20px var(--primary); }
+            to { text-shadow: 0 0 20px var(--secondary), 0 0 40px var(--secondary); }
+        }
+    </style>
+</head>
+<body>
+    <div class="reveal">
+        <div class="slides">
+            <!-- Title Slide -->
+            <section>
+                <h1 class="finale-glow">⭕ Episode 7: Ring Buffers</h1>
+                <h3>When Data Never Stops — The Season Finale</h3>
+                <p style="opacity: 0.7; margin-top: 40px;">Season 1: The Invisible Linked List</p>
+                <div style="margin-top: 40px;">
+                    <span class="badge badge-blue">Circular Buffer</span>
+                    <span class="badge badge-green">Producer-Consumer</span>
+                    <span class="badge badge-yellow">Streaming</span>
+                    <span class="badge badge-purple">Kafka</span>
+                    <span class="badge badge-red">FINALE</span>
+                </div>
+            </section>
+
+            <!-- Act 1: The Infinite Stream Problem -->
+            <section>
+                <section>
+                    <h2>Act 1: Data That Never Stops</h2>
+                    <blockquote>
+                        "All season we assumed data stops arriving. LRU keeps recent items. 
+                        Browser history has endpoints. But what if it doesn't stop?"
+                    </blockquote>
+                </section>
+
+                <section>
+                    <h2>The Infinite Stream Problem</h2>
+                    <div class="highlight-box">
+                        <p>📈 Stock tickers: 10,000 prices/second, forever</p>
+                        <p>📹 Video streaming: 60 frames/second, 2-hour movie</p>
+                        <p>📊 Server logs: 100,000 events/second, 24/7</p>
+                        <p>🎮 Game telemetry: Player actions, millisecond precision</p>
+                    </div>
+                    <p class="fragment" style="color: var(--danger); font-size: 1.2em;">
+                        You can't store infinite data. You need bounded buffers.
+                    </p>
+                </section>
+
+                <section>
+                    <h2>Bounded Queue: The Foundation</h2>
+                    <pre><code class="language-python">class BoundedQueue:
+    def __init__(self, capacity):
+        self.buffer = [None] * capacity
+        self.head = 0  # Next read position
+        self.tail = 0  # Next write position
+        self.size = 0
+        self.capacity = capacity
+    
+    def enqueue(self, item):
+        if self.size == self.capacity:
+            raise BufferFull()
+        self.buffer[self.tail] = item
+        self.tail = (self.tail + 1) % self.capacity  # Wrap around!
+        self.size += 1
+    
+    def dequeue(self):
+        if self.size == 0:
+            raise BufferEmpty()
+        item = self.buffer[self.head]
+        self.head = (self.head + 1) % self.capacity  # Wrap around!
+        self.size -= 1
+        return item</code></pre>
+                </section>
+
+                <section>
+                    <h2>The Ring Buffer Insight</h2>
+                    <pre><code class="language-text">Linear view (wasteful):
+[A][B][C][_][_][_][_][_] → grows forever
+
+Ring view (bounded):
+     head
+       ↓
+    ┌──────────┐
+    │ [D][E][_]│
+    │          │
+    │ [_][A][B]│
+    └──────────┘
+          ↑
+        tail
+
+Overwrites oldest when full - O(1) always!</code></pre>
+                </section>
+            </section>
+
+            <!-- Act 2: Production Ring Buffer -->
+            <section>
+                <section>
+                    <h2>Act 2: Production Ring Buffer</h2>
+                    <h3>Lock-Free for High Performance</h3>
+                </section>
+
+                <section>
+                    <h2>Single Producer, Single Consumer</h2>
+                    <pre><code class="language-python">class SPSCRingBuffer:
+    """Single Producer, Single Consumer - no locks needed!"""
+    
+    def __init__(self, capacity):
+        # Capacity must be power of 2 for fast modulo
+        assert capacity & (capacity - 1) == 0
+        self.buffer = [None] * capacity
+        self.mask = capacity - 1  # For bitwise AND instead of modulo
+        self.head = 0  # Consumer reads here
+        self.tail = 0  # Producer writes here
+    
+    def push(self, item):
+        if self.tail - self.head == len(self.buffer):
+            return False  # Buffer full
+        self.buffer[self.tail & self.mask] = item
+        self.tail += 1  # No wrap needed - let it overflow
+        return True</code></pre>
+                </section>
+
+                <section>
+                    <h2>Why Power of 2?</h2>
+                    <div class="comparison-grid">
+                        <div class="comparison-box bad">
+                            <h3>❌ Modulo (slow)</h3>
+                            <pre><code class="language-python">index = counter % capacity
+# Division is expensive
+# ~20 CPU cycles</code></pre>
+                        </div>
+                        <div class="comparison-box good">
+                            <h3>✅ Bitwise AND (fast)</h3>
+                            <pre><code class="language-python">index = counter & (capacity - 1)
+# Single instruction
+# ~1 CPU cycle</code></pre>
+                        </div>
+                    </div>
+                    <p class="fragment success-box">
+                        <strong>20× faster</strong> at millions of operations per second!
+                    </p>
+                </section>
+
+                <section>
+                    <h2>Real World: Logging Buffer</h2>
+                    <pre><code class="language-python">class LoggingBuffer:
+    """Production logging with overflow protection."""
+    
+    def __init__(self, capacity=10000):
+        self.buffer = SPSCRingBuffer(capacity)
+        self.dropped_count = 0
+        self.flush_thread = Thread(target=self._flush_loop)
+    
+    def log(self, level, message):
+        entry = LogEntry(time.time(), level, message)
+        if not self.buffer.push(entry):
+            self.dropped_count += 1  # Don't block producer!
+    
+    def _flush_loop(self):
+        batch = []
+        while True:
+            while entry := self.buffer.pop():
+                batch.append(entry)
+                if len(batch) >= 100:
+                    self._write_batch(batch)
+                    batch = []
+            time.sleep(0.01)  # Yield CPU</code></pre>
+                </section>
+            </section>
+
+            <!-- Act 3: Video Streaming -->
+            <section>
+                <section>
+                    <h2>Act 3: Video Streaming</h2>
+                    <h3>Jitter Buffers & Smooth Playback</h3>
+                </section>
+
+                <section>
+                    <h2>The Jitter Problem</h2>
+                    <pre><code class="language-text">Network reality (packets arrive unevenly):
+Time:     0    50   80   150   160   250ms
+Packet:   1    2    3    4     5     6
+
+Playback needs (constant rate):
+Time:     0    33   66   100   133   166ms
+Frame:    1    2    3    4     5     6
+
+Solution: Buffer absorbs jitter!</code></pre>
+                </section>
+
+                <section>
+                    <h2>Jitter Buffer Implementation</h2>
+                    <pre><code class="language-python">class JitterBuffer:
+    """Smooths network jitter for video playback."""
+    
+    def __init__(self, target_latency_ms=100, max_size=30):
+        self.buffer = RingBuffer(max_size)
+        self.target_latency_ms = target_latency_ms
+        self.playback_time = None
+    
+    def receive_frame(self, frame, timestamp):
+        """Called when network delivers a frame."""
+        self.buffer.push((frame, timestamp))
+    
+    def get_next_frame(self):
+        """Called every 16.67ms for 60fps playback."""
+        if self.buffer.size < 3:
+            return None  # Buffering...
+        
+        frame, timestamp = self.buffer.pop()
+        return frame</code></pre>
+                </section>
+
+                <section>
+                    <h2>Adaptive Bitrate Streaming</h2>
+                    <pre><code class="language-python">class AdaptiveBitratePlayer:
+    """Like YouTube's auto quality adjustment."""
+    
+    quality_levels = [
+        (360, 500_000),   # 360p, 500 Kbps
+        (720, 2_000_000), # 720p, 2 Mbps
+        (1080, 5_000_000) # 1080p, 5 Mbps
+    ]
+    
+    def adjust_quality(self):
+        buffer_health = self.buffer.size / self.buffer.capacity
+        
+        if buffer_health < 0.3:
+            self.quality = max(0, self.quality - 1)
+            # Buffer draining, reduce quality
+        elif buffer_health > 0.7:
+            self.quality = min(2, self.quality + 1)
+            # Buffer healthy, try higher quality</code></pre>
+                </section>
+            </section>
+
+            <!-- Act 4: Kafka-Style Distributed Logs -->
+            <section>
+                <section>
+                    <h2>Act 4: Kafka-Style Distributed Logs</h2>
+                    <h3>Ring Buffer at Global Scale</h3>
+                </section>
+
+                <section>
+                    <h2>The Distributed Log</h2>
+                    <pre><code class="language-text">Partition = Giant Ring Buffer on Disk
+
+    offset: 0    1    2    3    4    5    6    7
+           [A]  [B]  [C]  [D]  [E]  [F]  [G]  [H]
+                      ↑              ↑
+                 Consumer 1     Consumer 2
+                 (slow)         (fast)
+
+Key insight: Multiple consumers, independent progress!</code></pre>
+                </section>
+
+                <section>
+                    <h2>Kafka Partition Implementation</h2>
+                    <pre><code class="language-python">class KafkaStylePartition:
+    def __init__(self, retention_bytes=1024**3):  # 1GB
+        self.log = []
+        self.offset = 0
+        self.retention_bytes = retention_bytes
+        self.consumer_offsets = {}  # consumer_id -> offset
+    
+    def append(self, message):
+        entry = LogEntry(self.offset, time.time(), message)
+        self.log.append(entry)
+        self.offset += 1
+        self._maybe_compact()
+        return entry.offset
+    
+    def consume(self, consumer_id, batch_size=100):
+        offset = self.consumer_offsets.get(consumer_id, 0)
+        messages = self.log[offset:offset + batch_size]
+        return messages</code></pre>
+                </section>
+
+                <section>
+                    <h2>Backpressure Strategies</h2>
+                    <table>
+                        <tr>
+                            <th>Strategy</th>
+                            <th>Behavior</th>
+                            <th>Use Case</th>
+                        </tr>
+                        <tr>
+                            <td><strong>Drop oldest</strong></td>
+                            <td>Overwrite head</td>
+                            <td>Metrics, logs</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Drop newest</strong></td>
+                            <td>Reject new writes</td>
+                            <td>Commands</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Block producer</strong></td>
+                            <td>Wait for space</td>
+                            <td>Critical data</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Resize buffer</strong></td>
+                            <td>Grow capacity</td>
+                            <td>Temporary spikes</td>
+                        </tr>
+                    </table>
+                </section>
+            </section>
+
+            <!-- Season 1 Retrospective -->
+            <section>
+                <section>
+                    <h2 class="finale-glow">🎬 Season 1 Complete!</h2>
+                    <p style="font-size: 1.3em; color: var(--secondary);">
+                        The Invisible Linked List
+                    </p>
+                </section>
+
+                <section>
+                    <h2>The Journey</h2>
+                    <div class="season-card" style="border-left-color: var(--primary);">
+                        <strong>Episode 1:</strong> Singly Linked Lists → Git Commits
+                    </div>
+                    <div class="season-card" style="border-left-color: var(--secondary);">
+                        <strong>Episode 2:</strong> List Intersection → Git Merge-Base
+                    </div>
+                    <div class="season-card" style="border-left-color: var(--success);">
+                        <strong>Episode 3:</strong> Doubly Linked Lists → Browser History
+                    </div>
+                    <div class="season-card" style="border-left-color: var(--warning);">
+                        <strong>Episode 4:</strong> Immutable Structures → Time Travel
+                    </div>
+                    <div class="season-card" style="border-left-color: var(--danger);">
+                        <strong>Episode 5:</strong> LRU Cache → Browser & Redis
+                    </div>
+                    <div class="season-card" style="border-left-color: var(--accent);">
+                        <strong>Episode 6:</strong> Distributed Caching → Global CDNs
+                    </div>
+                    <div class="season-card" style="border-left-color: #fff;">
+                        <strong>Episode 7:</strong> Ring Buffers → Streaming Systems
+                    </div>
+                </section>
+
+                <section>
+                    <h2>The Pattern</h2>
+                    <pre><code class="language-text">LeetCode Problem
+      ↓
+Understand the core algorithm
+      ↓
+See it in real systems
+      ↓
+Scale breaks assumptions
+      ↓
+Production patterns emerge
+      ↓
+🎯 You now think like a systems engineer!</code></pre>
+                </section>
+
+                <section>
+                    <h2>Quick Reference Card</h2>
+                    <table style="font-size: 0.6em;">
+                        <tr>
+                            <th>LeetCode</th>
+                            <th>Production</th>
+                            <th>Key Insight</th>
+                        </tr>
+                        <tr>
+                            <td>Reverse Linked List</td>
+                            <td>Git commits</td>
+                            <td>Immutable history</td>
+                        </tr>
+                        <tr>
+                            <td>List Intersection</td>
+                            <td>Git merge-base</td>
+                            <td>Find common ancestor</td>
+                        </tr>
+                        <tr>
+                            <td>Design Browser History</td>
+                            <td>Navigation stack</td>
+                            <td>Bidirectional traversal</td>
+                        </tr>
+                        <tr>
+                            <td>Copy List w/ Random</td>
+                            <td>Persistent data</td>
+                            <td>Structural sharing</td>
+                        </tr>
+                        <tr>
+                            <td>LRU Cache</td>
+                            <td>Redis, CDN</td>
+                            <td>O(1) eviction</td>
+                        </tr>
+                        <tr>
+                            <td>Consistent Hashing</td>
+                            <td>Distributed cache</td>
+                            <td>Minimal remapping</td>
+                        </tr>
+                        <tr>
+                            <td>Circular Buffer</td>
+                            <td>Kafka, streaming</td>
+                            <td>Bounded infinite</td>
+                        </tr>
+                    </table>
+                </section>
+
+                <section>
+                    <h2>What You've Mastered</h2>
+                    <div class="highlight-box">
+                        <p>✅ Linked lists are everywhere (just invisible)</p>
+                        <p>✅ LeetCode patterns map to real systems</p>
+                        <p>✅ Scale changes everything</p>
+                        <p>✅ Trade-offs are the essence of engineering</p>
+                        <p>✅ The algorithm is the same—the engineering explodes</p>
+                    </div>
+                </section>
+
+                <section>
+                    <h2>Season 2 Preview</h2>
+                    <blockquote>
+                        "Season 1 showed linked lists hiding everywhere.
+                        Season 2 reveals trees growing in every system..."
+                    </blockquote>
+                    <div class="highlight-box fragment">
+                        <p>🌲 Binary Search Trees → Database Indexes</p>
+                        <p>🔄 AVL/Red-Black → Self-Balancing Storage</p>
+                        <p>📁 B-Trees → Filesystem Design</p>
+                        <p>🌐 Tries → Autocomplete & Routing</p>
+                    </div>
+                </section>
+
+                <section>
+                    <h1 class="finale-glow">Thank You!</h1>
+                    <p style="font-size: 1.5em; margin-top: 40px;">
+                        Season 1: The Invisible Linked List
+                    </p>
+                    <p style="opacity: 0.7; margin-top: 20px;">
+                        From LeetCode to Production
+                    </p>
+                    <div style="margin-top: 40px;">
+                        <span class="badge badge-blue">🎓 Learning Complete</span>
+                        <span class="badge badge-green">🚀 Ready for Season 2</span>
+                    </div>
+                </section>
+            </section>
+
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/reveal.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/plugin/highlight/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/plugin/notes/notes.min.js"></script>
+    <script>
+        Reveal.initialize({
+            hash: true,
+            slideNumber: 'c/t',
+            plugins: [RevealHighlight, RevealNotes],
+            transition: 'slide',
+            backgroundTransition: 'fade'
+        });
+    </script>
+</body>
+</html>

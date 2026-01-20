@@ -1107,4 +1107,118 @@ A: Ropes are a specific implementation of immutable text. Our tree-based approac
 
 ---
 
+## 🏆 Challenge for the Audience
+
+> "Design an undo system for a collaborative spreadsheet where users can undo their own changes without affecting others' work. How would you track which operations belong to which user while maintaining a consistent view for everyone?"
+
+**Hint**: Each user has their own "view" of the history DAG. Undoing traverses only your operations while keeping others' changes. Use operation metadata (user_id) combined with vector clocks to determine which operations to skip during rebuild.
+
+---
+
+## Interactive Code Demos
+
+### Demo 1: Structural Sharing Visualization
+```python
+# Show memory savings with structural sharing
+text1 = ImmutableText.from_string("Hello World")
+text2 = text1.insert(5, "Beautiful ")
+
+print(f"text1: {text1.get_text()}")  # "Hello World"
+print(f"text2: {text2.get_text()}")  # "Hello Beautiful World"
+print(f"Shared nodes: {text1.count_shared_nodes(text2)}")
+```
+
+### Demo 2: Branching Undo
+```python
+# Show branching history
+history = PersistentHistory()
+history.initialize("")
+
+history.insert(0, "Hello")      # v1
+history.insert(5, " World")     # v2
+history.undo()                   # back to v1
+history.insert(5, "!")          # v3 (new branch!)
+
+print(history.get_branches())    # Shows both v2 and v3
+```
+
+### Demo 3: CRDT Convergence
+```python
+# Show two replicas converging
+alice = CRDTDocument("alice")
+bob = CRDTDocument("bob")
+
+alice.insert(0, "Hello")
+bob.insert(0, "World")
+
+# Exchange operations
+alice.receive(bob.get_operations())
+bob.receive(alice.get_operations())
+
+assert alice.get_text() == bob.get_text()  # Converged!
+```
+
+---
+
+## Episode Metadata
+
+**Prerequisites**: 
+- Episode 3 (doubly linked lists, browser history)
+- Basic tree data structures
+
+**Key Terms Introduced**:
+- Immutability
+- Structural sharing
+- Persistent data structures
+- History DAG
+- Vector clocks
+- CRDTs (Conflict-free Replicated Data Types)
+- Operational transformation
+- Tombstoning
+
+**Connections to Other Episodes**:
+- Episode 1-2: Linear history → branching history (DAG)
+- Episode 3: Browser history → undo history (more complex)
+- Episode 5: LRU cache for history eviction
+- Episode 6: Distributed systems → CRDTs at scale
+- Episode 7: Ring buffers for operation logs
+
+**Real-World Systems Referenced**:
+- Redux, Recoil (state management)
+- Git, Mercurial (version control)
+- Figma, Google Docs (collaborative editing)
+- Datomic (immutable database)
+- Clojure (functional language)
+
+---
+
+## Production Code Repository Structure
+
+```
+episode4-immutable-undo/
+├── basic/
+│   ├── mutable_history.py          # Mutable solution (problems)
+│   ├── immutable_text.py           # ImmutableText with structural sharing
+│   └── test_basic.py
+├── history/
+│   ├── history_node.py             # HistoryNode (DAG node)
+│   ├── persistent_history.py       # PersistentHistory (branching undo)
+│   └── test_history.py
+├── crdt/
+│   ├── vector_clock.py             # VectorClock implementation
+│   ├── crdt_document.py            # CRDTDocument with OT
+│   ├── tombstone.py                # Tombstone-based undo
+│   └── test_crdt.py
+├── production/
+│   ├── generational_gc.py          # ProductionHistorySystem
+│   ├── delta_compression.py        # Snapshot + delta storage
+│   └── test_production.py
+└── benchmarks/
+    ├── structural_sharing.py       # Memory savings measurement
+    ├── gc_pressure.py              # GC impact analysis
+    └── convergence_time.py         # CRDT convergence benchmarks
+```
+
+---
+
 *"The real challenge isn't implementing undo. It's implementing undo that works when 50 users are all undoing at once. Immutability makes that possible."*

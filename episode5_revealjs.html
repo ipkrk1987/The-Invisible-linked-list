@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Episode 5: The Cache That Forgets – LRU Cache Powers Your Browser, Database, and OS</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/reset.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/reveal.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/theme/black.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/styles/monokai.min.css">
+    <style>
+        :root {
+            --primary: #4facfe;
+            --secondary: #00f2fe;
+            --accent: #f093fb;
+            --warning: #ffeaa7;
+            --danger: #ff6b6b;
+            --success: #00b894;
+            --bg-dark: #1a1a2e;
+        }
+        .reveal {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+        }
+        .reveal h1, .reveal h2, .reveal h3 {
+            text-transform: none;
+            font-weight: 700;
+        }
+        .reveal h1 {
+            font-size: 2.2em;
+            background: linear-gradient(90deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .reveal h2 {
+            font-size: 1.6em;
+            color: var(--primary);
+        }
+        .reveal h3 {
+            font-size: 1.3em;
+            color: var(--secondary);
+        }
+        .reveal pre {
+            width: 100%;
+            font-size: 0.5em;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+            border-radius: 12px;
+        }
+        .reveal code {
+            font-family: 'Fira Code', 'Consolas', monospace;
+        }
+        .gradient-text {
+            background: linear-gradient(90deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .highlight-box {
+            background: rgba(79, 172, 254, 0.1);
+            border: 2px solid var(--primary);
+            border-radius: 12px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .warning-box {
+            background: rgba(255, 107, 107, 0.1);
+            border: 2px solid var(--danger);
+            border-radius: 12px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .success-box {
+            background: rgba(0, 184, 148, 0.1);
+            border: 2px solid var(--success);
+            border-radius: 12px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .comparison-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin: 20px 0;
+        }
+        .comparison-box {
+            background: rgba(255,255,255,0.05);
+            border-radius: 12px;
+            padding: 20px;
+        }
+        .comparison-box.bad {
+            border: 2px solid var(--danger);
+        }
+        .comparison-box.good {
+            border: 2px solid var(--success);
+        }
+        .stat-number {
+            font-size: 2.5em;
+            font-weight: 800;
+            background: linear-gradient(90deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .pyramid {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+        }
+        .pyramid-level {
+            background: linear-gradient(90deg, var(--primary), var(--secondary));
+            color: #000;
+            padding: 8px 16px;
+            border-radius: 4px;
+            font-weight: 600;
+            font-size: 0.7em;
+        }
+        .pyramid-level:nth-child(1) { width: 30%; }
+        .pyramid-level:nth-child(2) { width: 40%; }
+        .pyramid-level:nth-child(3) { width: 50%; }
+        .pyramid-level:nth-child(4) { width: 60%; }
+        .pyramid-level:nth-child(5) { width: 70%; }
+        .pyramid-level:nth-child(6) { width: 80%; }
+        .pyramid-level:nth-child(7) { width: 90%; background: var(--danger); }
+        .animation-container {
+            width: 100%;
+            height: 400px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+        }
+        canvas {
+            border-radius: 12px;
+            background: rgba(0,0,0,0.3);
+        }
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.7em;
+            font-weight: 600;
+            margin: 0 5px;
+        }
+        .badge-blue { background: var(--primary); color: #000; }
+        .badge-green { background: var(--success); color: #000; }
+        .badge-red { background: var(--danger); color: #fff; }
+        .badge-yellow { background: var(--warning); color: #000; }
+        blockquote {
+            background: rgba(79, 172, 254, 0.1);
+            border-left: 4px solid var(--primary);
+            padding: 20px;
+            font-style: italic;
+            border-radius: 0 12px 12px 0;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.7em;
+        }
+        th, td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        th {
+            background: rgba(79, 172, 254, 0.2);
+            color: var(--primary);
+        }
+        .two-column {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            align-items: start;
+        }
+        .lru-box {
+            display: inline-block;
+            background: var(--primary);
+            color: #000;
+            padding: 8px 16px;
+            border-radius: 8px;
+            margin: 5px;
+            font-weight: 600;
+        }
+        .lru-box.evicted {
+            background: var(--danger);
+            color: #fff;
+            text-decoration: line-through;
+        }
+        .lru-arrow {
+            color: var(--secondary);
+            font-size: 1.5em;
+        }
+    </style>
+</head>
+<body>
+    <div class="reveal">
+        <div class="slides">
+            <!-- Title Slide -->
+            <section>
+                <h1>⚡ Episode 5: The Cache That Forgets</h1>
+                <h3>How LRU Cache Powers Your Browser, Database, and OS</h3>
+                <p style="opacity: 0.7; margin-top: 40px;">Season 1: The Invisible Linked List</p>
+                <div style="margin-top: 40px;">
+                    <span class="badge badge-blue">LeetCode #146</span>
+                    <span class="badge badge-green">Redis</span>
+                    <span class="badge badge-yellow">Chrome</span>
+                    <span class="badge badge-blue">MySQL</span>
+                </div>
+            </section>
+
+            <!-- Act 1: The Caching Imperative -->
+            <section>
+                <section>
+                    <h2>Act 1: The Caching Imperative</h2>
+                    <blockquote>
+                        "The fastest way to compute something is to not compute it at all. 
+                        The second fastest is to compute it once and remember the result."
+                    </blockquote>
+                </section>
+
+                <section>
+                    <h2>The Memory Hierarchy Problem</h2>
+                    <div class="pyramid">
+                        <div class="pyramid-level">L1 Cache: 1ns (~32KB)</div>
+                        <div class="pyramid-level">L2 Cache: 3ns (~256KB)</div>
+                        <div class="pyramid-level">L3 Cache: 12ns (~8MB)</div>
+                        <div class="pyramid-level">RAM: 100ns (~64GB)</div>
+                        <div class="pyramid-level">SSD: 100μs (~1TB)</div>
+                        <div class="pyramid-level">HDD: 5ms (~10TB)</div>
+                        <div class="pyramid-level">Network: 50-500ms (∞)</div>
+                    </div>
+                    <p class="fragment" style="margin-top: 20px; color: var(--danger); font-size: 1.2em;">
+                        100,000× latency gap from L1 to network!
+                    </p>
+                </section>
+
+                <section>
+                    <h2>The Principle of Locality</h2>
+                    <div class="highlight-box">
+                        <h3>Temporal Locality</h3>
+                        <p>"If I accessed X recently, I'll access it again soon"</p>
+                        <p style="opacity: 0.7;">Example: Same profile picture loaded 100 times scrolling Instagram</p>
+                    </div>
+                    <div class="highlight-box fragment">
+                        <h3>Spatial Locality</h3>
+                        <p>"If I accessed X, I'll access nearby data soon"</p>
+                        <p style="opacity: 0.7;">Example: Sequential array access, adjacent image tiles</p>
+                    </div>
+                </section>
+
+                <section>
+                    <h2>Eviction Policy Comparison</h2>
+                    <table>
+                        <tr>
+                            <th>Policy</th>
+                            <th>Strategy</th>
+                            <th>Best For</th>
+                            <th>Worst For</th>
+                        </tr>
+                        <tr>
+                            <td><strong>LRU</strong></td>
+                            <td>Evict oldest access</td>
+                            <td>Temporal locality</td>
+                            <td>Sequential scans</td>
+                        </tr>
+                        <tr>
+                            <td><strong>LFU</strong></td>
+                            <td>Evict lowest count</td>
+                            <td>Hot items</td>
+                            <td>Stale popular items</td>
+                        </tr>
+                        <tr>
+                            <td><strong>FIFO</strong></td>
+                            <td>Evict oldest insert</td>
+                            <td>Simple hardware</td>
+                            <td>Ignores access pattern</td>
+                        </tr>
+                        <tr>
+                            <td><strong>CLOCK</strong></td>
+                            <td>Second chance bit</td>
+                            <td>OS pages</td>
+                            <td>Not optimal</td>
+                        </tr>
+                    </table>
+                    <p class="fragment success-box" style="margin-top: 20px;">
+                        LRU wins for most workloads — simple, exploits temporal locality!
+                    </p>
+                </section>
+            </section>
+
+            <!-- Act 2: The LeetCode Foundation -->
+            <section>
+                <section>
+                    <h2>Act 2: The LeetCode Foundation</h2>
+                    <h3>LeetCode #146: Design LRU Cache</h3>
+                </section>
+
+                <section>
+                    <h2>The Classic O(1) Solution</h2>
+                    <div class="highlight-box">
+                        <p><strong>The Trick:</strong></p>
+                        <p>Hash Map → O(1) lookup by key</p>
+                        <p>Doubly Linked List → O(1) move-to-front & eviction</p>
+                    </div>
+                    <pre><code class="language-text">Hash Map: key → DListNode
+          ↓
+Doubly Linked List: 
+  head ↔ [MRU] ↔ [key2] ↔ [key3] ↔ [LRU] ↔ tail</code></pre>
+                </section>
+
+                <section>
+                    <h2>DListNode Structure</h2>
+                    <pre><code class="language-python">class DListNode:
+    """Node in doubly-linked list for O(1) removal"""
+    def __init__(self, key=0, value=0):
+        self.key = key
+        self.value = value
+        self.prev = None
+        self.next = None
+
+# Sentinel nodes eliminate edge cases!
+# head ↔ [data] ↔ [data] ↔ tail
+#  ↑ dummy                   ↑ dummy</code></pre>
+                </section>
+
+                <section>
+                    <h2>Core Operations</h2>
+                    <pre><code class="language-python">def _add_node(self, node):
+    """Add node right after head (most recent position)"""
+    node.prev = self.head
+    node.next = self.head.next
+    self.head.next.prev = node
+    self.head.next = node
+
+def _remove_node(self, node):
+    """Remove node from its current position"""
+    prev_node = node.prev
+    next_node = node.next
+    prev_node.next = next_node
+    next_node.prev = prev_node
+
+def _move_to_head(self, node):
+    """Move existing node to head (most recent)"""
+    self._remove_node(node)
+    self._add_node(node)</code></pre>
+                </section>
+
+                <section>
+                    <h2>Get and Put Operations</h2>
+                    <pre><code class="language-python">def get(self, key: int) -> int:
+    if key not in self.cache:
+        return -1
+    node = self.cache[key]
+    self._move_to_head(node)  # Update access order!
+    return node.value
+
+def put(self, key: int, value: int) -> None:
+    if key in self.cache:
+        node = self.cache[key]
+        node.value = value
+        self._move_to_head(node)
+    else:
+        if len(self.cache) >= self.capacity:
+            lru = self._pop_tail()  # Evict LRU
+            del self.cache[lru.key]
+        new_node = DListNode(key, value)
+        self.cache[key] = new_node
+        self._add_node(new_node)</code></pre>
+                    <p class="fragment warning-box">
+                        This is perfect for interviews. But production needs more...
+                    </p>
+                </section>
+            </section>
+
+            <!-- Act 3: Production Browser Cache -->
+            <section>
+                <section>
+                    <h2>Act 3: Production Browser Cache</h2>
+                    <h3>What Chrome Actually Does</h3>
+                </section>
+
+                <section>
+                    <h2>Browser Cache Requirements</h2>
+                    <div class="two-column">
+                        <div>
+                            <h3>Multi-Tier Storage</h3>
+                            <p>📱 Memory: ~100ns, 50-200MB</p>
+                            <p>💾 Disk: ~100μs, 10GB+</p>
+                            <p>🌐 HTTP: Headers, ETags</p>
+                        </div>
+                        <div>
+                            <h3>Resource Priorities</h3>
+                            <p>📜 Scripts/CSS: 50%</p>
+                            <p>🖼️ Images: 30%</p>
+                            <p>🔤 Fonts: 10%</p>
+                            <p>📊 API: 10%</p>
+                        </div>
+                    </div>
+                </section>
+
+                <section>
+                    <h2>Size-Aware Eviction</h2>
+                    <pre><code class="language-python">class BrowserResourceCache:
+    def __init__(self, max_size_mb: int = 100):
+        self.max_size_bytes = max_size_mb * 1024 * 1024
+        self.current_size_bytes = 0
+        
+        self.lru = LRUCache(capacity=10000)
+        self.resources: Dict[str, Resource] = {}
+        
+        # Resource type limits
+        self.type_limits = {
+            ResourceType.IMAGE: int(max_size_mb * 0.5 * 1024 * 1024),
+            ResourceType.SCRIPT: int(max_size_mb * 0.2 * 1024 * 1024),
+            ResourceType.FONT: int(max_size_mb * 0.1 * 1024 * 1024),
+        }</code></pre>
+                    <p class="fragment highlight-box">
+                        <strong>Key insight:</strong> Size-based eviction, not just count!
+                    </p>
+                </section>
+
+                <section>
+                    <h2>HTTP Cache Semantics</h2>
+                    <pre><code class="language-python">class Resource:
+    def __init__(self, url, content, content_type):
+        self.url = url
+        self.content = content
+        self.size = len(content)
+        self.created_at = time.time()
+        self.last_accessed = time.time()
+        
+        # HTTP cache headers
+        self.cache_control_max_age = 3600
+        self.etag = hashlib.md5(content).hexdigest()[:16]
+    
+    def is_expired(self) -> bool:
+        age = time.time() - self.created_at
+        return age > self.cache_control_max_age</code></pre>
+                </section>
+            </section>
+
+            <!-- Act 4: Scale Breaks -->
+            <section>
+                <section>
+                    <h2>Act 4: When Scale Breaks Things</h2>
+                </section>
+
+                <section>
+                    <h2>Break #1: Thread Safety</h2>
+                    <pre><code class="language-python"># Our LRU is NOT thread-safe!
+cache = LRUCache(capacity=100)
+
+def worker(thread_id):
+    for i in range(1000):
+        cache.put(f"key_{thread_id}_{i}", i)
+        cache.get(f"key_{thread_id}_{i}")
+
+# 10 threads = Corrupted linked list! Segfaults!</code></pre>
+                    <div class="fragment warning-box">
+                        <strong>Problem:</strong> Doubly-linked list manipulation is not atomic!
+                    </div>
+                </section>
+
+                <section>
+                    <h2>Break #2: Memory Accounting</h2>
+                    <pre><code class="language-python">cache = LRUCache(capacity=1000)  # Sounds reasonable...
+
+for i in range(1000):
+    cache.put(i, b"x" * 1024 * 1024)  # 1MB each!
+
+# Result: 1GB memory! OOM!</code></pre>
+                    <div class="fragment warning-box">
+                        <strong>Problem:</strong> Count-based limits ignore actual memory usage!
+                    </div>
+                </section>
+
+                <section>
+                    <h2>Break #3: No Observability</h2>
+                    <div class="highlight-box">
+                        <h3>Questions You Can't Answer:</h3>
+                        <p>❓ What's the hit ratio?</p>
+                        <p>❓ Which keys are hot?</p>
+                        <p>❓ Is capacity too small or large?</p>
+                        <p>❓ Are evictions happening frequently?</p>
+                    </div>
+                    <p class="fragment">Solution: <strong>ObservableLRUCache</strong> with comprehensive metrics!</p>
+                </section>
+            </section>
+
+            <!-- Act 5: Real-World Variants -->
+            <section>
+                <section>
+                    <h2>Act 5: Real-World Variants</h2>
+                </section>
+
+                <section>
+                    <h2>Redis: Approximate LRU</h2>
+                    <pre><code class="language-python">class RedisStyleApproximateLRU:
+    def _evict_approximate_lru(self):
+        # Don't check ALL keys, just sample N
+        sample_size = min(5, len(self.data))
+        samples = random.sample(list(self.data.items()), sample_size)
+        
+        # Find oldest in sample (not globally!)
+        oldest_key = min(samples, key=lambda x: x[1][1])[0]
+        del self.data[oldest_key]</code></pre>
+                    <div class="fragment success-box">
+                        <strong>Key insight:</strong> 90% of LRU benefit, 10% of cost. Good enough!
+                    </div>
+                </section>
+
+                <section>
+                    <h2>OS CLOCK Algorithm</h2>
+                    <pre><code class="language-python">class OSPageCache:
+    def _find_victim_frame(self) -> int:
+        """Clock algorithm: find unreferenced page"""
+        while True:
+            if not self.reference_bits[self.clock_hand]:
+                # Found victim - hasn't been referenced
+                victim = self.clock_hand
+                self.clock_hand = (self.clock_hand + 1) % len(self.frames)
+                return victim
+            else:
+                # Give second chance
+                self.reference_bits[self.clock_hand] = False
+                self.clock_hand = (self.clock_hand + 1) % len(self.frames)</code></pre>
+                    <p class="fragment" style="color: var(--secondary);">
+                        Hardware only provides reference bit — full LRU would need timestamp on EVERY memory access!
+                    </p>
+                </section>
+
+                <section>
+                    <h2>MySQL InnoDB: Segmented LRU</h2>
+                    <pre><code class="language-python">class SegmentedLRU:
+    def __init__(self, capacity):
+        # 5/8 young (recently added), 3/8 old (frequently accessed)
+        self.young_list = LRUCache(int(capacity * 5 / 8))
+        self.old_list = LRUCache(capacity - self.young_size)</code></pre>
+                    <div class="fragment highlight-box">
+                        <strong>Key insight:</strong> Prevents full table scans from evicting hot data!
+                    </div>
+                </section>
+            </section>
+
+            <!-- Act 6: When LRU Breaks -->
+            <section>
+                <section>
+                    <h2>Act 6: When LRU Breaks</h2>
+                </section>
+
+                <section>
+                    <h2>Sequential Scan: 0% Hit Rate</h2>
+                    <pre><code class="language-python"># Full table scan on 1M rows with 10K row cache
+cache = LRUCache(capacity=10000)
+
+for i in range(1000000):
+    cache.put(f"row_{i}", f"data_{i}")
+    # After first 10K rows: cache has ONLY last 10K
+    # First rows evicted even though needed again!
+
+# Result: 0% hit ratio! Cache is useless!</code></pre>
+                    <div class="fragment warning-box">
+                        <strong>Why:</strong> LRU evicts oldest, but in scans, oldest is next needed!
+                    </div>
+                </section>
+
+                <section>
+                    <h2>LRU Decision Matrix</h2>
+                    <table>
+                        <tr>
+                            <th>Access Pattern</th>
+                            <th>LRU Performance</th>
+                            <th>Better Alternative</th>
+                        </tr>
+                        <tr>
+                            <td>Random access</td>
+                            <td style="color: var(--success);">✅ Excellent</td>
+                            <td>-</td>
+                        </tr>
+                        <tr>
+                            <td>Sequential scan</td>
+                            <td style="color: var(--danger);">❌ 0% hit rate</td>
+                            <td>MRU or no cache</td>
+                        </tr>
+                        <tr>
+                            <td>Looping (&gt; cache)</td>
+                            <td style="color: var(--danger);">❌ Thrashing</td>
+                            <td>LFU or larger cache</td>
+                        </tr>
+                        <tr>
+                            <td>Bulk imports</td>
+                            <td style="color: var(--danger);">❌ Pollution</td>
+                            <td>Segmented LRU</td>
+                        </tr>
+                    </table>
+                </section>
+            </section>
+
+            <!-- Epilogue -->
+            <section>
+                <section>
+                    <h2>Epilogue: Single Machine Limits</h2>
+                    <pre><code class="language-python">class SingleServerReality:
+    max_ram = 256 * (1024**3)  # 256GB ($50k server)
+    max_qps = 100_000           # ~100K requests/second
+    max_bandwidth = 10 Gbps     # Network limit
+    
+    # Real-world scale needed:
+    # Twitter: 300M users
+    # Netflix: 2B hours/month
+    # Facebook: 4PB photos
+    
+    # One server is 1000x too small!</code></pre>
+                </section>
+
+                <section>
+                    <h2>Key Takeaways</h2>
+                    <div class="highlight-box">
+                        <p>1. <strong>Memory hierarchy creates 100,000× latency gaps</strong></p>
+                        <p>2. <strong>LRU = Hash map + Doubly linked list = O(1)</strong></p>
+                        <p>3. <strong>Production needs: thread safety, size accounting, metrics</strong></p>
+                        <p>4. <strong>Variants: Approximate (Redis), CLOCK (OS), Segmented (MySQL)</strong></p>
+                        <p>5. <strong>Know when LRU fails: sequential scans, looping patterns</strong></p>
+                    </div>
+                </section>
+
+                <section>
+                    <h2>Next Episode: Distributed Caching</h2>
+                    <blockquote>
+                        "What happens when 256GB isn't enough? How do you cache across 100 servers 
+                        without thundering herd or inconsistency?"
+                    </blockquote>
+                    <div class="highlight-box">
+                        <p>🔑 Consistent hashing for data distribution</p>
+                        <p>⚡ Request coalescing for thundering herd</p>
+                        <p>🌍 CDN architecture for global scale</p>
+                    </div>
+                    <p style="font-size: 1.5em; margin-top: 30px;">See you in Episode 6! 🚀</p>
+                </section>
+            </section>
+
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/reveal.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/plugin/highlight/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/plugin/notes/notes.min.js"></script>
+    <script>
+        Reveal.initialize({
+            hash: true,
+            slideNumber: 'c/t',
+            plugins: [RevealHighlight, RevealNotes],
+            transition: 'slide',
+            backgroundTransition: 'fade'
+        });
+    </script>
+</body>
+</html>

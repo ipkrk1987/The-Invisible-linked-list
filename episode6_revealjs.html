@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Episode 6: Distributed Caches at Scale – From Single-Machine LRU to Global CDNs</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/reset.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/reveal.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/theme/black.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/styles/monokai.min.css">
+    <style>
+        :root {
+            --primary: #4facfe;
+            --secondary: #00f2fe;
+            --accent: #f093fb;
+            --warning: #ffeaa7;
+            --danger: #ff6b6b;
+            --success: #00b894;
+            --bg-dark: #1a1a2e;
+        }
+        .reveal {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+        }
+        .reveal h1, .reveal h2, .reveal h3 {
+            text-transform: none;
+            font-weight: 700;
+        }
+        .reveal h1 {
+            font-size: 2.2em;
+            background: linear-gradient(90deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .reveal h2 {
+            font-size: 1.6em;
+            color: var(--primary);
+        }
+        .reveal h3 {
+            font-size: 1.3em;
+            color: var(--secondary);
+        }
+        .reveal pre {
+            width: 100%;
+            font-size: 0.5em;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+            border-radius: 12px;
+        }
+        .reveal code {
+            font-family: 'Fira Code', 'Consolas', monospace;
+        }
+        .highlight-box {
+            background: rgba(79, 172, 254, 0.1);
+            border: 2px solid var(--primary);
+            border-radius: 12px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .warning-box {
+            background: rgba(255, 107, 107, 0.1);
+            border: 2px solid var(--danger);
+            border-radius: 12px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .success-box {
+            background: rgba(0, 184, 148, 0.1);
+            border: 2px solid var(--success);
+            border-radius: 12px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .comparison-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin: 20px 0;
+        }
+        .comparison-box {
+            background: rgba(255,255,255,0.05);
+            border-radius: 12px;
+            padding: 20px;
+        }
+        .comparison-box.bad {
+            border: 2px solid var(--danger);
+        }
+        .comparison-box.good {
+            border: 2px solid var(--success);
+        }
+        .stat-number {
+            font-size: 2.5em;
+            font-weight: 800;
+            background: linear-gradient(90deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .animation-container {
+            width: 100%;
+            height: 400px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+        }
+        canvas {
+            border-radius: 12px;
+            background: rgba(0,0,0,0.3);
+        }
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.7em;
+            font-weight: 600;
+            margin: 0 5px;
+        }
+        .badge-blue { background: var(--primary); color: #000; }
+        .badge-green { background: var(--success); color: #000; }
+        .badge-red { background: var(--danger); color: #fff; }
+        .badge-yellow { background: var(--warning); color: #000; }
+        blockquote {
+            background: rgba(79, 172, 254, 0.1);
+            border-left: 4px solid var(--primary);
+            padding: 20px;
+            font-style: italic;
+            border-radius: 0 12px 12px 0;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.7em;
+        }
+        th, td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        th {
+            background: rgba(79, 172, 254, 0.2);
+            color: var(--primary);
+        }
+        .two-column {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            align-items: start;
+        }
+        .hash-ring {
+            width: 300px;
+            height: 300px;
+            border: 3px solid var(--primary);
+            border-radius: 50%;
+            position: relative;
+            margin: 20px auto;
+        }
+        .hash-node {
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: var(--success);
+            color: #000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 0.8em;
+        }
+        .tier-box {
+            background: rgba(255,255,255,0.05);
+            border-radius: 12px;
+            padding: 15px;
+            margin: 10px 0;
+            border-left: 4px solid var(--primary);
+        }
+        .tier-box.l1 { border-left-color: var(--success); }
+        .tier-box.l2 { border-left-color: var(--warning); }
+        .tier-box.l3 { border-left-color: var(--danger); }
+    </style>
+</head>
+<body>
+    <div class="reveal">
+        <div class="slides">
+            <!-- Title Slide -->
+            <section>
+                <h1>🌐 Episode 6: Distributed Caches at Scale</h1>
+                <h3>From Single-Machine LRU to Global CDNs</h3>
+                <p style="opacity: 0.7; margin-top: 40px;">Season 1: The Invisible Linked List</p>
+                <div style="margin-top: 40px;">
+                    <span class="badge badge-blue">Consistent Hashing</span>
+                    <span class="badge badge-green">Redis Cluster</span>
+                    <span class="badge badge-yellow">CDN</span>
+                    <span class="badge badge-blue">Kafka</span>
+                </div>
+            </section>
+
+            <!-- Act 1: The Single-Server Limit -->
+            <section>
+                <section>
+                    <h2>Act 1: The Single-Server Limit</h2>
+                    <blockquote>
+                        "Episode 5 mastered caching on one machine. Now we scale to 10,000 machines 
+                        across 6 continents. The LRU algorithm stays the same—the engineering explodes."
+                    </blockquote>
+                </section>
+
+                <section>
+                    <h2>One Server Isn't Enough</h2>
+                    <pre><code class="language-python">class SingleServerReality:
+    max_ram = 256 * (1024**3)  # 256GB (high-end: $50k)
+    max_qps = 100_000          # ~100K requests/second
+    max_bandwidth = 10 Gbps    # Network limit</code></pre>
+                    <div class="two-column fragment">
+                        <div class="highlight-box">
+                            <h3>Real-World Scale</h3>
+                            <p>🐦 Twitter: 300M users</p>
+                            <p>📺 Netflix: 2B hours/month</p>
+                            <p>📘 Facebook: 4PB photos</p>
+                        </div>
+                        <div class="warning-box">
+                            <h3>The Gap</h3>
+                            <p class="stat-number">1000×</p>
+                            <p>One server is too small!</p>
+                        </div>
+                    </div>
+                </section>
+
+                <section>
+                    <h2>New Problems Introduced</h2>
+                    <div class="highlight-box">
+                        <p>❓ Which server stores which data?</p>
+                        <p>❓ How do we stay consistent?</p>
+                        <p>❓ What happens when servers crash?</p>
+                        <p>❓ How do we avoid hot spots?</p>
+                    </div>
+                    <p class="fragment" style="color: var(--secondary); font-size: 1.2em; margin-top: 20px;">
+                        The algorithm is the same. The engineering explodes.
+                    </p>
+                </section>
+            </section>
+
+            <!-- Act 2: Distributed Systems Fundamentals -->
+            <section>
+                <section>
+                    <h2>Act 2: Why hash % N Breaks</h2>
+                </section>
+
+                <section>
+                    <h2>Naive Partitioning Disaster</h2>
+                    <pre><code class="language-python"># Naive approach: hash(key) % num_servers
+key = "user:123"
+server = hash(key) % 100  # server 42
+
+# Add server 101:
+server = hash(key) % 101  # server 87 - MOVED!
+
+# 99 out of 100 keys rehash to different servers!
+# = Cache storm (100M misses simultaneously)
+# = Database dies from load</code></pre>
+                    <div class="fragment warning-box">
+                        <strong>99% of keys move!</strong> Your database melts.
+                    </div>
+                </section>
+
+                <section>
+                    <h2>Consistent Hashing: The Solution</h2>
+                    <div class="highlight-box">
+                        <p><strong>Key Insight:</strong> Map both servers AND keys to points on a circle (0-2³²)</p>
+                    </div>
+                    <pre><code class="language-text">Hash space circle:
+         0°
+    ┌───────────┐
+    │   Server A (45°)
+    │           
+    │   Key → (75°) → goes to Server A (first clockwise)
+    │
+    │   Server B (180°)
+    └───────────┘
+       180°</code></pre>
+                    <p class="fragment success-box">
+                        Adding a server? Only ~1/n keys move, not 99%!
+                    </p>
+                </section>
+
+                <section>
+                    <h2>Virtual Nodes for Load Balancing</h2>
+                    <pre><code class="language-python">class ConsistentHashRing:
+    def __init__(self, virtual_nodes_per_server=100):
+        self.ring = {}  # hash -> server_id
+        self.sorted_hashes = []
+    
+    def add_server(self, server_id):
+        # Create 100 virtual nodes for even distribution
+        for i in range(self.virtual_nodes_per_server):
+            virtual_key = f"{server_id}-{i}"
+            hash_val = self._hash(virtual_key)
+            self.ring[hash_val] = server_id
+            self.sorted_hashes.append(hash_val)
+        self.sorted_hashes.sort()</code></pre>
+                </section>
+
+                <section>
+                    <h2>Key Lookup with Binary Search</h2>
+                    <pre><code class="language-python">def get_server(self, key):
+    key_hash = self._hash(key)
+    
+    # Binary search for first hash >= key_hash
+    import bisect
+    idx = bisect.bisect_left(self.sorted_hashes, key_hash)
+    
+    # Wrap around if at end
+    if idx == len(self.sorted_hashes):
+        idx = 0
+    
+    return self.ring[self.sorted_hashes[idx]]</code></pre>
+                    <div class="fragment highlight-box">
+                        <strong>Used by:</strong> DynamoDB, Cassandra, Akamai CDN, Discord
+                    </div>
+                </section>
+            </section>
+
+            <!-- Act 3: Multi-Tier Caching -->
+            <section>
+                <section>
+                    <h2>Act 3: Multi-Tier Caching</h2>
+                </section>
+
+                <section>
+                    <h2>Three-Tier Architecture</h2>
+                    <div class="tier-box l1">
+                        <h3>L1: In-Memory (fastest, smallest)</h3>
+                        <p>~100ns access, 10GB capacity</p>
+                        <p>Hot data, decoded objects</p>
+                    </div>
+                    <div class="tier-box l2">
+                        <h3>L2: Local SSD (medium)</h3>
+                        <p>~100μs access, 1TB capacity</p>
+                        <p>Warm data, compressed</p>
+                    </div>
+                    <div class="tier-box l3">
+                        <h3>L3: Remote Cluster (slowest, largest)</h3>
+                        <p>~1ms access, 100TB capacity</p>
+                        <p>Cold data, distributed</p>
+                    </div>
+                </section>
+
+                <section>
+                    <h2>Multi-Tier Cache Implementation</h2>
+                    <pre><code class="language-python">class MultiTierCache:
+    def __init__(self):
+        self.l1_cache = LRUCache(capacity=10000)   # RAM
+        self.l2_cache = SSDCache(max_size_gb=100)  # SSD
+        self.l3_cluster = DistributedCacheCluster() # Network
+    
+    def get(self, key):
+        # Try L1
+        if (value := self.l1_cache.get(key)) != -1:
+            return value
+        
+        # Try L2, promote to L1
+        if (value := self.l2_cache.get(key)):
+            self.l1_cache.put(key, value)
+            return value
+        
+        # Try L3, promote to L2 and L1
+        if (value := self.l3_cluster.get(key)):
+            self.l2_cache.put(key, value)
+            self.l1_cache.put(key, value)
+            return value</code></pre>
+                </section>
+            </section>
+
+            <!-- Act 4: CDN Architecture -->
+            <section>
+                <section>
+                    <h2>Act 4: CDN Architecture</h2>
+                    <h3>Caching at Planetary Scale</h3>
+                </section>
+
+                <section>
+                    <h2>Global Edge Network</h2>
+                    <pre><code class="language-python">class GlobalCDN:
+    def __init__(self):
+        self.edge_nodes = {
+            'us-east-1': CDNEdgeNode(500GB),
+            'us-west-2': CDNEdgeNode(500GB),
+            'eu-west-1': CDNEdgeNode(300GB),
+            'ap-southeast-1': CDNEdgeNode(200GB),
+        }
+        
+        self.geo_routing = {
+            'US': ['us-east-1', 'us-west-2'],
+            'EU': ['eu-west-1'],
+            'AP': ['ap-southeast-1'],
+        }</code></pre>
+                </section>
+
+                <section>
+                    <h2>CDN Edge Operations</h2>
+                    <pre><code class="language-python">class CDNEdgeNode:
+    def get_asset(self, url, request_headers):
+        cache_key = self._normalize_url(url)
+        
+        if cache_key in self.asset_cache:
+            content, headers, expiry = self.asset_cache[cache_key]
+            
+            if time.time() < expiry:
+                headers['X-CDN-Cache'] = 'HIT'
+                return content, headers
+        
+        # Cache miss - fetch from origin
+        content, headers = self._fetch_from_origin(url)
+        
+        # Cache if allowed by headers
+        max_age = self._parse_cache_control(headers)
+        if max_age > 0:
+            self._cache_asset(cache_key, content, headers, max_age)
+        
+        headers['X-CDN-Cache'] = 'MISS'
+        return content, headers</code></pre>
+                </section>
+
+                <section>
+                    <h2>CDN Optimizations</h2>
+                    <div class="highlight-box">
+                        <p>🎯 <strong>Anycast routing:</strong> Same IP everywhere, BGP routes to nearest</p>
+                        <p>🔒 <strong>TLS termination:</strong> HTTPS at edge, HTTP to origin</p>
+                        <p>🖼️ <strong>Image optimization:</strong> Resize, compress, WebP conversion</p>
+                        <p>🛡️ <strong>DDoS protection:</strong> Rate limiting, bot detection</p>
+                        <p>🔥 <strong>WAF:</strong> Web Application Firewall at edge</p>
+                    </div>
+                </section>
+            </section>
+
+            <!-- Act 5: Cache Invalidation -->
+            <section>
+                <section>
+                    <h2>Act 5: The Hardest Problem</h2>
+                    <blockquote>
+                        "There are only two hard things in Computer Science: cache invalidation and naming things."
+                        — Phil Karlton
+                    </blockquote>
+                </section>
+
+                <section>
+                    <h2>Invalidation Strategies</h2>
+                    <table>
+                        <tr>
+                            <th>Strategy</th>
+                            <th>Mechanism</th>
+                            <th>Best For</th>
+                            <th>Risk</th>
+                        </tr>
+                        <tr>
+                            <td><strong>TTL</strong></td>
+                            <td>Expires after time</td>
+                            <td>Simple cases</td>
+                            <td>Stale until TTL</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Write-through</strong></td>
+                            <td>Update cache + DB sync</td>
+                            <td>Consistency critical</td>
+                            <td>Slow writes</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Write-behind</strong></td>
+                            <td>Update cache, async DB</td>
+                            <td>Performance</td>
+                            <td>Data loss on crash</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Versioning</strong></td>
+                            <td>ETags, timestamps</td>
+                            <td>Large objects</td>
+                            <td>Complexity</td>
+                        </tr>
+                    </table>
+                </section>
+            </section>
+
+            <!-- Act 6: Case Studies -->
+            <section>
+                <section>
+                    <h2>Act 6: Real-World Case Studies</h2>
+                </section>
+
+                <section>
+                    <h2>Facebook TAO</h2>
+                    <pre><code class="language-python">class TAOCache:
+    """Facebook's graph cache for social data."""
+    
+    # Two-layer: memcache (RAM) + MySQL (persistent)
+    # Graph-oriented: objects + associations
+    
+    def get_object(self, obj_id):
+        if obj_id in self.cache:
+            return self.cache[obj_id]
+        return self._load_from_mysql(obj_id)
+    
+    def create_association(self, from_id, type, to_id):
+        # Friend requests, likes, comments
+        self.associations[(from_id, type)].append(to_id)
+        self._invalidate_related(from_id, type)</code></pre>
+                    <p class="fragment highlight-box">
+                        Graph-oriented caching for social data — objects AND relationships!
+                    </p>
+                </section>
+
+                <section>
+                    <h2>Netflix EVCache</h2>
+                    <pre><code class="language-python">class EVCache:
+    """Netflix's distributed cache for personalization."""
+    
+    # Multi-region replication
+    regions = ['us-east', 'eu-west', 'ap-southeast']
+    
+    def get_recommendations(self, user_id):
+        # Try local region first
+        recs = self._get_local(key)
+        if recs:
+            return recs
+        
+        # Try other regions
+        for region in self.regions:
+            recs = self._get_from_region(region, key)
+            if recs:
+                self._replicate_locally(key, recs)
+                return recs</code></pre>
+                </section>
+            </section>
+
+            <!-- Epilogue -->
+            <section>
+                <section>
+                    <h2>Season 1 Complete Journey</h2>
+                    <pre><code class="language-text">Episode 1: Singly Linked Lists → Git Commits
+Episode 2: List Intersection → Git Merge-Base
+Episode 3: Doubly Linked Lists → Browser History
+Episode 4: Immutable Structures → Time Travel
+Episode 5: LRU Cache → Browser & DB Caching
+Episode 6: Distributed Caching → Global CDNs</code></pre>
+                    <p class="fragment" style="color: var(--secondary); font-size: 1.2em;">
+                        From a single linked list to a global distributed system!
+                    </p>
+                </section>
+
+                <section>
+                    <h2>Key Takeaways</h2>
+                    <div class="highlight-box">
+                        <p>1. <strong>hash % N breaks at scale</strong> — use consistent hashing</p>
+                        <p>2. <strong>Virtual nodes</strong> improve load distribution</p>
+                        <p>3. <strong>Multi-tier caching</strong> balances speed vs capacity</p>
+                        <p>4. <strong>CDNs</strong> bring cache to users geographically</p>
+                        <p>5. <strong>Cache invalidation</strong> is the hardest problem</p>
+                    </div>
+                </section>
+
+                <section>
+                    <h2>Next Episode: Ring Buffers</h2>
+                    <blockquote>
+                        "All season we assumed data stops arriving. What if it doesn't? 
+                        Stock tickers, video streams, server logs — they're infinite."
+                    </blockquote>
+                    <div class="highlight-box">
+                        <p>⭕ Ring buffers for infinite streams</p>
+                        <p>📺 Video streaming with jitter buffers</p>
+                        <p>📊 Kafka-style distributed logs</p>
+                        <p>🎬 Season 1 Finale!</p>
+                    </div>
+                    <p style="font-size: 1.5em; margin-top: 30px;">See you in Episode 7! 🚀</p>
+                </section>
+            </section>
+
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/reveal.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/plugin/highlight/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/plugin/notes/notes.min.js"></script>
+    <script>
+        Reveal.initialize({
+            hash: true,
+            slideNumber: 'c/t',
+            plugins: [RevealHighlight, RevealNotes],
+            transition: 'slide',
+            backgroundTransition: 'fade'
+        });
+    </script>
+</body>
+</html>
