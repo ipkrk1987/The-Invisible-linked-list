@@ -4,74 +4,77 @@
 **Series**: From LeetCode to Production  
 **Season**: 1 - The Invisible Linked List  
 **Episode**: S1E05  
-**Duration**: 25 minutes  
+**Duration**: 20 minutes  
 **Release Target**: [TBD]
 
 ---
 
 ## Executive Summary
 
-This episode transforms LeetCode #146 (LRU Cache) from an interview problem into production-grade browser caches, database buffers, and OS page replacement algorithms. We explore the theory of caching (locality, eviction policies, coherence), implement a full browser resource cache with size-aware eviction and HTTP semantics, then examine how real systems like Redis, MySQL InnoDB, and operating systems adapt the basic LRU pattern for their specific workloads.
+This episode uses **failure-driven storytelling** to transform LeetCode #146 (LRU Cache) from an interview problem into production-grade browser caches. We start with a catastrophic website crash, reveal the invisible 100,000x latency gap, then unveil how a simple data structure saves millions of dollars in server costs.
+
+---
+
+## 🎬 NARRATIVE STRUCTURE: THE THREE-ACT FAILURE PATTERN
+
+This episode follows the proven failure-first structure:
+1. **Show failure first** — Website crashes, pages load forever
+2. **Explain WHY it failed** — The memory hierarchy gap
+3. **Reveal the solution** — Pseudocode with key insights
+4. **Show what breaks at scale** — Thread safety, memory, observability
 
 ---
 
 ## 🎯 Presenter's Intent
 
-**Core message**: "LRU Cache isn't just an interview problem—it's the algorithm running in your browser right now, in your database's buffer pool, and in your operating system's page table. The LeetCode solution is 50 lines. Production systems add thread safety, memory accounting, and observability. Let's see what separates a whiteboard solution from Chrome's real cache."
+**Core message**: "Your website just crashed. Users are leaving. Why? Because every request hits the database. What if your server could REMEMBER? That's caching — and the algorithm running in your browser RIGHT NOW is the same one from LeetCode #146."
 
-**Audience**: Senior engineers who will ask:
-- "Why not just use a hash map with timestamps?" → Addressed in Act 2
-- "How does Redis handle LRU at scale?" → Act 5
-- "When is LRU the wrong choice?" → Act 6
-- "How big should my cache be?" → Throughout + FAQ
-- "What about cache invalidation?" → Act 1 + Episode 6 teaser
+**The Emotional Arc**:
+- 😤 Frustration: "Why is this page taking 10 seconds to load?!"
+- 🤔 Understanding: "Oh, hitting the database 100,000x slower than memory"
+- 💡 Revelation: "Wait... I can just REMEMBER the last request?"
+- 🎯 Mastery: "Hash map + Linked list = O(1) everything!"
 
-**Duration**: 25 minutes (can be split into two 12-13 min sessions)
+**Audience**: Engineers who will ask:
+- "Why is my API so slow?" → Act 1 (the latency gap)
+- "How does LRU actually work?" → Act 2 (the elegant trick)
+- "What breaks in production?" → Act 3 (scale problems)
+- "When should I NOT use LRU?" → Act 4 (decision matrix)
+
+**Duration**: 20 minutes
 
 ---
 
-## Act Structure
+## Act Structure — FAILURE-DRIVEN
 
-### Act 1: The Caching Imperative (Slides 1-6) [5 min]
-- **Hook**: The memory hierarchy problem (L1 cache to network: 100,000x difference)
-- **Theory**: Principle of locality (temporal, spatial, semantic)
-- **Framework**: Eviction policies comparison (LRU, LFU, FIFO, ARC, CLOCK)
-- **Challenge**: Cache coherence problem
+### ACT 1: "Why Is My Website So Slow?" [5 min]
+**The Failure**: E-commerce site crashes on Black Friday
+**The Pain**: Show EXACTLY what happens without caching
+**The Insight**: 100,000x latency gap between memory and network
+**The Solution CONCEPT**: What if we could remember?
+**Code**: NONE — just the pain
 
-### Act 2: The LeetCode Foundation (Slides 7-11) [4 min]
-- **Classic Solution**: Hash map + doubly-linked list for O(1) operations
-- **Visual**: Head/tail sentinel nodes, move-to-front mechanics
-- **Code Walkthrough**: Complete LRUCache implementation
-- **What's Missing**: Thread safety, size accounting, monitoring
+### ACT 2: "The Elegant Trick" [5 min]
+**The Revelation**: Hash map + Doubly linked list = O(1) everything
+**The Insight**: Move-to-front on access, evict from tail
+**The Pseudocode**: Core operations explained visually
+**Code**: ONE strategic code block (the LRU class)
 
-### Act 3: Production Browser Cache (Slides 12-18) [6 min]
-- **Requirements**: Multi-tier (RAM/SSD/HTTP), resource prioritization
-- **Architecture**: Size-aware eviction, type limits, HTTP cache semantics
-- **Implementation**: BrowserResourceCache with metrics tracking
-- **Memory Pressure**: Proactive eviction under system pressure
+### ACT 3: "What Breaks at Scale?" [5 min]
+**The Failure**: Thread corruption, OOM crashes, blind debugging
+**The Pain**: Production disasters from naive implementation
+**The Insight**: Size-based eviction, thread safety, observability
+**Code**: Pseudocode showing the fixes
 
-### Act 4: Scale Breaks (Slides 19-23) [4 min]
-- **Break #1**: Thread safety (corrupted linked lists)
-- **Break #2**: Memory accounting failures (OOM from large values)
-- **Break #3**: No observability (blind cache debugging)
-- **Solutions**: Locking strategies, byte tracking, comprehensive metrics
+### ACT 4: "When LRU Fails" [3 min]
+**The Failure**: 0% hit rate on sequential scans
+**The Insight**: Know your access patterns
+**The Decision Matrix**: When to use / not use LRU
+**Code**: NONE — the matrix IS the insight
 
-### Act 5: Real-World Variants (Slides 24-28) [4 min]
-- **Redis**: Approximate LRU with sampling (90% benefit, 10% cost)
-- **OS CLOCK**: Second-chance algorithm with hardware reference bits
-- **MySQL InnoDB**: Segmented LRU (young/old lists for scan resistance)
-- **Comparison**: When each variant wins
-
-### Act 6: When LRU Breaks (Slides 29-31) [2 min]
-- **Sequential Scans**: 0% hit rate problem
-- **Looping Patterns**: Working set thrashing
-- **Bulk Loads**: Cache pollution with cold data
-- **Decision Matrix**: When NOT to use LRU
-
-### Act 7: Season Transition (Slides 32-33) [1 min]
-- **Teaser**: Single machine limits (256GB max, 100K QPS)
-- **Preview**: Episode 6 - Distributed caching at 10,000 servers
-- **Key Insight**: Same algorithm, exponentially harder engineering
+### ACT 5: "Real-World Variants" [2 min]
+**The Revelation**: Redis, Linux, MySQL all use LRU variants
+**The Teaser**: Episode 6 — What if one server isn't enough?
 
 ---
 
