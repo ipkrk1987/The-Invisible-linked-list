@@ -1,0 +1,1930 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Episode 2.2: Bound Search - The Infinite Scroll Algorithm</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@4.5.0/dist/reset.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@4.5.0/dist/reveal.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@4.5.0/dist/theme/black.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@4.5.0/plugin/highlight/monokai.css">
+    <style>
+        :root {
+            --primary-green: #00ff88;
+            --primary-blue: #00d4ff;
+            --primary-purple: #b388ff;
+            --primary-orange: #ff9500;
+            --primary-red: #ff4757;
+            --primary-yellow: #ffd93d;
+            --bg-dark: #1a1a2e;
+            --bg-card: #16213e;
+        }
+        
+        .reveal {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+        }
+        
+        .reveal h1, .reveal h2, .reveal h3 {
+            text-transform: none;
+            font-weight: 700;
+        }
+        
+        .reveal h1 {
+            font-size: 2.5em;
+            background: linear-gradient(135deg, var(--primary-blue), var(--primary-purple));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .reveal h2 {
+            font-size: 1.8em;
+            color: var(--primary-green);
+        }
+        
+        .reveal h3 {
+            font-size: 1.4em;
+            color: var(--primary-blue);
+        }
+        
+        .subtitle {
+            font-size: 1.2em;
+            color: var(--primary-purple);
+            margin-top: 0.5em;
+        }
+        
+        .episode-badge {
+            display: inline-block;
+            background: linear-gradient(135deg, var(--primary-orange), var(--primary-red));
+            padding: 0.3em 1em;
+            border-radius: 20px;
+            font-size: 0.8em;
+            margin-bottom: 1em;
+        }
+        
+        .season-badge {
+            display: inline-block;
+            background: linear-gradient(135deg, var(--primary-blue), var(--primary-purple));
+            padding: 0.2em 0.8em;
+            border-radius: 15px;
+            font-size: 0.6em;
+            margin-bottom: 0.5em;
+        }
+        
+        .highlight-box {
+            background: rgba(0, 255, 136, 0.1);
+            border-left: 4px solid var(--primary-green);
+            padding: 1em;
+            margin: 1em 0;
+            border-radius: 0 10px 10px 0;
+        }
+        
+        .warning-box {
+            background: rgba(255, 71, 87, 0.1);
+            border-left: 4px solid var(--primary-red);
+            padding: 1em;
+            margin: 1em 0;
+            border-radius: 0 10px 10px 0;
+        }
+        
+        .insight-box {
+            background: rgba(0, 212, 255, 0.1);
+            border-left: 4px solid var(--primary-blue);
+            padding: 1em;
+            margin: 1em 0;
+            border-radius: 0 10px 10px 0;
+        }
+        
+        .animation-container {
+            background: var(--bg-card);
+            border-radius: 15px;
+            padding: 20px;
+            margin: 20px auto;
+            max-width: 900px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+        }
+        
+        .animation-canvas {
+            background: var(--bg-dark);
+            border-radius: 10px;
+            display: block;
+            margin: 0 auto;
+        }
+        
+        .control-panel {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 15px;
+            flex-wrap: wrap;
+        }
+        
+        .control-btn {
+            background: linear-gradient(135deg, var(--primary-blue), var(--primary-purple));
+            border: none;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 0.9em;
+            transition: all 0.3s ease;
+        }
+        
+        .control-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(0, 212, 255, 0.4);
+        }
+        
+        .control-btn.active {
+            background: linear-gradient(135deg, var(--primary-green), var(--primary-blue));
+        }
+        
+        .control-btn.danger {
+            background: linear-gradient(135deg, var(--primary-orange), var(--primary-red));
+        }
+        
+        .status-display {
+            text-align: center;
+            margin-top: 10px;
+            font-size: 0.9em;
+            color: var(--primary-yellow);
+            min-height: 24px;
+        }
+        
+        .two-column {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            align-items: start;
+        }
+        
+        .code-small {
+            font-size: 0.7em !important;
+        }
+        
+        .pseudocode {
+            background: var(--bg-card);
+            border-radius: 10px;
+            padding: 20px;
+            font-family: 'Consolas', monospace;
+            font-size: 0.85em;
+            text-align: left;
+            border-left: 4px solid var(--primary-purple);
+        }
+        
+        .pseudocode .keyword {
+            color: var(--primary-purple);
+            font-weight: bold;
+        }
+        
+        .pseudocode .comment {
+            color: #6a9955;
+            font-style: italic;
+        }
+        
+        .pseudocode .highlight {
+            color: var(--primary-green);
+        }
+        
+        .comparison-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin: 20px 0;
+        }
+        
+        .comparison-card {
+            background: var(--bg-card);
+            border-radius: 15px;
+            padding: 20px;
+            text-align: center;
+        }
+        
+        .comparison-card.bad {
+            border: 2px solid var(--primary-red);
+        }
+        
+        .comparison-card.good {
+            border: 2px solid var(--primary-green);
+        }
+        
+        .comparison-card h4 {
+            margin-bottom: 15px;
+        }
+        
+        .icon-large {
+            font-size: 3em;
+            margin-bottom: 10px;
+        }
+        
+        .takeaway-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin-top: 20px;
+        }
+        
+        .takeaway-item {
+            background: var(--bg-card);
+            border-radius: 10px;
+            padding: 15px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .takeaway-item .icon {
+            font-size: 2em;
+            min-width: 50px;
+            text-align: center;
+        }
+        
+        .takeaway-item .text {
+            text-align: left;
+            font-size: 0.85em;
+        }
+        
+        .leetcode-badge {
+            display: inline-block;
+            background: linear-gradient(135deg, #ffa116, #ff6b00);
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            margin-bottom: 15px;
+        }
+        
+        .timeline-visual {
+            display: flex;
+            justify-content: center;
+            gap: 5px;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+        
+        .timeline-item {
+            background: var(--bg-card);
+            padding: 10px 15px;
+            border-radius: 8px;
+            font-size: 0.8em;
+            transition: all 0.3s ease;
+        }
+        
+        .timeline-item.new {
+            background: var(--primary-green);
+            color: black;
+        }
+        
+        .timeline-item.duplicate {
+            background: var(--primary-red);
+            animation: pulse 0.5s ease-in-out infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+        
+        .reveal .slides section .fragment.visible {
+            opacity: 1;
+        }
+        
+        .act-label {
+            position: absolute;
+            top: 10px;
+            right: 20px;
+            font-size: 0.6em;
+            color: var(--primary-purple);
+            opacity: 0.7;
+        }
+    </style>
+</head>
+<body>
+    <div class="reveal">
+        <div class="slides">
+            
+            <!-- ==================== ACT 1: THE HOOK ==================== -->
+            
+            <!-- Slide 1.1: Title -->
+            <section>
+                <div class="season-badge">Season 2: Binary Trees & Production Systems</div>
+                <div class="episode-badge">Episode 2.2</div>
+                <h1>Bound Search</h1>
+                <p class="subtitle">The Infinite Scroll Algorithm</p>
+                <p style="margin-top: 2em; font-size: 0.9em; color: #888;">
+                    From LeetCode #34 to Twitter's Pagination Engine
+                </p>
+                <aside class="notes">
+                    Welcome to Episode 2.2! Today we're solving one of the most common bugs 
+                    in social media apps - the pagination problem. Every engineer has seen 
+                    duplicate posts while scrolling. Today we learn why it happens and how 
+                    to fix it using the same algorithm from LeetCode #34.
+                </aside>
+            </section>
+            
+            <!-- Slide 1.2: The Bug Demo Animation -->
+            <section>
+                <span class="act-label">ACT 1: THE HOOK</span>
+                <h2>🔴 The Social Media Bug</h2>
+                <div class="animation-container">
+                    <canvas id="feedBugCanvas" class="animation-canvas" width="800" height="400"></canvas>
+                    <div class="control-panel">
+                        <button class="control-btn" onclick="feedBugAnim.loadPage1()">Load Page 1</button>
+                        <button class="control-btn danger" onclick="feedBugAnim.insertNewPosts()">New Posts Arrive!</button>
+                        <button class="control-btn" onclick="feedBugAnim.loadPage2()">Load Page 2</button>
+                        <button class="control-btn" onclick="feedBugAnim.reset()">Reset</button>
+                    </div>
+                    <div class="status-display" id="feedBugStatus">Click "Load Page 1" to start</div>
+                </div>
+                <aside class="notes">
+                    Interactive demo: First load page 1. Then click "New Posts Arrive" to 
+                    simulate real-time updates. Finally click "Load Page 2" and watch the 
+                    duplicates appear! This happens because OFFSET-based pagination breaks 
+                    when new data arrives.
+                </aside>
+            </section>
+            
+            <!-- Slide 1.3: The Problem Statement -->
+            <section>
+                <span class="act-label">ACT 1: THE HOOK</span>
+                <h2>This Isn't a UI Bug</h2>
+                <div class="warning-box" style="font-size: 1.3em; text-align: center;">
+                    It's a <strong style="color: var(--primary-red);">fundamental failure</strong> 
+                    of how we paginate sorted, changing data.
+                </div>
+                <div class="fragment" style="margin-top: 2em;">
+                    <p>The symptoms:</p>
+                    <ul>
+                        <li>Duplicate posts appearing</li>
+                        <li>Posts mysteriously disappearing</li>
+                        <li>Jumping back in time while scrolling</li>
+                    </ul>
+                </div>
+                <div class="fragment highlight-box" style="margin-top: 1em;">
+                    <strong>Today's Mission:</strong> Build bulletproof pagination for millions 
+                    of concurrent users on constantly updating feeds.
+                </div>
+                <aside class="notes">
+                    This bug affects Twitter, Facebook, Reddit, Instagram - any feed with 
+                    real-time updates. The root cause is using OFFSET pagination, which 
+                    we'll explore and then fix using cursor-based pagination.
+                </aside>
+            </section>
+            
+            <!-- ==================== ACT 2: THE PROBLEM ==================== -->
+            
+            <!-- Slide 2.1: LeetCode Problem -->
+            <section>
+                <span class="act-label">ACT 2: THE PROBLEM</span>
+                <div class="leetcode-badge">LeetCode #34</div>
+                <h2>Find First and Last Position</h2>
+                <p>Given a sorted array and a target, find the starting and ending position.</p>
+                <div style="margin: 30px 0;">
+                    <code style="font-size: 1.2em; background: var(--bg-card); padding: 15px 25px; border-radius: 10px;">
+                        [5, 7, 7, 8, <span style="color: var(--primary-green);">8, 8</span>, 10] → target: 8 → [3, 5]
+                    </code>
+                </div>
+                <div class="fragment insight-box">
+                    <strong>The Hidden Power:</strong> This algorithm finds <em>boundaries</em> in sorted data.
+                    <br>That's exactly what pagination needs!
+                </div>
+                <aside class="notes">
+                    LeetCode #34 seems like a simple binary search variant. But the real 
+                    insight is that it teaches us how to find BOUNDARIES - where a range 
+                    of values begins and ends. This is the foundation of cursor pagination.
+                </aside>
+            </section>
+            
+            <!-- Slide 2.2: Core Algorithm (minimal code) -->
+            <section>
+                <span class="act-label">ACT 2: THE PROBLEM</span>
+                <h2>The Core Algorithm</h2>
+                <pre><code class="language-python" data-trim style="font-size: 0.85em;">
+def find_boundary(nums, target, find_first=True):
+    left, right, result = 0, len(nums) - 1, -1
+    
+    while left <= right:
+        mid = (left + right) // 2
+        if nums[mid] == target:
+            result = mid
+            if find_first: right = mid - 1  # ← Keep searching LEFT
+            else: left = mid + 1            # → Keep searching RIGHT
+        elif nums[mid] < target: left = mid + 1
+        else: right = mid - 1
+    return result
+                </code></pre>
+                <div class="fragment insight-box" style="margin-top: 20px;">
+                    <strong>Key Insight:</strong> When we find the target, we <em>don't stop</em>. 
+                    We keep searching to find the boundary.
+                </div>
+                <aside class="notes">
+                    The key insight: when we find the target, we DON'T stop. We keep searching 
+                    in one direction to find the boundary. This is what makes it different 
+                    from basic binary search. Note the overflow-safe mid calculation.
+                </aside>
+            </section>
+            
+            <!-- Slide 2.3: Key Insight -->
+            <section>
+                <span class="act-label">ACT 2: THE PROBLEM</span>
+                <h2>The Critical Reframing</h2>
+                <div class="comparison-grid">
+                    <div class="comparison-card">
+                        <h4 style="color: var(--primary-blue);">lower_bound(target)</h4>
+                        <p>"Where does the range <strong>≥ target</strong> begin?"</p>
+                        <div style="margin-top: 15px; font-size: 0.9em; color: #aaa;">
+                            First post from Jan 15th <em>or later</em>
+                        </div>
+                    </div>
+                    <div class="comparison-card">
+                        <h4 style="color: var(--primary-purple);">upper_bound(target)</h4>
+                        <p>"Where does the range <strong>≤ target</strong> end?"</p>
+                        <div style="margin-top: 15px; font-size: 0.9em; color: #aaa;">
+                            Last post from Jan 15th <em>or earlier</em>
+                        </div>
+                    </div>
+                </div>
+                <div class="fragment highlight-box" style="margin-top: 30px; text-align: center; font-size: 1.2em;">
+                    💡 <strong>Pagination is just repeatedly moving your lower_bound!</strong>
+                </div>
+                <aside class="notes">
+                    This is the "aha" moment. Pagination isn't about counting rows - it's 
+                    about finding BOUNDARIES in sorted data. Each "next page" is just 
+                    calling lower_bound with the last item you saw.
+                </aside>
+            </section>
+            
+            <!-- Slide 2.4: Lower/Upper Bound Animation -->
+            <section>
+                <span class="act-label">ACT 2: THE PROBLEM</span>
+                <h2>🟡 Boundary Search Visualizer</h2>
+                <div class="animation-container">
+                    <canvas id="boundCanvas" class="animation-canvas" width="800" height="350"></canvas>
+                    <div class="control-panel">
+                        <button class="control-btn" onclick="boundAnim.findLower()">Find Lower Bound</button>
+                        <button class="control-btn" onclick="boundAnim.findUpper()">Find Upper Bound</button>
+                        <button class="control-btn" onclick="boundAnim.step()">Step</button>
+                        <button class="control-btn" onclick="boundAnim.reset()">Reset</button>
+                    </div>
+                    <div class="status-display" id="boundStatus">Target: 8 | Click to find boundaries</div>
+                </div>
+                <aside class="notes">
+                    Step through the algorithm visually. Watch how lower_bound keeps 
+                    searching left even after finding 8, while upper_bound searches right. 
+                    This is exactly how cursors work in pagination.
+                </aside>
+            </section>
+            
+            <!-- Slide 2.5: The Anti-Pattern -->
+            <section>
+                <span class="act-label">ACT 2: THE PROBLEM</span>
+                <h2>❌ The Naive Approach: OFFSET</h2>
+                <div class="pseudocode" style="font-size: 1em;">
+                    <span class="comment">-- Page 1</span><br>
+                    <span class="keyword">SELECT</span> * <span class="keyword">FROM</span> posts <span class="keyword">LIMIT</span> 20 <span class="highlight">OFFSET 0</span><br><br>
+                    <span class="comment">-- Page 2</span><br>
+                    <span class="keyword">SELECT</span> * <span class="keyword">FROM</span> posts <span class="keyword">LIMIT</span> 20 <span class="highlight">OFFSET 20</span> <span style="color: var(--primary-red)">⚠️</span>
+                </div>
+                <div class="fragment warning-box" style="margin-top: 30px;">
+                    <strong>OFFSET = "skip N rows"</strong> ≠ "continue from position X"<br>
+                    <span style="font-size: 0.9em;">If 3 new posts arrive → OFFSET 20 returns wrong rows!</span>
+                </div>
+                <aside class="notes">
+                    This looks simple and works in a static database. But when new rows 
+                    are inserted while users are paginating, OFFSET causes chaos. The 
+                    rows shift, and OFFSET 20 now points to different data.
+                </aside>
+            </section>
+            
+            <!-- Slide 2.6: Why It Breaks (Visual) -->
+            <section>
+                <span class="act-label">ACT 2: THE PROBLEM</span>
+                <h2>Why OFFSET Breaks</h2>
+                <div style="font-size: 0.85em;">
+                    <div class="fragment">
+                        <p><strong>Step 1:</strong> User loads Page 1 (posts 1-20)</p>
+                        <div class="timeline-visual">
+                            <div class="timeline-item" style="background: var(--primary-green); color: black;">P1</div>
+                            <div class="timeline-item" style="background: var(--primary-green); color: black;">P2</div>
+                            <div class="timeline-item">...</div>
+                            <div class="timeline-item" style="background: var(--primary-green); color: black;">P20</div>
+                            <div class="timeline-item">P21</div>
+                            <div class="timeline-item">P22</div>
+                            <div class="timeline-item">...</div>
+                        </div>
+                    </div>
+                    <div class="fragment">
+                        <p><strong>Step 2:</strong> 3 new posts arrive at the TOP</p>
+                        <div class="timeline-visual">
+                            <div class="timeline-item new">N1</div>
+                            <div class="timeline-item new">N2</div>
+                            <div class="timeline-item new">N3</div>
+                            <div class="timeline-item">P1</div>
+                            <div class="timeline-item">P2</div>
+                            <div class="timeline-item">...</div>
+                            <div class="timeline-item">P20</div>
+                            <div class="timeline-item">P21</div>
+                            <div class="timeline-item">...</div>
+                        </div>
+                    </div>
+                    <div class="fragment">
+                        <p><strong>Step 3:</strong> User loads Page 2 (OFFSET 20) — sees P18-P37!</p>
+                        <div class="timeline-visual">
+                            <div class="timeline-item">N1</div>
+                            <div class="timeline-item">N2</div>
+                            <div class="timeline-item">N3</div>
+                            <div class="timeline-item duplicate">P18</div>
+                            <div class="timeline-item duplicate">P19</div>
+                            <div class="timeline-item duplicate">P20</div>
+                            <div class="timeline-item" style="background: var(--primary-blue); color: black;">P21</div>
+                            <div class="timeline-item">...</div>
+                        </div>
+                        <p style="color: var(--primary-red);">⚠️ P18-P20 shown TWICE!</p>
+                    </div>
+                </div>
+                <aside class="notes">
+                    Visual breakdown of the problem. When new posts insert at position 0, 
+                    every other post shifts down. OFFSET 20 now points to P18 instead of P21. 
+                    The user sees duplicates and the experience is broken.
+                </aside>
+            </section>
+            
+            <!-- ==================== ACT 3: THE SOLUTION ==================== -->
+            
+            <!-- Slide 3.1: Cursor Introduction -->
+            <section>
+                <span class="act-label">ACT 3: THE SOLUTION</span>
+                <h2>✅ Cursor Pagination</h2>
+                <div class="highlight-box" style="font-size: 1.2em; text-align: center;">
+                    A <strong>cursor</strong> is a stable pointer to a specific position in sorted data.
+                </div>
+                <div class="fragment" style="margin-top: 30px;">
+                    <div class="comparison-grid">
+                        <div class="comparison-card bad">
+                            <h4>❌ OFFSET Says:</h4>
+                            <p>"Give me rows 20-40"</p>
+                            <p style="font-size: 0.8em; color: #888;">(Position shifts when data changes)</p>
+                        </div>
+                        <div class="comparison-card good">
+                            <h4>✅ Cursor Says:</h4>
+                            <p>"Give me rows after <strong>this specific row</strong>"</p>
+                            <p style="font-size: 0.8em; color: #888;">(Stable reference point)</p>
+                        </div>
+                    </div>
+                </div>
+                <aside class="notes">
+                    The cursor is like a bookmark. Instead of saying "page 2", you say 
+                    "everything after post P20". No matter how many new posts arrive, 
+                    P20 is still P20, and "after P20" is still well-defined.
+                </aside>
+            </section>
+            
+            <!-- Slide 3.2: Cursor vs OFFSET Animation -->
+            <section>
+                <span class="act-label">ACT 3: THE SOLUTION</span>
+                <h2>🔴 OFFSET vs Cursor Comparison</h2>
+                <div class="animation-container">
+                    <canvas id="compareCanvas" class="animation-canvas" width="800" height="400"></canvas>
+                    <div class="control-panel">
+                        <button class="control-btn" onclick="compareAnim.loadPage1()">Load Page 1</button>
+                        <button class="control-btn danger" onclick="compareAnim.insertPosts()">Insert 3 New Posts</button>
+                        <button class="control-btn" onclick="compareAnim.loadPage2()">Load Page 2</button>
+                        <button class="control-btn" onclick="compareAnim.reset()">Reset</button>
+                    </div>
+                    <div class="status-display" id="compareStatus">Compare OFFSET (top) vs Cursor (bottom)</div>
+                </div>
+                <aside class="notes">
+                    Side-by-side comparison. The top row uses OFFSET and will show duplicates. 
+                    The bottom row uses cursor pagination and maintains consistency. 
+                    Same scenario, different outcomes.
+                </aside>
+            </section>
+            
+            <!-- Slide 3.3: The Connection -->
+            <section>
+                <span class="act-label">ACT 3: THE SOLUTION</span>
+                <h2>Cursors ARE Lower Bound Operations</h2>
+                <div class="pseudocode" style="font-size: 1em;">
+                    <span class="keyword">GET_NEXT_PAGE</span>(cursor):<br><br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">// Step 1: Binary search (our LeetCode algorithm!)</span><br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;start = <span class="highlight">lower_bound</span>(cursor.timestamp)<br><br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">// Step 2: Read sequentially from there</span><br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">RETURN</span> posts[start : start + limit]
+                </div>
+                <div class="fragment insight-box" style="margin-top: 30px; text-align: center; font-size: 1.1em;">
+                    💡 "Posts older than P20" = <code style="background: var(--bg-card); padding: 5px 10px; border-radius: 5px;">lower_bound(P20.timestamp)</code>
+                </div>
+                <aside class="notes">
+                    This is where LeetCode meets production. Every cursor pagination request 
+                    is a lower_bound search followed by a sequential scan. The algorithm 
+                    you practiced is running at scale in every social media platform.
+                </aside>
+            </section>
+            
+            <!-- Slide 3.4: Scale Break -->
+            <section>
+                <span class="act-label">ACT 3: THE SOLUTION</span>
+                <h2>🤔 But Wait...</h2>
+                <div class="warning-box" style="font-size: 1.1em;">
+                    What if new posts arrive <strong>while</strong> you're scrolling?
+                </div>
+                <div class="fragment" style="margin-top: 30px;">
+                    <p>With cursor pagination:</p>
+                    <ul>
+                        <li>User loads Page 1: sees P1-P20</li>
+                        <li>New posts N1, N2 arrive at top</li>
+                        <li>User loads Page 2: correctly sees P21-P40</li>
+                    </ul>
+                    <p style="margin-top: 20px; color: var(--primary-yellow);">
+                        ⚠️ Problem: User <strong>never sees</strong> N1 and N2!
+                    </p>
+                </div>
+                <div class="fragment highlight-box" style="margin-top: 20px;">
+                    <strong>UX Decision:</strong> New posts should appear at TOP, not injected into history.
+                    <br>Solution: <strong>MVCC Snapshots</strong>
+                </div>
+                <aside class="notes">
+                    Cursor pagination solves duplicates, but creates a new problem: users 
+                    miss new content. The solution is to give each user a "frozen" view 
+                    of the feed at the moment they started scrolling.
+                </aside>
+            </section>
+            
+            <!-- Slide 3.5: MVCC Introduction -->
+            <section>
+                <span class="act-label">ACT 3: THE SOLUTION</span>
+                <h2>MVCC Snapshots</h2>
+                <p style="color: var(--primary-purple);">Multi-Version Concurrency Control</p>
+                <div class="highlight-box" style="font-size: 1.1em; text-align: center; margin-top: 20px;">
+                    Each reader gets a <strong>frozen snapshot</strong> of data at a specific moment.
+                </div>
+                <div class="fragment" style="margin-top: 30px;">
+                    <div class="pseudocode">
+                        <span class="keyword">FUNCTION</span> create_feed_session(user):<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;snapshot_time = <span class="highlight">NOW()</span><br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">// All pagination reads from THIS moment</span><br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">RETURN</span> FeedSnapshot(snapshot_time)
+                    </div>
+                </div>
+                <div class="fragment insight-box" style="margin-top: 20px;">
+                    <strong>Mental Model:</strong> Each "Load More" walks through a frozen moment in time.
+                    New posts appear in a <em>newer</em> snapshot at the top.
+                </div>
+                <aside class="notes">
+                    MVCC is used by every major database (PostgreSQL, MySQL InnoDB). 
+                    For feeds, we create a "snapshot" when the user opens the app. 
+                    All pagination reads from that snapshot. Pull-to-refresh creates a new snapshot.
+                </aside>
+            </section>
+            
+            <!-- Slide 3.6: MVCC Animation -->
+            <section>
+                <span class="act-label">ACT 3: THE SOLUTION</span>
+                <h2>🟢 MVCC Snapshot Demo</h2>
+                <div class="animation-container">
+                    <canvas id="mvccCanvas" class="animation-canvas" width="800" height="400"></canvas>
+                    <div class="control-panel">
+                        <button class="control-btn" onclick="mvccAnim.createSnapshot()">Create Snapshot</button>
+                        <button class="control-btn" onclick="mvccAnim.addLivePost()">Add Live Post</button>
+                        <button class="control-btn" onclick="mvccAnim.paginate()">Load Next Page</button>
+                        <button class="control-btn" onclick="mvccAnim.refresh()">Pull to Refresh</button>
+                        <button class="control-btn" onclick="mvccAnim.reset()">Reset</button>
+                    </div>
+                    <div class="status-display" id="mvccStatus">Left: Live Feed | Right: Your Snapshot</div>
+                </div>
+                <aside class="notes">
+                    Interactive split-screen. Left shows the live feed with new posts arriving. 
+                    Right shows your frozen snapshot. Pagination works on the snapshot. 
+                    "Pull to Refresh" creates a new snapshot with all the new posts.
+                </aside>
+            </section>
+            
+            <!-- Slide 3.7: SSTable Connection -->
+            <section>
+                <span class="act-label">ACT 3: THE SOLUTION</span>
+                <h2>📊 Connecting to Episode 2.1</h2>
+                <p>Remember our SSTable from last episode?</p>
+                <div class="fragment" style="margin-top: 20px;">
+                    <div class="pseudocode">
+                        <span class="keyword">FUNCTION</span> range_query(start_key, end_key, limit):<br><br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">// Step 1: Binary search for starting block</span><br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;start_block = <span class="highlight">binary_search</span>(start_key) <span class="comment">// O(log n)</span><br><br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">// Step 2: Sequential scan from that point</span><br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">RETURN</span> <span class="highlight">sequential_read</span>(start_block, limit) <span class="comment">// Fast on disk!</span>
+                    </div>
+                </div>
+                <div class="fragment insight-box" style="margin-top: 20px;">
+                    <strong>Performance Insight:</strong><br>
+                    O(log n) to find the start + sequential disk reads (extremely fast) = efficient pagination
+                </div>
+                <aside class="notes">
+                    Range queries extend our Episode 2.1 SSTable. We use binary search to 
+                    find where to start reading, then sequential reads are cache-friendly 
+                    and fast. This is how databases efficiently serve pagination queries.
+                </aside>
+            </section>
+            
+            <!-- Slide 3.8: Range Query Animation -->
+            <section>
+                <span class="act-label">ACT 3: THE SOLUTION</span>
+                <h2>🔵 Range Query on SSTable</h2>
+                <div class="animation-container">
+                    <canvas id="rangeCanvas" class="animation-canvas" width="800" height="350"></canvas>
+                    <div class="control-panel">
+                        <button class="control-btn" onclick="rangeAnim.binarySearch()">Binary Search Start</button>
+                        <button class="control-btn" onclick="rangeAnim.sequentialScan()">Sequential Scan</button>
+                        <button class="control-btn" onclick="rangeAnim.step()">Step</button>
+                        <button class="control-btn" onclick="rangeAnim.reset()">Reset</button>
+                    </div>
+                    <div class="status-display" id="rangeStatus">Query: posts after timestamp 1705300000</div>
+                </div>
+                <aside class="notes">
+                    Watch binary search narrow down to the starting block, then see 
+                    sequential reads grab the next N items. This is exactly how cursor 
+                    pagination works under the hood in database engines.
+                </aside>
+            </section>
+            
+            <!-- ==================== ACT 4: MASTERY ==================== -->
+            
+            <!-- Slide 4.1: Production Flow Animation -->
+            <section>
+                <span class="act-label">ACT 4: MASTERY</span>
+                <h2>🟣 Complete Production Flow</h2>
+                <div class="animation-container">
+                    <canvas id="flowCanvas" class="animation-canvas" width="800" height="400"></canvas>
+                    <div class="control-panel">
+                        <button class="control-btn" onclick="flowAnim.step1()">1. Decode Cursor</button>
+                        <button class="control-btn" onclick="flowAnim.step2()">2. Get Snapshot</button>
+                        <button class="control-btn" onclick="flowAnim.step3()">3. Range Query</button>
+                        <button class="control-btn" onclick="flowAnim.step4()">4. Build Response</button>
+                        <button class="control-btn" onclick="flowAnim.auto()">Auto Play</button>
+                        <button class="control-btn" onclick="flowAnim.reset()">Reset</button>
+                    </div>
+                    <div class="status-display" id="flowStatus">End-to-end pagination request flow</div>
+                </div>
+                <aside class="notes">
+                    The complete picture: decode the cursor to get snapshot ID and position, 
+                    retrieve the snapshot, run the range query, build the next cursor, 
+                    return the response. This is production-grade infinite scroll.
+                </aside>
+            </section>
+            
+            <!-- Slide 4.2: Composite Cursors -->
+            <section>
+                <span class="act-label">ACT 4: MASTERY</span>
+                <h2>Composite Cursors</h2>
+                <p>A production cursor encodes more than just position:</p>
+                <div class="pseudocode" style="margin-top: 20px; font-size: 1em;">
+                    <span class="keyword">CURSOR</span> = {<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;<span class="highlight">snapshot_id</span>: "snap_2024_01_15" <span class="comment">// Which frozen timeline</span><br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;<span class="highlight">last_timestamp</span>: 1705320000 <span class="comment">// When we left off</span><br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;<span class="highlight">last_id</span>: "post_abc" <span class="comment">// Tie-breaker</span><br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;<span class="highlight">signature</span>: hmac(...) <span class="comment">// Tamper-proof</span><br>
+                    }<br><br>
+                    <span class="comment">// Sent as: eyJzbmFwc2hvdF9pZCI6Li4u (base64)</span>
+                </div>
+                <div class="fragment insight-box" style="margin-top: 25px;">
+                    <strong>Multi-device sync:</strong> Phone and laptop share the same snapshot,
+                    so they see consistent data!
+                </div>
+                <aside class="notes">
+                    Production cursors are opaque tokens that encode snapshot ID, position, 
+                    and often a signature to prevent users from tampering. This enables 
+                    consistent experiences across devices.
+                </aside>
+            </section>
+            
+            <!-- Slide 4.3: When to Use -->
+            <section>
+                <span class="act-label">ACT 4: MASTERY</span>
+                <h2>When to Use This Pattern</h2>
+                <div class="two-column">
+                    <div class="comparison-card good">
+                        <h4 style="color: var(--primary-green);">✅ Use Cursor + MVCC When:</h4>
+                        <ul style="text-align: left; font-size: 0.85em;">
+                            <li>Data is sorted (time, score, etc.)</li>
+                            <li>Real-time updates during pagination</li>
+                            <li>Consistency matters (no duplicates)</li>
+                            <li>Stateless pagination needed</li>
+                            <li>Multi-device support required</li>
+                        </ul>
+                    </div>
+                    <div class="comparison-card bad">
+                        <h4 style="color: var(--primary-red);">❌ Skip It When:</h4>
+                        <ul style="text-align: left; font-size: 0.85em;">
+                            <li>Data fits in memory</li>
+                            <li>Order doesn't matter</li>
+                            <li>Data is static/rarely changes</li>
+                            <li>Simple OFFSET works fine</li>
+                            <li>Random sampling is acceptable</li>
+                        </ul>
+                    </div>
+                </div>
+                <aside class="notes">
+                    Not every system needs cursor pagination. For admin dashboards with 
+                    static data, OFFSET is fine. Reserve this complexity for feeds, 
+                    activity streams, and real-time collaborative systems.
+                </aside>
+            </section>
+            
+            <!-- Slide 4.4: Next Episode Teaser -->
+            <section>
+                <span class="act-label">ACT 4: MASTERY</span>
+                <h2>🔮 Next Episode Preview</h2>
+                <p>What if the sort order itself isn't static?</p>
+                <div class="fragment" style="margin-top: 30px;">
+                    <div class="highlight-box">
+                        <strong>Feature Flag Rollouts:</strong>
+                        <ul style="margin-top: 10px;">
+                            <li>User A (10% cohort): sees [NewFeature, OldFeature]</li>
+                            <li>User B (90% cohort): sees [OldFeature, NewFeature]</li>
+                        </ul>
+                        <p style="margin-top: 15px;">Same data, but the <em>starting point rotates</em> based on user!</p>
+                    </div>
+                </div>
+                <div class="fragment" style="margin-top: 20px;">
+                    <div class="leetcode-badge">LeetCode #33</div>
+                    <p><strong>Search in Rotated Sorted Array</strong></p>
+                    <p style="font-size: 0.9em; color: #888;">Finding data when the sort order has been pivoted</p>
+                </div>
+                <aside class="notes">
+                    Teaser for Episode 2.3. We'll build a feature flag system that handles 
+                    canary deployments and progressive rollouts. The key algorithm is 
+                    LeetCode #33 - searching in rotated arrays.
+                </aside>
+            </section>
+            
+            <!-- Slide 4.5: Recap -->
+            <section>
+                <span class="act-label">ACT 4: MASTERY</span>
+                <h2>🎯 Key Takeaways</h2>
+                <div class="takeaway-grid">
+                    <div class="takeaway-item">
+                        <div class="icon">📍</div>
+                        <div class="text"><strong>OFFSET breaks</strong> with real-time inserts. Use cursor-based pagination.</div>
+                    </div>
+                    <div class="takeaway-item">
+                        <div class="icon">🔍</div>
+                        <div class="text"><strong>Cursors = lower_bound</strong> operations on sorted data.</div>
+                    </div>
+                    <div class="takeaway-item">
+                        <div class="icon">📸</div>
+                        <div class="text"><strong>MVCC snapshots</strong> solve consistency during real-time updates.</div>
+                    </div>
+                    <div class="takeaway-item">
+                        <div class="icon">⚡</div>
+                        <div class="text"><strong>Binary search + sequential reads</strong> = efficient range queries.</div>
+                    </div>
+                </div>
+                <div class="fragment highlight-box" style="margin-top: 30px; text-align: center;">
+                    <strong>The Journey:</strong> From LeetCode #34 (find boundaries) → 
+                    Twitter/Facebook infinite scroll handling millions of users
+                </div>
+                <aside class="notes">
+                    Recap the key concepts. The algorithm from LeetCode directly applies 
+                    to building production pagination. Understanding bounds gives you 
+                    the foundation for cursor-based systems.
+                </aside>
+            </section>
+            
+            <!-- End Slide -->
+            <section>
+                <h2>🎬 End of Episode 2.2</h2>
+                <p class="subtitle">Bound Search - The Infinite Scroll Algorithm</p>
+                <div style="margin-top: 40px;">
+                    <p>Next: Episode 2.3</p>
+                    <p style="color: var(--primary-purple);">"Rotated Search - The Feature Flag System"</p>
+                </div>
+                <div style="margin-top: 40px; font-size: 0.8em; color: #666;">
+                    <p>Practice: <a href="https://leetcode.com/problems/find-first-and-last-position-of-element-in-sorted-array/" target="_blank" style="color: var(--primary-blue);">LeetCode #34</a></p>
+                </div>
+            </section>
+            
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/reveal.js@4.5.0/dist/reveal.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/reveal.js@4.5.0/plugin/notes/notes.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/reveal.js@4.5.0/plugin/highlight/highlight.js"></script>
+    
+    <script>
+        // Initialize Reveal.js
+        Reveal.initialize({
+            hash: true,
+            slideNumber: true,
+            width: 1920,
+            height: 1080,
+            margin: 0.1,
+            plugins: [RevealNotes, RevealHighlight]
+        });
+        
+        // ==================== ANIMATION 1: Feed Bug Demo ====================
+        class FeedBugAnimation {
+            constructor(canvasId, statusId) {
+                this.canvas = document.getElementById(canvasId);
+                this.ctx = this.canvas.getContext('2d');
+                this.statusEl = document.getElementById(statusId);
+                this.reset();
+            }
+            
+            reset() {
+                this.posts = ['P1', 'P2', 'P3', 'P4', 'P5', 'P6', 'P7', 'P8', 'P9', 'P10'];
+                this.page1Loaded = false;
+                this.page2Loaded = false;
+                this.newPostsInserted = false;
+                this.highlightedPosts = [];
+                this.duplicates = [];
+                this.draw();
+                this.statusEl.textContent = 'Click "Load Page 1" to start';
+            }
+            
+            loadPage1() {
+                this.page1Loaded = true;
+                this.highlightedPosts = ['P1', 'P2', 'P3', 'P4', 'P5'];
+                this.draw();
+                this.statusEl.textContent = 'Page 1 loaded: P1-P5 (OFFSET 0, LIMIT 5)';
+            }
+            
+            insertNewPosts() {
+                if (!this.page1Loaded) {
+                    this.statusEl.textContent = 'Load Page 1 first!';
+                    return;
+                }
+                this.posts = ['N1', 'N2', 'N3', ...this.posts];
+                this.newPostsInserted = true;
+                this.draw();
+                this.statusEl.textContent = '⚡ 3 new posts (N1, N2, N3) inserted at top!';
+            }
+            
+            loadPage2() {
+                if (!this.newPostsInserted) {
+                    this.highlightedPosts = ['P6', 'P7', 'P8', 'P9', 'P10'];
+                    this.draw();
+                    this.statusEl.textContent = 'Page 2 loaded correctly: P6-P10';
+                    return;
+                }
+                // With OFFSET 5, we now get P3-P7 instead of P6-P10
+                this.page2Loaded = true;
+                this.highlightedPosts = ['P3', 'P4', 'P5', 'P6', 'P7'];
+                this.duplicates = ['P3', 'P4', 'P5'];
+                this.draw();
+                this.statusEl.textContent = '❌ BUG! OFFSET 5 now returns P3-P7. P3-P5 shown TWICE!';
+            }
+            
+            draw() {
+                const ctx = this.ctx;
+                const w = this.canvas.width;
+                const h = this.canvas.height;
+                
+                ctx.fillStyle = '#1a1a2e';
+                ctx.fillRect(0, 0, w, h);
+                
+                // Title
+                ctx.fillStyle = '#fff';
+                ctx.font = 'bold 24px Segoe UI';
+                ctx.textAlign = 'center';
+                ctx.fillText('Feed Timeline (newest first)', w/2, 40);
+                
+                // Draw posts
+                const postWidth = 60;
+                const postHeight = 50;
+                const startX = 50;
+                const startY = 100;
+                const gap = 10;
+                
+                this.posts.forEach((post, i) => {
+                    const x = startX + (i % 10) * (postWidth + gap);
+                    const y = startY + Math.floor(i / 10) * (postHeight + gap + 30);
+                    
+                    // Determine color
+                    let bgColor = '#16213e';
+                    let textColor = '#fff';
+                    
+                    if (post.startsWith('N')) {
+                        bgColor = '#00ff88';
+                        textColor = '#000';
+                    } else if (this.duplicates.includes(post)) {
+                        bgColor = '#ff4757';
+                        textColor = '#fff';
+                    } else if (this.highlightedPosts.includes(post)) {
+                        bgColor = '#00d4ff';
+                        textColor = '#000';
+                    }
+                    
+                    // Draw post box
+                    ctx.fillStyle = bgColor;
+                    ctx.beginPath();
+                    ctx.roundRect(x, y, postWidth, postHeight, 8);
+                    ctx.fill();
+                    
+                    // Draw text
+                    ctx.fillStyle = textColor;
+                    ctx.font = 'bold 18px Segoe UI';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(post, x + postWidth/2, y + postHeight/2 + 6);
+                });
+                
+                // Legend
+                const legendY = 280;
+                ctx.font = '16px Segoe UI';
+                ctx.textAlign = 'left';
+                
+                ctx.fillStyle = '#00ff88';
+                ctx.fillRect(50, legendY, 20, 20);
+                ctx.fillStyle = '#fff';
+                ctx.fillText('New Posts', 80, legendY + 15);
+                
+                ctx.fillStyle = '#00d4ff';
+                ctx.fillRect(200, legendY, 20, 20);
+                ctx.fillStyle = '#fff';
+                ctx.fillText('Current Page', 230, legendY + 15);
+                
+                ctx.fillStyle = '#ff4757';
+                ctx.fillRect(380, legendY, 20, 20);
+                ctx.fillStyle = '#fff';
+                ctx.fillText('DUPLICATES!', 410, legendY + 15);
+                
+                // Explanation
+                if (this.page2Loaded && this.newPostsInserted) {
+                    ctx.fillStyle = '#ff4757';
+                    ctx.font = 'bold 20px Segoe UI';
+                    ctx.textAlign = 'center';
+                    ctx.fillText('OFFSET 5 now points to P3 (position shifted by 3 new posts)', w/2, 350);
+                }
+            }
+        }
+        
+        // ==================== ANIMATION 2: Boundary Search ====================
+        class BoundaryAnimation {
+            constructor(canvasId, statusId) {
+                this.canvas = document.getElementById(canvasId);
+                this.ctx = this.canvas.getContext('2d');
+                this.statusEl = document.getElementById(statusId);
+                this.reset();
+            }
+            
+            reset() {
+                this.array = [1, 3, 5, 7, 8, 8, 8, 8, 10, 12, 15];
+                this.target = 8;
+                this.left = 0;
+                this.right = this.array.length - 1;
+                this.mid = -1;
+                this.result = -1;
+                this.mode = null; // 'lower' or 'upper'
+                this.searching = false;
+                this.steps = [];
+                this.currentStep = 0;
+                this.draw();
+                this.statusEl.textContent = 'Target: 8 | Click to find boundaries';
+            }
+            
+            findLower() {
+                this.reset();
+                this.mode = 'lower';
+                this.searching = true;
+                this.generateSteps(true);
+                this.statusEl.textContent = 'Finding LOWER bound (first occurrence of 8)';
+                this.draw();
+            }
+            
+            findUpper() {
+                this.reset();
+                this.mode = 'upper';
+                this.searching = true;
+                this.generateSteps(false);
+                this.statusEl.textContent = 'Finding UPPER bound (last occurrence of 8)';
+                this.draw();
+            }
+            
+            generateSteps(findFirst) {
+                this.steps = [];
+                let left = 0, right = this.array.length - 1;
+                let result = -1;
+                
+                while (left <= right) {
+                    const mid = Math.floor((left + right) / 2);
+                    this.steps.push({ left, right, mid, result });
+                    
+                    if (this.array[mid] === this.target) {
+                        result = mid;
+                        if (findFirst) {
+                            right = mid - 1;
+                        } else {
+                            left = mid + 1;
+                        }
+                    } else if (this.array[mid] < this.target) {
+                        left = mid + 1;
+                    } else {
+                        right = mid - 1;
+                    }
+                }
+                this.steps.push({ left, right, mid: -1, result, done: true });
+            }
+            
+            step() {
+                if (!this.searching || this.currentStep >= this.steps.length) {
+                    return;
+                }
+                
+                const s = this.steps[this.currentStep];
+                this.left = s.left;
+                this.right = s.right;
+                this.mid = s.mid;
+                this.result = s.result;
+                
+                if (s.done) {
+                    this.statusEl.textContent = `Found ${this.mode} bound at index ${this.result} (value: ${this.array[this.result]})`;
+                } else {
+                    const midVal = this.array[this.mid];
+                    this.statusEl.textContent = `Checking index ${this.mid} (value: ${midVal}) | left=${this.left}, right=${this.right}`;
+                }
+                
+                this.currentStep++;
+                this.draw();
+            }
+            
+            draw() {
+                const ctx = this.ctx;
+                const w = this.canvas.width;
+                const h = this.canvas.height;
+                
+                ctx.fillStyle = '#1a1a2e';
+                ctx.fillRect(0, 0, w, h);
+                
+                // Title
+                ctx.fillStyle = '#fff';
+                ctx.font = 'bold 24px Segoe UI';
+                ctx.textAlign = 'center';
+                ctx.fillText(`Finding ${this.mode === 'lower' ? 'LOWER' : this.mode === 'upper' ? 'UPPER' : ''} Bound for Target: ${this.target}`, w/2, 40);
+                
+                // Draw array
+                const boxSize = 55;
+                const startX = (w - this.array.length * (boxSize + 10)) / 2;
+                const arrayY = 120;
+                
+                this.array.forEach((val, i) => {
+                    const x = startX + i * (boxSize + 10);
+                    
+                    // Determine color
+                    let bgColor = '#16213e';
+                    let borderColor = '#333';
+                    
+                    if (i === this.mid) {
+                        bgColor = '#ffd93d';
+                        borderColor = '#ffd93d';
+                    } else if (i === this.result) {
+                        bgColor = '#00ff88';
+                        borderColor = '#00ff88';
+                    } else if (val === this.target) {
+                        bgColor = '#3d5a80';
+                        borderColor = '#00d4ff';
+                    }
+                    
+                    if (this.searching && (i < this.left || i > this.right)) {
+                        bgColor = '#0d1117';
+                        borderColor = '#333';
+                    }
+                    
+                    // Draw box
+                    ctx.fillStyle = bgColor;
+                    ctx.strokeStyle = borderColor;
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.roundRect(x, arrayY, boxSize, boxSize, 8);
+                    ctx.fill();
+                    ctx.stroke();
+                    
+                    // Draw value
+                    ctx.fillStyle = i === this.mid ? '#000' : '#fff';
+                    ctx.font = 'bold 22px Segoe UI';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(val, x + boxSize/2, arrayY + boxSize/2 + 8);
+                    
+                    // Draw index
+                    ctx.fillStyle = '#888';
+                    ctx.font = '14px Segoe UI';
+                    ctx.fillText(i, x + boxSize/2, arrayY + boxSize + 20);
+                });
+                
+                // Draw pointers
+                if (this.searching) {
+                    const leftX = startX + this.left * (boxSize + 10) + boxSize/2;
+                    const rightX = startX + this.right * (boxSize + 10) + boxSize/2;
+                    const pointerY = arrayY - 30;
+                    
+                    // Left pointer
+                    ctx.fillStyle = '#00d4ff';
+                    ctx.beginPath();
+                    ctx.moveTo(leftX, pointerY + 20);
+                    ctx.lineTo(leftX - 10, pointerY);
+                    ctx.lineTo(leftX + 10, pointerY);
+                    ctx.fill();
+                    ctx.font = 'bold 14px Segoe UI';
+                    ctx.fillText('L', leftX, pointerY - 5);
+                    
+                    // Right pointer
+                    ctx.fillStyle = '#b388ff';
+                    ctx.beginPath();
+                    ctx.moveTo(rightX, pointerY + 20);
+                    ctx.lineTo(rightX - 10, pointerY);
+                    ctx.lineTo(rightX + 10, pointerY);
+                    ctx.fill();
+                    ctx.fillText('R', rightX, pointerY - 5);
+                }
+                
+                // Legend
+                ctx.font = '16px Segoe UI';
+                ctx.textAlign = 'left';
+                
+                ctx.fillStyle = '#ffd93d';
+                ctx.fillRect(50, 280, 20, 20);
+                ctx.fillStyle = '#fff';
+                ctx.fillText('Current Mid', 80, 295);
+                
+                ctx.fillStyle = '#00ff88';
+                ctx.fillRect(200, 280, 20, 20);
+                ctx.fillStyle = '#fff';
+                ctx.fillText('Result Found', 230, 295);
+                
+                ctx.fillStyle = '#3d5a80';
+                ctx.fillRect(380, 280, 20, 20);
+                ctx.fillStyle = '#fff';
+                ctx.fillText('Target Values', 410, 295);
+            }
+        }
+        
+        // ==================== ANIMATION 3: OFFSET vs Cursor Comparison ====================
+        class CompareAnimation {
+            constructor(canvasId, statusId) {
+                this.canvas = document.getElementById(canvasId);
+                this.ctx = this.canvas.getContext('2d');
+                this.statusEl = document.getElementById(statusId);
+                this.reset();
+            }
+            
+            reset() {
+                this.offsetPosts = ['P1', 'P2', 'P3', 'P4', 'P5', 'P6', 'P7', 'P8'];
+                this.cursorPosts = ['P1', 'P2', 'P3', 'P4', 'P5', 'P6', 'P7', 'P8'];
+                this.offsetPage = [];
+                this.cursorPage = [];
+                this.offsetDuplicates = [];
+                this.cursorRef = null; // The cursor points to P4
+                this.state = 'initial';
+                this.draw();
+                this.statusEl.textContent = 'Compare OFFSET (top) vs Cursor (bottom)';
+            }
+            
+            loadPage1() {
+                this.offsetPage = ['P1', 'P2', 'P3', 'P4'];
+                this.cursorPage = ['P1', 'P2', 'P3', 'P4'];
+                this.cursorRef = 'P4';
+                this.state = 'page1';
+                this.draw();
+                this.statusEl.textContent = 'Page 1 loaded. Cursor now points to P4.';
+            }
+            
+            insertPosts() {
+                if (this.state !== 'page1') {
+                    this.statusEl.textContent = 'Load Page 1 first!';
+                    return;
+                }
+                this.offsetPosts = ['N1', 'N2', 'N3', ...this.offsetPosts];
+                this.cursorPosts = ['N1', 'N2', 'N3', ...this.cursorPosts];
+                this.state = 'inserted';
+                this.draw();
+                this.statusEl.textContent = '⚡ 3 new posts inserted. Watch what happens next...';
+            }
+            
+            loadPage2() {
+                if (this.state !== 'inserted') {
+                    if (this.state === 'page1') {
+                        this.offsetPage = ['P5', 'P6', 'P7', 'P8'];
+                        this.cursorPage = ['P5', 'P6', 'P7', 'P8'];
+                        this.state = 'page2ok';
+                        this.draw();
+                        this.statusEl.textContent = 'Page 2 loaded correctly (no new posts inserted)';
+                        return;
+                    }
+                    this.statusEl.textContent = 'Insert posts first!';
+                    return;
+                }
+                
+                // OFFSET: positions shifted, now gets P2-P5
+                this.offsetPage = ['P2', 'P3', 'P4', 'P5'];
+                this.offsetDuplicates = ['P2', 'P3', 'P4'];
+                
+                // Cursor: still gets items after P4
+                this.cursorPage = ['P5', 'P6', 'P7', 'P8'];
+                
+                this.state = 'page2';
+                this.draw();
+                this.statusEl.textContent = '❌ OFFSET shows duplicates! ✅ Cursor works correctly!';
+            }
+            
+            draw() {
+                const ctx = this.ctx;
+                const w = this.canvas.width;
+                const h = this.canvas.height;
+                
+                ctx.fillStyle = '#1a1a2e';
+                ctx.fillRect(0, 0, w, h);
+                
+                // Draw OFFSET section
+                this.drawSection('OFFSET Pagination', this.offsetPosts, this.offsetPage, this.offsetDuplicates, 30, '#ff4757');
+                
+                // Divider
+                ctx.strokeStyle = '#444';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(50, h/2);
+                ctx.lineTo(w - 50, h/2);
+                ctx.stroke();
+                
+                // Draw Cursor section
+                this.drawSection('Cursor Pagination', this.cursorPosts, this.cursorPage, [], h/2 + 20, '#00ff88', this.cursorRef);
+            }
+            
+            drawSection(title, posts, highlighted, duplicates, yOffset, accentColor, cursor = null) {
+                const ctx = this.ctx;
+                const w = this.canvas.width;
+                
+                // Title
+                ctx.fillStyle = accentColor;
+                ctx.font = 'bold 20px Segoe UI';
+                ctx.textAlign = 'left';
+                ctx.fillText(title, 50, yOffset + 30);
+                
+                // Draw posts
+                const boxWidth = 55;
+                const boxHeight = 40;
+                const startX = 50;
+                const postsY = yOffset + 60;
+                
+                posts.forEach((post, i) => {
+                    const x = startX + i * (boxWidth + 8);
+                    
+                    let bgColor = '#16213e';
+                    let textColor = '#fff';
+                    
+                    if (post.startsWith('N')) {
+                        bgColor = '#00ff88';
+                        textColor = '#000';
+                    } else if (duplicates.includes(post)) {
+                        bgColor = '#ff4757';
+                    } else if (highlighted.includes(post)) {
+                        bgColor = '#00d4ff';
+                        textColor = '#000';
+                    }
+                    
+                    ctx.fillStyle = bgColor;
+                    ctx.beginPath();
+                    ctx.roundRect(x, postsY, boxWidth, boxHeight, 6);
+                    ctx.fill();
+                    
+                    ctx.fillStyle = textColor;
+                    ctx.font = 'bold 16px Segoe UI';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(post, x + boxWidth/2, postsY + boxHeight/2 + 5);
+                    
+                    // Draw cursor arrow if this is the cursor reference
+                    if (cursor && post === cursor) {
+                        ctx.fillStyle = '#ffd93d';
+                        ctx.beginPath();
+                        ctx.moveTo(x + boxWidth/2, postsY + boxHeight + 5);
+                        ctx.lineTo(x + boxWidth/2 - 8, postsY + boxHeight + 20);
+                        ctx.lineTo(x + boxWidth/2 + 8, postsY + boxHeight + 20);
+                        ctx.fill();
+                        ctx.font = '12px Segoe UI';
+                        ctx.fillText('cursor', x + boxWidth/2, postsY + boxHeight + 35);
+                    }
+                });
+                
+                // Result indicator
+                if (duplicates.length > 0) {
+                    ctx.fillStyle = '#ff4757';
+                    ctx.font = 'bold 16px Segoe UI';
+                    ctx.textAlign = 'right';
+                    ctx.fillText('❌ DUPLICATES!', w - 50, yOffset + 30);
+                } else if (highlighted.length > 0 && this.state === 'page2') {
+                    ctx.fillStyle = '#00ff88';
+                    ctx.font = 'bold 16px Segoe UI';
+                    ctx.textAlign = 'right';
+                    ctx.fillText('✅ Correct!', w - 50, yOffset + 30);
+                }
+            }
+        }
+        
+        // ==================== ANIMATION 4: MVCC Snapshot ====================
+        class MVCCAnimation {
+            constructor(canvasId, statusId) {
+                this.canvas = document.getElementById(canvasId);
+                this.ctx = this.canvas.getContext('2d');
+                this.statusEl = document.getElementById(statusId);
+                this.reset();
+            }
+            
+            reset() {
+                this.liveFeed = ['P1', 'P2', 'P3', 'P4', 'P5', 'P6', 'P7', 'P8'];
+                this.snapshot = [];
+                this.snapshotTime = null;
+                this.currentPage = [];
+                this.newPostCount = 0;
+                this.draw();
+                this.statusEl.textContent = 'Left: Live Feed | Right: Your Snapshot';
+            }
+            
+            createSnapshot() {
+                this.snapshot = [...this.liveFeed];
+                this.snapshotTime = new Date().toLocaleTimeString();
+                this.currentPage = this.snapshot.slice(0, 4);
+                this.draw();
+                this.statusEl.textContent = `📸 Snapshot created at ${this.snapshotTime} | Showing page 1`;
+            }
+            
+            addLivePost() {
+                this.newPostCount++;
+                this.liveFeed.unshift(`N${this.newPostCount}`);
+                this.draw();
+                this.statusEl.textContent = `⚡ New post N${this.newPostCount} added to LIVE feed (snapshot unchanged)`;
+            }
+            
+            paginate() {
+                if (this.snapshot.length === 0) {
+                    this.statusEl.textContent = 'Create a snapshot first!';
+                    return;
+                }
+                
+                const currentIndex = this.snapshot.indexOf(this.currentPage[this.currentPage.length - 1]);
+                if (currentIndex >= this.snapshot.length - 1) {
+                    this.statusEl.textContent = 'End of snapshot reached!';
+                    return;
+                }
+                
+                this.currentPage = this.snapshot.slice(currentIndex + 1, currentIndex + 5);
+                this.draw();
+                this.statusEl.textContent = `Loading next page from snapshot (frozen at ${this.snapshotTime})`;
+            }
+            
+            refresh() {
+                this.snapshot = [...this.liveFeed];
+                this.snapshotTime = new Date().toLocaleTimeString();
+                this.currentPage = this.snapshot.slice(0, 4);
+                this.draw();
+                this.statusEl.textContent = `🔄 New snapshot created! Now includes ${this.newPostCount} new posts`;
+            }
+            
+            draw() {
+                const ctx = this.ctx;
+                const w = this.canvas.width;
+                const h = this.canvas.height;
+                
+                ctx.fillStyle = '#1a1a2e';
+                ctx.fillRect(0, 0, w, h);
+                
+                // Left side: Live Feed
+                this.drawFeed('📡 Live Feed', this.liveFeed, [], 30, w/2 - 30, '#00d4ff');
+                
+                // Divider
+                ctx.strokeStyle = '#444';
+                ctx.lineWidth = 3;
+                ctx.setLineDash([10, 5]);
+                ctx.beginPath();
+                ctx.moveTo(w/2, 20);
+                ctx.lineTo(w/2, h - 20);
+                ctx.stroke();
+                ctx.setLineDash([]);
+                
+                // Right side: Snapshot
+                if (this.snapshot.length > 0) {
+                    this.drawFeed(`📸 Your Snapshot (${this.snapshotTime})`, this.snapshot, this.currentPage, w/2 + 30, w - 30, '#00ff88');
+                } else {
+                    ctx.fillStyle = '#666';
+                    ctx.font = '18px Segoe UI';
+                    ctx.textAlign = 'center';
+                    ctx.fillText('No snapshot yet', w * 3/4, h/2);
+                    ctx.fillText('Click "Create Snapshot"', w * 3/4, h/2 + 30);
+                }
+            }
+            
+            drawFeed(title, posts, highlighted, startX, endX, accentColor) {
+                const ctx = this.ctx;
+                const width = endX - startX;
+                
+                // Title
+                ctx.fillStyle = accentColor;
+                ctx.font = 'bold 18px Segoe UI';
+                ctx.textAlign = 'center';
+                ctx.fillText(title, startX + width/2, 35);
+                
+                // Draw posts in a grid
+                const boxWidth = 50;
+                const boxHeight = 35;
+                const cols = 4;
+                const gapX = 10;
+                const gapY = 10;
+                const gridStartX = startX + (width - (cols * (boxWidth + gapX))) / 2;
+                const gridStartY = 60;
+                
+                posts.slice(0, 12).forEach((post, i) => {
+                    const col = i % cols;
+                    const row = Math.floor(i / cols);
+                    const x = gridStartX + col * (boxWidth + gapX);
+                    const y = gridStartY + row * (boxHeight + gapY);
+                    
+                    let bgColor = '#16213e';
+                    let textColor = '#fff';
+                    
+                    if (post.startsWith('N')) {
+                        bgColor = '#00ff88';
+                        textColor = '#000';
+                    } else if (highlighted.includes(post)) {
+                        bgColor = accentColor;
+                        textColor = '#000';
+                    }
+                    
+                    ctx.fillStyle = bgColor;
+                    ctx.beginPath();
+                    ctx.roundRect(x, y, boxWidth, boxHeight, 5);
+                    ctx.fill();
+                    
+                    ctx.fillStyle = textColor;
+                    ctx.font = 'bold 14px Segoe UI';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(post, x + boxWidth/2, y + boxHeight/2 + 5);
+                });
+                
+                // Show current page indicator
+                if (highlighted.length > 0) {
+                    ctx.fillStyle = '#ffd93d';
+                    ctx.font = '14px Segoe UI';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(`Current page: ${highlighted.join(', ')}`, startX + width/2, 350);
+                }
+            }
+        }
+        
+        // ==================== ANIMATION 5: Range Query ====================
+        class RangeQueryAnimation {
+            constructor(canvasId, statusId) {
+                this.canvas = document.getElementById(canvasId);
+                this.ctx = this.canvas.getContext('2d');
+                this.statusEl = document.getElementById(statusId);
+                this.reset();
+            }
+            
+            reset() {
+                // SSTable blocks with timestamps
+                this.blocks = [
+                    { id: 0, range: '1705200000-1705220000', keys: 50 },
+                    { id: 1, range: '1705220000-1705240000', keys: 45 },
+                    { id: 2, range: '1705240000-1705260000', keys: 52 },
+                    { id: 3, range: '1705260000-1705280000', keys: 48 },
+                    { id: 4, range: '1705280000-1705300000', keys: 51 },
+                    { id: 5, range: '1705300000-1705320000', keys: 47 },
+                    { id: 6, range: '1705320000-1705340000', keys: 49 },
+                    { id: 7, range: '1705340000-1705360000', keys: 46 },
+                ];
+                this.targetTimestamp = 1705300000;
+                this.phase = 'initial';
+                this.left = 0;
+                this.right = this.blocks.length - 1;
+                this.mid = -1;
+                this.foundBlock = -1;
+                this.scannedBlocks = [];
+                this.steps = [];
+                this.currentStep = 0;
+                this.draw();
+                this.statusEl.textContent = 'Query: posts after timestamp 1705300000';
+            }
+            
+            binarySearch() {
+                this.reset();
+                this.phase = 'searching';
+                this.generateBinarySearchSteps();
+                this.statusEl.textContent = 'Binary searching for starting block...';
+                this.draw();
+            }
+            
+            generateBinarySearchSteps() {
+                this.steps = [];
+                let left = 0, right = this.blocks.length - 1;
+                
+                while (left <= right) {
+                    const mid = Math.floor((left + right) / 2);
+                    const blockStart = parseInt(this.blocks[mid].range.split('-')[0]);
+                    this.steps.push({ left, right, mid, comparison: blockStart });
+                    
+                    if (blockStart >= this.targetTimestamp) {
+                        right = mid - 1;
+                    } else {
+                        left = mid + 1;
+                    }
+                }
+                this.steps.push({ done: true, foundBlock: left });
+            }
+            
+            sequentialScan() {
+                if (this.foundBlock === -1) {
+                    this.statusEl.textContent = 'Run binary search first!';
+                    return;
+                }
+                this.phase = 'scanning';
+                this.scannedBlocks = [];
+                this.scanStep = 0;
+                this.autoScan();
+            }
+            
+            autoScan() {
+                if (this.scanStep < 3 && this.foundBlock + this.scanStep < this.blocks.length) {
+                    this.scannedBlocks.push(this.foundBlock + this.scanStep);
+                    this.scanStep++;
+                    this.draw();
+                    this.statusEl.textContent = `Sequential scan: reading block ${this.scannedBlocks[this.scannedBlocks.length - 1]}`;
+                    setTimeout(() => this.autoScan(), 500);
+                } else {
+                    this.statusEl.textContent = `Done! Read ${this.scannedBlocks.length} blocks sequentially`;
+                }
+            }
+            
+            step() {
+                if (this.phase !== 'searching' || this.currentStep >= this.steps.length) {
+                    return;
+                }
+                
+                const s = this.steps[this.currentStep];
+                
+                if (s.done) {
+                    this.foundBlock = s.foundBlock;
+                    this.phase = 'found';
+                    this.statusEl.textContent = `Found starting block: ${this.foundBlock}`;
+                } else {
+                    this.left = s.left;
+                    this.right = s.right;
+                    this.mid = s.mid;
+                    this.statusEl.textContent = `Checking block ${this.mid} (starts at ${s.comparison})`;
+                }
+                
+                this.currentStep++;
+                this.draw();
+            }
+            
+            draw() {
+                const ctx = this.ctx;
+                const w = this.canvas.width;
+                const h = this.canvas.height;
+                
+                ctx.fillStyle = '#1a1a2e';
+                ctx.fillRect(0, 0, w, h);
+                
+                // Title
+                ctx.fillStyle = '#fff';
+                ctx.font = 'bold 22px Segoe UI';
+                ctx.textAlign = 'center';
+                ctx.fillText('SSTable Blocks (sorted by timestamp)', w/2, 35);
+                
+                // Draw blocks
+                const blockWidth = 85;
+                const blockHeight = 60;
+                const startX = (w - this.blocks.length * (blockWidth + 10)) / 2;
+                const blocksY = 100;
+                
+                this.blocks.forEach((block, i) => {
+                    const x = startX + i * (blockWidth + 10);
+                    
+                    let bgColor = '#16213e';
+                    let borderColor = '#333';
+                    
+                    if (i === this.mid) {
+                        bgColor = '#ffd93d';
+                        borderColor = '#ffd93d';
+                    } else if (i === this.foundBlock && this.phase !== 'searching') {
+                        bgColor = '#00ff88';
+                        borderColor = '#00ff88';
+                    } else if (this.scannedBlocks.includes(i)) {
+                        bgColor = '#00d4ff';
+                        borderColor = '#00d4ff';
+                    }
+                    
+                    if (this.phase === 'searching' && (i < this.left || i > this.right)) {
+                        bgColor = '#0d1117';
+                    }
+                    
+                    ctx.fillStyle = bgColor;
+                    ctx.strokeStyle = borderColor;
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.roundRect(x, blocksY, blockWidth, blockHeight, 8);
+                    ctx.fill();
+                    ctx.stroke();
+                    
+                    // Block label
+                    ctx.fillStyle = (i === this.mid || this.scannedBlocks.includes(i)) ? '#000' : '#fff';
+                    ctx.font = 'bold 14px Segoe UI';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(`Block ${i}`, x + blockWidth/2, blocksY + 20);
+                    
+                    // Key count
+                    ctx.font = '12px Segoe UI';
+                    ctx.fillText(`${block.keys} keys`, x + blockWidth/2, blocksY + 40);
+                });
+                
+                // Draw index
+                ctx.fillStyle = '#fff';
+                ctx.font = 'bold 18px Segoe UI';
+                ctx.textAlign = 'left';
+                ctx.fillText('Sparse Index:', 50, 220);
+                
+                // Index entries
+                const indexY = 250;
+                this.blocks.forEach((block, i) => {
+                    const x = startX + i * (blockWidth + 10);
+                    const range = block.range.split('-');
+                    
+                    let textColor = '#888';
+                    if (i === this.foundBlock && this.phase !== 'searching') {
+                        textColor = '#00ff88';
+                    }
+                    
+                    ctx.fillStyle = textColor;
+                    ctx.font = '11px Consolas';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(range[0], x + blockWidth/2, indexY);
+                });
+                
+                // Legend
+                ctx.font = '14px Segoe UI';
+                ctx.textAlign = 'left';
+                
+                ctx.fillStyle = '#ffd93d';
+                ctx.fillRect(50, 300, 15, 15);
+                ctx.fillStyle = '#fff';
+                ctx.fillText('Binary Search', 75, 312);
+                
+                ctx.fillStyle = '#00ff88';
+                ctx.fillRect(200, 300, 15, 15);
+                ctx.fillStyle = '#fff';
+                ctx.fillText('Start Block', 225, 312);
+                
+                ctx.fillStyle = '#00d4ff';
+                ctx.fillRect(350, 300, 15, 15);
+                ctx.fillStyle = '#fff';
+                ctx.fillText('Sequential Read', 375, 312);
+            }
+        }
+        
+        // ==================== ANIMATION 6: Production Flow ====================
+        class ProductionFlowAnimation {
+            constructor(canvasId, statusId) {
+                this.canvas = document.getElementById(canvasId);
+                this.ctx = this.canvas.getContext('2d');
+                this.statusEl = document.getElementById(statusId);
+                this.reset();
+            }
+            
+            reset() {
+                this.currentStep = 0;
+                this.steps = [
+                    { label: 'Decode Cursor', icon: '🔓', desc: 'Extract snapshot_id and last_key' },
+                    { label: 'Get Snapshot', icon: '📸', desc: 'Load frozen timeline view' },
+                    { label: 'Range Query', icon: '🔍', desc: 'Binary search + sequential read' },
+                    { label: 'Build Response', icon: '📦', desc: 'Create next cursor + posts' }
+                ];
+                this.draw();
+                this.statusEl.textContent = 'End-to-end pagination request flow';
+            }
+            
+            step1() { this.currentStep = 1; this.draw(); this.statusEl.textContent = this.steps[0].desc; }
+            step2() { this.currentStep = 2; this.draw(); this.statusEl.textContent = this.steps[1].desc; }
+            step3() { this.currentStep = 3; this.draw(); this.statusEl.textContent = this.steps[2].desc; }
+            step4() { this.currentStep = 4; this.draw(); this.statusEl.textContent = this.steps[3].desc; }
+            
+            auto() {
+                this.reset();
+                let step = 1;
+                const interval = setInterval(() => {
+                    if (step > 4) {
+                        clearInterval(interval);
+                        this.statusEl.textContent = '✅ Response sent to client!';
+                        return;
+                    }
+                    this.currentStep = step;
+                    this.statusEl.textContent = this.steps[step - 1].desc;
+                    this.draw();
+                    step++;
+                }, 1000);
+            }
+            
+            draw() {
+                const ctx = this.ctx;
+                const w = this.canvas.width;
+                const h = this.canvas.height;
+                
+                ctx.fillStyle = '#1a1a2e';
+                ctx.fillRect(0, 0, w, h);
+                
+                // Title
+                ctx.fillStyle = '#fff';
+                ctx.font = 'bold 22px Segoe UI';
+                ctx.textAlign = 'center';
+                ctx.fillText('Production Pagination Flow', w/2, 35);
+                
+                // Draw flow boxes
+                const boxWidth = 150;
+                const boxHeight = 80;
+                const startX = 80;
+                const boxY = 150;
+                const gap = 30;
+                
+                this.steps.forEach((step, i) => {
+                    const x = startX + i * (boxWidth + gap);
+                    const isActive = i < this.currentStep;
+                    const isCurrent = i === this.currentStep - 1;
+                    
+                    // Connection arrow
+                    if (i > 0) {
+                        ctx.strokeStyle = isActive ? '#00ff88' : '#333';
+                        ctx.lineWidth = 3;
+                        ctx.beginPath();
+                        ctx.moveTo(x - gap + 5, boxY + boxHeight/2);
+                        ctx.lineTo(x - 5, boxY + boxHeight/2);
+                        ctx.stroke();
+                        
+                        // Arrow head
+                        ctx.fillStyle = isActive ? '#00ff88' : '#333';
+                        ctx.beginPath();
+                        ctx.moveTo(x - 5, boxY + boxHeight/2);
+                        ctx.lineTo(x - 15, boxY + boxHeight/2 - 8);
+                        ctx.lineTo(x - 15, boxY + boxHeight/2 + 8);
+                        ctx.fill();
+                    }
+                    
+                    // Box
+                    let bgColor = '#16213e';
+                    let borderColor = '#333';
+                    
+                    if (isCurrent) {
+                        bgColor = '#00ff88';
+                        borderColor = '#00ff88';
+                    } else if (isActive) {
+                        bgColor = '#1e4d3d';
+                        borderColor = '#00ff88';
+                    }
+                    
+                    ctx.fillStyle = bgColor;
+                    ctx.strokeStyle = borderColor;
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.roundRect(x, boxY, boxWidth, boxHeight, 10);
+                    ctx.fill();
+                    ctx.stroke();
+                    
+                    // Icon
+                    ctx.font = '28px Segoe UI';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(step.icon, x + boxWidth/2, boxY + 35);
+                    
+                    // Label
+                    ctx.fillStyle = isCurrent ? '#000' : '#fff';
+                    ctx.font = 'bold 14px Segoe UI';
+                    ctx.fillText(step.label, x + boxWidth/2, boxY + 65);
+                    
+                    // Step number
+                    ctx.fillStyle = isCurrent ? '#000' : (isActive ? '#00ff88' : '#666');
+                    ctx.font = 'bold 16px Segoe UI';
+                    ctx.fillText(`${i + 1}`, x + boxWidth/2, boxY - 15);
+                });
+                
+                // Input/Output
+                ctx.font = '16px Segoe UI';
+                ctx.textAlign = 'left';
+                
+                // Input cursor
+                ctx.fillStyle = '#ffd93d';
+                ctx.fillText('Input: cursor_token="eyJzbmFwc2..."', 50, 300);
+                
+                // Output
+                ctx.fillStyle = '#00d4ff';
+                ctx.fillText('Output: { posts: [...], next_cursor: "...", has_more: true }', 50, 340);
+            }
+        }
+        
+        // Initialize all animations
+        const feedBugAnim = new FeedBugAnimation('feedBugCanvas', 'feedBugStatus');
+        const boundAnim = new BoundaryAnimation('boundCanvas', 'boundStatus');
+        const compareAnim = new CompareAnimation('compareCanvas', 'compareStatus');
+        const mvccAnim = new MVCCAnimation('mvccCanvas', 'mvccStatus');
+        const rangeAnim = new RangeQueryAnimation('rangeCanvas', 'rangeStatus');
+        const flowAnim = new ProductionFlowAnimation('flowCanvas', 'flowStatus');
+        
+        // Reinitialize on slide change
+        Reveal.on('slidechanged', event => {
+            feedBugAnim.draw();
+            boundAnim.draw();
+            compareAnim.draw();
+            mvccAnim.draw();
+            rangeAnim.draw();
+            flowAnim.draw();
+        });
+    </script>
+</body>
+</html>
