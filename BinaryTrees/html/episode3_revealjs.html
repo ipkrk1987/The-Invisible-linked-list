@@ -1,0 +1,1586 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Episode 2.3: Ring Buffers - When Your Logs Go in Circles</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@4.5.0/dist/reset.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@4.5.0/dist/reveal.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@4.5.0/dist/theme/black.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@4.5.0/plugin/highlight/monokai.css">
+    <style>
+        :root {
+            --primary-green: #00ff88;
+            --primary-blue: #00d4ff;
+            --primary-purple: #b388ff;
+            --primary-orange: #ff9500;
+            --primary-red: #ff4757;
+            --primary-yellow: #ffd93d;
+            --bg-dark: #1a1a2e;
+            --bg-card: #16213e;
+        }
+        
+        .reveal {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+        }
+        
+        .reveal h1, .reveal h2, .reveal h3 {
+            text-transform: none;
+            font-weight: 700;
+        }
+        
+        .reveal h1 {
+            font-size: 2.5em;
+            background: linear-gradient(135deg, var(--primary-blue), var(--primary-purple));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .reveal h2 {
+            font-size: 1.8em;
+            color: var(--primary-green);
+        }
+        
+        .reveal h3 {
+            font-size: 1.4em;
+            color: var(--primary-blue);
+        }
+        
+        .reveal pre code {
+            background: #1e1e1e;
+            font-size: 0.95em;
+        }
+        
+        .subtitle {
+            font-size: 1.2em;
+            color: var(--primary-purple);
+            margin-top: 0.5em;
+        }
+        
+        .episode-badge {
+            display: inline-block;
+            background: linear-gradient(135deg, var(--primary-orange), var(--primary-red));
+            padding: 0.3em 1em;
+            border-radius: 20px;
+            font-size: 0.8em;
+            margin-bottom: 1em;
+        }
+        
+        .season-badge {
+            display: inline-block;
+            background: linear-gradient(135deg, var(--primary-blue), var(--primary-purple));
+            padding: 0.2em 0.8em;
+            border-radius: 15px;
+            font-size: 0.6em;
+            margin-bottom: 0.5em;
+        }
+        
+        .highlight-box {
+            background: rgba(0, 255, 136, 0.1);
+            border-left: 4px solid var(--primary-green);
+            padding: 1em;
+            margin: 1em 0;
+            border-radius: 0 10px 10px 0;
+        }
+        
+        .warning-box {
+            background: rgba(255, 71, 87, 0.1);
+            border-left: 4px solid var(--primary-red);
+            padding: 1em;
+            margin: 1em 0;
+            border-radius: 0 10px 10px 0;
+        }
+        
+        .insight-box {
+            background: rgba(0, 212, 255, 0.1);
+            border-left: 4px solid var(--primary-blue);
+            padding: 1em;
+            margin: 1em 0;
+            border-radius: 0 10px 10px 0;
+        }
+        
+        .animation-container {
+            background: var(--bg-card);
+            border-radius: 15px;
+            padding: 20px;
+            margin: 20px auto;
+            max-width: 900px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+        }
+        
+        .animation-canvas {
+            background: var(--bg-dark);
+            border-radius: 10px;
+            display: block;
+            margin: 0 auto;
+        }
+        
+        .control-panel {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 15px;
+            flex-wrap: wrap;
+        }
+        
+        .control-btn {
+            background: linear-gradient(135deg, var(--primary-blue), var(--primary-purple));
+            border: none;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 0.9em;
+            transition: all 0.3s ease;
+        }
+        
+        .control-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(0, 212, 255, 0.4);
+        }
+        
+        .control-btn.active {
+            background: linear-gradient(135deg, var(--primary-green), var(--primary-blue));
+        }
+        
+        .control-btn.danger {
+            background: linear-gradient(135deg, var(--primary-orange), var(--primary-red));
+        }
+        
+        .status-display {
+            text-align: center;
+            margin-top: 10px;
+            font-size: 0.9em;
+            color: var(--primary-yellow);
+            min-height: 24px;
+        }
+        
+        .takeaway-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin-top: 20px;
+        }
+        
+        .takeaway-item {
+            background: var(--bg-card);
+            border-radius: 10px;
+            padding: 15px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .takeaway-item .icon {
+            font-size: 2em;
+            min-width: 50px;
+            text-align: center;
+        }
+        
+        .takeaway-item .text {
+            text-align: left;
+            font-size: 0.85em;
+        }
+        
+        .leetcode-badge {
+            display: inline-block;
+            background: linear-gradient(135deg, #ffa116, #ff6b00);
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            margin-bottom: 15px;
+        }
+        
+        .act-label {
+            position: absolute;
+            top: 10px;
+            right: 20px;
+            font-size: 0.6em;
+            color: var(--primary-purple);
+            opacity: 0.7;
+        }
+        
+        .failure-card {
+            background: var(--bg-card);
+            border-radius: 10px;
+            padding: 15px;
+            margin: 10px 0;
+            border-left: 4px solid var(--primary-orange);
+        }
+        
+        .failure-card h4 {
+            color: var(--primary-orange);
+            margin-bottom: 10px;
+        }
+        
+        .code-comparison {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        
+        .code-panel {
+            background: var(--bg-card);
+            border-radius: 10px;
+            padding: 15px;
+        }
+        
+        .code-panel.bad {
+            border-top: 3px solid var(--primary-red);
+        }
+        
+        .code-panel.good {
+            border-top: 3px solid var(--primary-green);
+        }
+    </style>
+</head>
+<body>
+    <div class="reveal">
+        <div class="slides">
+            
+            <!-- ==================== ACT 1: THE HOOK ==================== -->
+            
+            <!-- Slide 1: Title -->
+            <section>
+                <div class="season-badge">Season 2: Binary Trees & Production Systems</div>
+                <div class="episode-badge">Episode 2.3</div>
+                <h1>Ring Buffers</h1>
+                <p class="subtitle">When Your Logs Go in Circles</p>
+                <p style="margin-top: 2em; font-size: 0.9em; color: #888;">
+                    From LeetCode #33 to Production Monitoring Systems
+                </p>
+            </section>
+            
+            <!-- Slide 2: What IS a Ring Buffer? -->
+            <section>
+                <span class="act-label">ACT 1: THE HOOK</span>
+                <h2>🔄 What IS a Ring Buffer?</h2>
+                <p>A fixed-size array that <strong style="color: var(--primary-green);">wraps around</strong> when full.</p>
+                <div class="animation-container">
+                    <canvas id="ringIntroCanvas" class="animation-canvas" width="800" height="300"></canvas>
+                    <div class="control-panel">
+                        <button class="control-btn" onclick="ringIntroAnim.write()">Write Data</button>
+                        <button class="control-btn danger" onclick="ringIntroAnim.fillAndWrap()">Fill & Wrap</button>
+                        <button class="control-btn" onclick="ringIntroAnim.reset()">Reset</button>
+                    </div>
+                    <div class="status-display" id="ringIntroStatus">Click "Write Data" to see how it works</div>
+                </div>
+            </section>
+            
+            <!-- Slide 3: You've Used Ring Buffers! -->
+            <section>
+                <span class="act-label">ACT 1: THE HOOK</span>
+                <h2>You've Already Used Ring Buffers!</h2>
+                <div class="takeaway-grid">
+                    <div class="takeaway-item">
+                        <div class="icon">📊</div>
+                        <div class="text"><strong>System Monitor</strong><br>CPU/Memory graphs show "last 60 seconds"</div>
+                    </div>
+                    <div class="takeaway-item">
+                        <div class="icon">📝</div>
+                        <div class="text"><strong>Log Viewers</strong><br>"Last 1000 errors" in your dashboard</div>
+                    </div>
+                    <div class="takeaway-item">
+                        <div class="icon">🎮</div>
+                        <div class="text"><strong>Game Replays</strong><br>"Kill cam" stores last N frames</div>
+                    </div>
+                    <div class="takeaway-item">
+                        <div class="icon">🔊</div>
+                        <div class="text"><strong>Audio Buffers</strong><br>Streaming audio uses circular buffers</div>
+                    </div>
+                </div>
+                <div class="fragment highlight-box" style="margin-top: 30px; text-align: center;">
+                    <strong>The Problem:</strong> When the buffer wraps, binary search breaks!
+                </div>
+            </section>
+            
+            <!-- Slide 4: The 2 AM Crisis -->
+            <section>
+                <span class="act-label">ACT 1: THE HOOK</span>
+                <h2>🚨 The 2 AM Crisis</h2>
+                <div class="animation-container">
+                    <canvas id="crisisCanvas" class="animation-canvas" width="800" height="350"></canvas>
+                    <div class="control-panel">
+                        <button class="control-btn" onclick="crisisAnim.showProblem()">Show Problem</button>
+                        <button class="control-btn danger" onclick="crisisAnim.tryBinarySearch()">Try Binary Search</button>
+                        <button class="control-btn" onclick="crisisAnim.reset()">Reset</button>
+                    </div>
+                    <div class="status-display" id="crisisStatus">SRE needs to find when memory spiked...</div>
+                </div>
+            </section>
+            
+            <!-- Slide 5: The Problem Statement -->
+            <section>
+                <span class="act-label">ACT 1: THE HOOK</span>
+                <h2>The Core Problem</h2>
+                <div class="warning-box" style="font-size: 1.2em; text-align: center;">
+                    Data is <strong style="color: var(--primary-green);">sorted by time</strong>... 
+                    but it <strong style="color: var(--primary-red);">WRAPS</strong>!
+                </div>
+                <div class="fragment" style="margin-top: 2em;">
+                    <div class="code-comparison">
+                        <div class="code-panel bad">
+                            <h4 style="color: var(--primary-red);">❌ What Binary Search Sees</h4>
+                            <pre><code style="font-size: 0.8em;">[1600, 1700, 1800, 1200, 1300, 1400]
+ ↑ looks like max    ↑ suddenly smaller?</code></pre>
+                        </div>
+                        <div class="code-panel good">
+                            <h4 style="color: var(--primary-green);">✅ What Actually Happened</h4>
+                            <pre><code style="font-size: 0.8em;">1200 → 1300 → 1400 → 1600 → 1700 → 1800
+                  ↑ wrap point (buffer filled here)</code></pre>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- ==================== ACT 2: THE LEETCODE ==================== -->
+            
+            <!-- Slide 6: LeetCode Problem -->
+            <section>
+                <span class="act-label">ACT 2: THE LEETCODE</span>
+                <div class="leetcode-badge">LeetCode #33</div>
+                <h2>Search in Rotated Sorted Array</h2>
+                <p>Array was sorted, then rotated at some pivot. Find the target.</p>
+                <div style="margin: 30px 0;">
+                    <code style="font-size: 1.1em; background: var(--bg-card); padding: 15px 25px; border-radius: 10px;">
+                        [4, 5, 6, 7, <span style="color: var(--primary-red);">0</span>, 1, 2] → target: 0 → index 4
+                    </code>
+                </div>
+                <div class="fragment insight-box">
+                    <strong>The Hidden Connection:</strong> A wrapped ring buffer IS a rotated sorted array!
+                </div>
+            </section>
+            
+            <!-- Slide 7: The Key Insight Animation -->
+            <section>
+                <span class="act-label">ACT 2: THE LEETCODE</span>
+                <h2>🔑 The Key Insight</h2>
+                <div class="animation-container">
+                    <canvas id="insightCanvas" class="animation-canvas" width="800" height="350"></canvas>
+                    <div class="control-panel">
+                        <button class="control-btn" onclick="insightAnim.showLeft()">Check Left Half</button>
+                        <button class="control-btn" onclick="insightAnim.showRight()">Check Right Half</button>
+                        <button class="control-btn" onclick="insightAnim.reset()">Reset</button>
+                    </div>
+                    <div class="status-display" id="insightStatus">One half is ALWAYS sorted! Click to see which.</div>
+                </div>
+                <div class="fragment highlight-box" style="margin-top: 20px; text-align: center;">
+                    <strong>If one half is sorted, check if target is in that range!</strong>
+                </div>
+            </section>
+            
+            <!-- Slide 8: The Algorithm -->
+            <section>
+                <span class="act-label">ACT 2: THE LEETCODE</span>
+                <h2>The Rotated Search Algorithm</h2>
+                <pre><code class="language-python" data-trim>
+def search_rotated(nums, target):
+    left, right = 0, len(nums) - 1
+    
+    while left <= right:
+        mid = left + (right - left) // 2
+        
+        if nums[mid] == target:
+            return mid
+            
+        # KEY INSIGHT: One half is ALWAYS sorted!
+        if nums[left] <= nums[mid]:
+            # Left half is sorted
+            if nums[left] <= target < nums[mid]:
+                right = mid - 1  # Target in sorted left
+            else:
+                left = mid + 1   # Target in rotated right
+        else:
+            # Right half is sorted
+            if nums[mid] < target <= nums[right]:
+                left = mid + 1   # Target in sorted right
+            else:
+                right = mid - 1  # Target in rotated left
+                
+    return -1
+                </code></pre>
+            </section>
+            
+            <!-- Slide 9: Algorithm Animation -->
+            <section>
+                <span class="act-label">ACT 2: THE LEETCODE</span>
+                <h2>🔍 Rotated Search Visualizer</h2>
+                <div class="animation-container">
+                    <canvas id="searchCanvas" class="animation-canvas" width="800" height="350"></canvas>
+                    <div class="control-panel">
+                        <button class="control-btn" onclick="searchAnim.search()">Start Search</button>
+                        <button class="control-btn" onclick="searchAnim.step()">Step</button>
+                        <button class="control-btn" onclick="searchAnim.reset()">Reset</button>
+                    </div>
+                    <div class="status-display" id="searchStatus">Target: 1300 (timestamp) | Click "Start Search"</div>
+                </div>
+            </section>
+            
+            <!-- ==================== ACT 3: THE NAIVE APPROACH ==================== -->
+            
+            <!-- Slide 10: The Naive Implementation -->
+            <section>
+                <span class="act-label">ACT 3: THE BREAK</span>
+                <h2>❌ The Naive Ring Buffer</h2>
+                <pre><code class="language-python" data-trim>
+class BrokenRingBuffer:
+    def __init__(self, capacity=1000):
+        self.capacity = capacity
+        self.buffer = [None] * capacity
+        self.write_index = 0
+        
+    def write(self, timestamp, value):
+        self.buffer[self.write_index] = (timestamp, value)
+        self.write_index = (self.write_index + 1) % self.capacity
+        
+    def search_timestamp(self, target_ts):
+        # Naive binary search - ASSUMES buffer is sorted!
+        left, right = 0, self.capacity - 1
+        
+        while left <= right:
+            mid = (left + right) // 2
+            if self.buffer[mid][0] == target_ts:
+                return mid
+            elif self.buffer[mid][0] < target_ts:
+                left = mid + 1
+            else:
+                right = mid - 1
+                
+        return -1  # WRONG when buffer wraps!
+                </code></pre>
+            </section>
+            
+            <!-- Slide 11: Why It Breaks Animation -->
+            <section>
+                <span class="act-label">ACT 3: THE BREAK</span>
+                <h2>💥 Why Naive Search Breaks</h2>
+                <div class="animation-container">
+                    <canvas id="breakCanvas" class="animation-canvas" width="800" height="350"></canvas>
+                    <div class="control-panel">
+                        <button class="control-btn danger" onclick="breakAnim.search()">Try Naive Binary Search</button>
+                        <button class="control-btn" onclick="breakAnim.step()">Step</button>
+                        <button class="control-btn" onclick="breakAnim.reset()">Reset</button>
+                    </div>
+                    <div class="status-display" id="breakStatus">Search for 1300 in wrapped buffer</div>
+                </div>
+            </section>
+            
+            <!-- ==================== ACT 4: THE SOLUTION ==================== -->
+            
+            <!-- Slide 12: The Solution -->
+            <section>
+                <span class="act-label">ACT 4: THE SOLUTION</span>
+                <h2>✅ The Rotated Ring Buffer</h2>
+                <pre><code class="language-python" data-trim>
+class RotatedRingBuffer:
+    def __init__(self, capacity=1000):
+        self.capacity = capacity
+        self.buffer = [None] * capacity
+        self.write_index = 0
+        self.count = 0
+        
+    def _get_wrap_point(self):
+        """Where does oldest data start?"""
+        if self.count < self.capacity:
+            return 0  # Not wrapped yet
+        return self.write_index  # Oldest is right after newest
+        
+    def search(self, target_ts):
+        """O(log n) search using rotated binary search"""
+        wrap = self._get_wrap_point()
+        
+        if wrap == 0:
+            return self._normal_binary_search(target_ts)
+        return self._rotated_search(target_ts)
+                </code></pre>
+            </section>
+            
+            <!-- Slide 13: Correct Search Animation -->
+            <section>
+                <span class="act-label">ACT 4: THE SOLUTION</span>
+                <h2>✅ Rotated Search in Action</h2>
+                <div class="animation-container">
+                    <canvas id="fixedCanvas" class="animation-canvas" width="800" height="350"></canvas>
+                    <div class="control-panel">
+                        <button class="control-btn active" onclick="fixedAnim.search()">Rotated Binary Search</button>
+                        <button class="control-btn" onclick="fixedAnim.step()">Step</button>
+                        <button class="control-btn" onclick="fixedAnim.reset()">Reset</button>
+                    </div>
+                    <div class="status-display" id="fixedStatus">Same buffer, correct algorithm!</div>
+                </div>
+            </section>
+            
+            <!-- ==================== ACT 5: FAILURE MODES ==================== -->
+            
+            <!-- Slide 14: Failure Mode 1 -->
+            <section>
+                <span class="act-label">ACT 5: FAILURE MODES</span>
+                <h2>⚠️ Five Real-World Failure Modes</h2>
+                <div class="failure-card">
+                    <h4>1. The Midnight Wrap</h4>
+                    <p>Buffer wraps at midnight. Timestamp comparison crosses date boundary.</p>
+                    <pre><code style="font-size: 0.8em;">23:59:59.999 → 00:00:00.001
+Binary search sees: 86399999ms > 1ms → goes WRONG direction!</code></pre>
+                    <p style="color: var(--primary-green); margin-top: 10px;"><strong>Solution:</strong> Use monotonic timestamps (system uptime)</p>
+                </div>
+            </section>
+            
+            <!-- Slide 15: Failure Mode 2 & 3 -->
+            <section>
+                <span class="act-label">ACT 5: FAILURE MODES</span>
+                <h2>⚠️ More Failure Modes</h2>
+                <div class="failure-card">
+                    <h4>2. The Partial Fill</h4>
+                    <p>Buffer isn't full yet. Some indices are None.</p>
+                    <pre><code style="font-size: 0.8em;">[1000, 1100, 1200, None, None, None]
+                    ↑ search hits None → CRASH!</code></pre>
+                    <p style="color: var(--primary-green);"><strong>Solution:</strong> Track count separately, limit search range</p>
+                </div>
+                <div class="failure-card fragment">
+                    <h4>3. The Duplicate Timestamp</h4>
+                    <p>Multiple events at same millisecond.</p>
+                    <pre><code style="font-size: 0.8em;">[1000, 1100, 1100, 1100, 1200]  ← three entries at 1100</code></pre>
+                    <p style="color: var(--primary-green);"><strong>Solution:</strong> Scan backward to find first occurrence</p>
+                </div>
+            </section>
+            
+            <!-- Slide 16: Failure Mode 4 & 5 -->
+            <section>
+                <span class="act-label">ACT 5: FAILURE MODES</span>
+                <h2>⚠️ Critical Failure Modes</h2>
+                <div class="failure-card">
+                    <h4>4. The Range Query</h4>
+                    <p>"Find all entries between timestamp A and B"</p>
+                    <pre><code style="font-size: 0.8em;">Index: [0]    [1]    [2]    [3]    [4]    [5]
+Data:  1600   1700   1800   1200   1300   1400
+Range 1250-1650 spans indices: [4, 5, 0] ← wraps!</code></pre>
+                    <p style="color: var(--primary-green);"><strong>Solution:</strong> Wrap-aware range iteration</p>
+                </div>
+                <div class="failure-card fragment">
+                    <h4>5. The Concurrent Write</h4>
+                    <p>Reader searches while writer overwrites.</p>
+                    <pre><code style="font-size: 0.8em;">Thread 1 (reader): Binary search, mid = 500
+Thread 2 (writer): Overwrites index 500
+Thread 1 (reader): Reads GARBAGE</code></pre>
+                    <p style="color: var(--primary-green);"><strong>Solution:</strong> Sequence locks</p>
+                </div>
+            </section>
+            
+            <!-- ==================== ACT 6: PRODUCTION HARDENING ==================== -->
+            
+            <!-- Slide 17: Monotonic Timestamps -->
+            <section>
+                <span class="act-label">ACT 6: PRODUCTION</span>
+                <h2>Layer 1: Monotonic Timestamps</h2>
+                <pre><code class="language-python" data-trim>
+class MonotonicRingBuffer(RotatedRingBuffer):
+    """Use monotonic clock to avoid midnight wrap issues"""
+    
+    def __init__(self, capacity):
+        super().__init__(capacity)
+        self.start_time = time.monotonic_ns()
+        
+    def _get_monotonic_ts(self):
+        """Nanoseconds since buffer creation"""
+        return time.monotonic_ns() - self.start_time
+        
+    def write(self, value):
+        ts = self._get_monotonic_ts()
+        super().write(ts, value)
+                </code></pre>
+                <div class="insight-box" style="margin-top: 20px;">
+                    <strong>Why monotonic?</strong> Wall clock can jump backward (NTP sync), 
+                    monotonic clock only ever increases.
+                </div>
+            </section>
+            
+            <!-- Slide 18: Range Queries -->
+            <section>
+                <span class="act-label">ACT 6: PRODUCTION</span>
+                <h2>Layer 2: Wrap-Aware Range Queries</h2>
+                <pre><code class="language-python" data-trim>
+def range_query(self, start_ts, end_ts):
+    """Get all entries in timestamp range, handling wrap"""
+    if self.count == 0:
+        return []
+        
+    results = []
+    wrap = self._get_wrap_point()
+    
+    # Iterate from oldest to newest (wrap-aware)
+    for i in range(self.count):
+        idx = (wrap + i) % self.capacity
+        entry = self.buffer[idx]
+        
+        if entry and start_ts <= entry[0] <= end_ts:
+            results.append(entry)
+            
+    return results
+                </code></pre>
+            </section>
+            
+            <!-- Slide 19: Concurrent Access -->
+            <section>
+                <span class="act-label">ACT 6: PRODUCTION</span>
+                <h2>Layer 3: Sequence Locks</h2>
+                <pre><code class="language-python" data-trim>
+class ConcurrentRingBuffer:
+    """Thread-safe with sequence locks"""
+    
+    def write(self, timestamp, value):
+        self.sequence += 1  # Odd = write in progress
+        
+        self.buffer[self.write_index] = (timestamp, value)
+        self.write_index = (self.write_index + 1) % self.capacity
+        
+        self.sequence += 1  # Even = write complete
+        
+    def read_consistent(self, index):
+        while True:
+            seq_before = self.sequence
+            if seq_before % 2 == 1:
+                continue  # Write in progress
+                
+            value = self.buffer[index]
+            
+            if seq_before == self.sequence:
+                return value  # Consistent!
+                </code></pre>
+            </section>
+            
+            <!-- Slide 20: Complete Production Buffer -->
+            <section>
+                <span class="act-label">ACT 6: PRODUCTION</span>
+                <h2>The Complete Production Buffer</h2>
+                <pre><code class="language-python" data-trim style="font-size: 0.75em;">
+class ProductionRingBuffer:
+    """
+    Production-ready ring buffer:
+    1. O(log n) rotated search
+    2. Monotonic timestamps
+    3. Range queries (wrap-aware)
+    4. Concurrent access (sequence locks)
+    5. Metrics and monitoring
+    """
+    
+    def search(self, target_ts):
+        self.metrics.record_search()
+        
+        # Wait for consistent read window
+        while self.sequence % 2 == 1:
+            pass
+            
+        wrap = self._get_wrap_point()
+        
+        if wrap == 0 or self.count < self.capacity:
+            return self._binary_search(0, self.count - 1, target_ts)
+        return self._rotated_search(target_ts)
+                </code></pre>
+            </section>
+            
+            <!-- Slide 21: Production Guarantees -->
+            <section>
+                <span class="act-label">ACT 6: PRODUCTION</span>
+                <h2>Production Guarantees</h2>
+                <table style="width: 100%; font-size: 0.9em;">
+                    <tr>
+                        <th style="color: var(--primary-blue);">Guarantee</th>
+                        <th style="color: var(--primary-green);">How We Achieve It</th>
+                    </tr>
+                    <tr>
+                        <td>O(log n) search</td>
+                        <td>Rotated binary search algorithm</td>
+                    </tr>
+                    <tr>
+                        <td>No midnight bugs</td>
+                        <td>Monotonic timestamps</td>
+                    </tr>
+                    <tr>
+                        <td>Thread safety</td>
+                        <td>Sequence locks for reads</td>
+                    </tr>
+                    <tr>
+                        <td>Range queries</td>
+                        <td>Wrap-aware iteration</td>
+                    </tr>
+                    <tr>
+                        <td>No data corruption</td>
+                        <td>Atomic write index updates</td>
+                    </tr>
+                    <tr>
+                        <td>Observability</td>
+                        <td>Metrics on every operation</td>
+                    </tr>
+                </table>
+            </section>
+            
+            <!-- ==================== ACT 7: RECAP ==================== -->
+            
+            <!-- Slide 22: Key Takeaways -->
+            <section>
+                <span class="act-label">ACT 7: MASTERY</span>
+                <h2>🎯 Key Takeaways</h2>
+                <div class="takeaway-grid">
+                    <div class="takeaway-item">
+                        <div class="icon">🔄</div>
+                        <div class="text"><strong>Ring Buffer = Rotated Array</strong><br>When wrapped, it's exactly LeetCode #33</div>
+                    </div>
+                    <div class="takeaway-item">
+                        <div class="icon">🔍</div>
+                        <div class="text"><strong>One half is ALWAYS sorted</strong><br>Use that to decide search direction</div>
+                    </div>
+                    <div class="takeaway-item">
+                        <div class="icon">⏰</div>
+                        <div class="text"><strong>Monotonic timestamps</strong><br>Avoid clock drift and midnight bugs</div>
+                    </div>
+                    <div class="takeaway-item">
+                        <div class="icon">🔒</div>
+                        <div class="text"><strong>Sequence locks</strong><br>Thread-safe reads without heavy locking</div>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- Slide 23: The Connection -->
+            <section>
+                <span class="act-label">ACT 7: MASTERY</span>
+                <h2>The LeetCode → Production Journey</h2>
+                <div class="highlight-box" style="text-align: center; font-size: 1.1em;">
+                    <strong>LeetCode #33:</strong> "Search in rotated sorted array"<br>
+                    ↓<br>
+                    <strong>Production:</strong> O(log n) search in 1M-entry monitoring buffer
+                </div>
+                <div class="fragment" style="margin-top: 30px;">
+                    <p>Systems using this pattern:</p>
+                    <ul>
+                        <li>Prometheus metrics storage</li>
+                        <li>Linux kernel ring buffers (dmesg)</li>
+                        <li>Network packet capture (tcpdump)</li>
+                        <li>Real-time audio/video processing</li>
+                    </ul>
+                </div>
+            </section>
+            
+            <!-- Slide 24: Next Episode Teaser -->
+            <section>
+                <span class="act-label">ACT 7: MASTERY</span>
+                <h2>🔮 Next Episode Preview</h2>
+                <p>Our ring buffer stores data... but what if we need <strong>dynamic sorted order</strong>?</p>
+                <div class="fragment" style="margin-top: 30px;">
+                    <div class="highlight-box">
+                        <strong>Real-time Leaderboard:</strong>
+                        <ul style="margin-top: 10px;">
+                            <li>Millions of score updates per second</li>
+                            <li>"What's player X's rank?" must be FAST</li>
+                            <li>Top 100 query runs constantly</li>
+                        </ul>
+                        <p style="margin-top: 15px;">Static arrays won't work. We need <em>dynamic</em> sorted structures!</p>
+                    </div>
+                </div>
+                <div class="fragment" style="margin-top: 20px;">
+                    <div class="leetcode-badge">LeetCode #98 + #701</div>
+                    <p><strong>Binary Search Trees</strong></p>
+                    <p style="font-size: 0.9em; color: #888;">Validate BST + Insert into BST → In-memory ordered K/V store</p>
+                </div>
+            </section>
+            
+            <!-- End Slide -->
+            <section>
+                <h2>🎬 End of Episode 2.3</h2>
+                <p class="subtitle">Ring Buffers - When Your Logs Go in Circles</p>
+                <div style="margin-top: 40px;">
+                    <p>Next: Episode 2.4</p>
+                    <p style="color: var(--primary-purple);">"Binary Search Trees - The Dynamic Leaderboard"</p>
+                </div>
+                <div style="margin-top: 40px; font-size: 0.8em; color: #666;">
+                    <p>Practice: <a href="https://leetcode.com/problems/search-in-rotated-sorted-array/" target="_blank" style="color: var(--primary-blue);">LeetCode #33</a></p>
+                </div>
+            </section>
+            
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/reveal.js@4.5.0/dist/reveal.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/reveal.js@4.5.0/plugin/notes/notes.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/reveal.js@4.5.0/plugin/highlight/highlight.js"></script>
+    
+    <script>
+        // Initialize Reveal.js
+        Reveal.initialize({
+            hash: true,
+            slideNumber: true,
+            width: 1920,
+            height: 1080,
+            margin: 0.1,
+            plugins: [RevealNotes, RevealHighlight]
+        });
+        
+        // ==================== ANIMATION 1: Ring Buffer Intro ====================
+        class RingIntroAnimation {
+            constructor(canvasId, statusId) {
+                this.canvas = document.getElementById(canvasId);
+                this.ctx = this.canvas.getContext('2d');
+                this.statusEl = document.getElementById(statusId);
+                this.reset();
+            }
+            
+            reset() {
+                this.slots = 8;
+                this.buffer = new Array(this.slots).fill(null);
+                this.writeIndex = 0;
+                this.dataCounter = 0;
+                this.draw();
+                this.statusEl.textContent = 'Click "Write Data" to see how it works';
+            }
+            
+            write() {
+                if (this.dataCounter >= 20) {
+                    this.statusEl.textContent = 'Buffer full of wrapped data! Click Reset.';
+                    return;
+                }
+                this.dataCounter++;
+                const label = String.fromCharCode(64 + this.dataCounter);
+                this.buffer[this.writeIndex] = label;
+                const oldIndex = this.writeIndex;
+                this.writeIndex = (this.writeIndex + 1) % this.slots;
+                this.draw();
+                
+                if (this.dataCounter > this.slots) {
+                    this.statusEl.textContent = `Wrote "${label}" at index ${oldIndex} (OVERWROTE old data!)`;
+                } else {
+                    this.statusEl.textContent = `Wrote "${label}" at index ${oldIndex}`;
+                }
+            }
+            
+            fillAndWrap() {
+                for (let i = 0; i < 11; i++) {
+                    this.dataCounter++;
+                    const label = String.fromCharCode(64 + this.dataCounter);
+                    this.buffer[this.writeIndex] = label;
+                    this.writeIndex = (this.writeIndex + 1) % this.slots;
+                }
+                this.draw();
+                this.statusEl.textContent = 'Buffer wrapped! Index 0 now has NEWER data than index 7!';
+            }
+            
+            draw() {
+                const ctx = this.ctx;
+                const w = this.canvas.width;
+                const h = this.canvas.height;
+                
+                ctx.fillStyle = '#1a1a2e';
+                ctx.fillRect(0, 0, w, h);
+                
+                const centerX = w / 2;
+                const centerY = h / 2 + 20;
+                const radius = 100;
+                
+                ctx.strokeStyle = '#333';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.arc(centerX, centerY, radius + 40, 0, Math.PI * 2);
+                ctx.stroke();
+                
+                for (let i = 0; i < this.slots; i++) {
+                    const angle = (i / this.slots) * Math.PI * 2 - Math.PI / 2;
+                    const x = centerX + Math.cos(angle) * radius;
+                    const y = centerY + Math.sin(angle) * radius;
+                    
+                    let bgColor = this.buffer[i] ? '#00d4ff' : '#16213e';
+                    if (i === this.writeIndex) {
+                        bgColor = '#ffd93d';
+                    }
+                    
+                    ctx.fillStyle = bgColor;
+                    ctx.beginPath();
+                    ctx.arc(x, y, 25, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    ctx.fillStyle = '#888';
+                    ctx.font = '14px Segoe UI';
+                    ctx.textAlign = 'center';
+                    const labelX = centerX + Math.cos(angle) * (radius + 55);
+                    const labelY = centerY + Math.sin(angle) * (radius + 55);
+                    ctx.fillText(`[${i}]`, labelX, labelY + 5);
+                    
+                    if (this.buffer[i]) {
+                        ctx.fillStyle = '#000';
+                        ctx.font = 'bold 18px Segoe UI';
+                        ctx.fillText(this.buffer[i], x, y + 6);
+                    }
+                }
+                
+                ctx.fillStyle = '#ffd93d';
+                ctx.font = 'bold 16px Segoe UI';
+                ctx.textAlign = 'center';
+                ctx.fillText('↓ Write Here', centerX, 30);
+                
+                ctx.font = '14px Segoe UI';
+                ctx.textAlign = 'left';
+                ctx.fillStyle = '#ffd93d';
+                ctx.fillRect(50, 250, 15, 15);
+                ctx.fillStyle = '#fff';
+                ctx.fillText('Write Position', 75, 262);
+                
+                ctx.fillStyle = '#00d4ff';
+                ctx.fillRect(200, 250, 15, 15);
+                ctx.fillStyle = '#fff';
+                ctx.fillText('Has Data', 225, 262);
+            }
+        }
+        
+        // ==================== ANIMATION 2: Crisis Animation ====================
+        class CrisisAnimation {
+            constructor(canvasId, statusId) {
+                this.canvas = document.getElementById(canvasId);
+                this.ctx = this.canvas.getContext('2d');
+                this.statusEl = document.getElementById(statusId);
+                this.reset();
+            }
+            
+            reset() {
+                this.buffer = [
+                    { ts: 1600, mem: 45 },
+                    { ts: 1700, mem: 52 },
+                    { ts: 1800, mem: 85 },
+                    { ts: 1200, mem: 30 },
+                    { ts: 1300, mem: 35 },
+                    { ts: 1400, mem: 40 },
+                ];
+                this.wrapPoint = 3;
+                this.searchState = null;
+                this.currentSearch = null;
+                this.searchStep = 0;
+                this.draw();
+                this.statusEl.textContent = 'SRE needs to find when memory spiked (crossed 80%)...';
+            }
+            
+            showProblem() {
+                this.searchState = 'problem';
+                this.draw();
+                this.statusEl.textContent = 'Memory spike at ts=1800! But buffer has WRAPPED. Index 3 has OLDER data!';
+            }
+            
+            tryBinarySearch() {
+                this.searchState = 'searching';
+                this.searchStep = 0;
+                this.doSearch();
+            }
+            
+            doSearch() {
+                const steps = [
+                    { left: 0, right: 5, mid: 2, msg: 'mid=2, ts=1800. Looking for ts>1600...' },
+                    { left: 3, right: 5, mid: 4, msg: 'mid=4, ts=1300 < 1600. Search RIGHT?' },
+                    { left: 5, right: 5, mid: 5, msg: 'mid=5, ts=1400 < 1600. No match!' },
+                    { done: true, msg: '❌ WRONG! Naive search failed - it doesn\'t know about the wrap!' }
+                ];
+                
+                if (this.searchStep < steps.length) {
+                    const step = steps[this.searchStep];
+                    this.currentSearch = step;
+                    this.draw();
+                    this.statusEl.textContent = step.msg;
+                    this.searchStep++;
+                    if (!step.done) {
+                        setTimeout(() => this.doSearch(), 1500);
+                    }
+                }
+            }
+            
+            draw() {
+                const ctx = this.ctx;
+                const w = this.canvas.width;
+                const h = this.canvas.height;
+                
+                ctx.fillStyle = '#1a1a2e';
+                ctx.fillRect(0, 0, w, h);
+                
+                ctx.fillStyle = '#fff';
+                ctx.font = 'bold 20px Segoe UI';
+                ctx.textAlign = 'center';
+                ctx.fillText('Ring Buffer (Memory Monitoring) - WRAPPED!', w/2, 30);
+                
+                const slotWidth = 100;
+                const slotHeight = 80;
+                const startX = (w - 6 * (slotWidth + 20)) / 2;
+                const slotY = 80;
+                
+                this.buffer.forEach((entry, i) => {
+                    const x = startX + i * (slotWidth + 20);
+                    
+                    let bgColor = '#16213e';
+                    let borderColor = '#333';
+                    
+                    if (entry.mem > 80) {
+                        bgColor = '#ff4757';
+                        borderColor = '#ff4757';
+                    }
+                    
+                    if (i === this.wrapPoint) {
+                        borderColor = '#ffd93d';
+                    }
+                    
+                    if (this.currentSearch && this.currentSearch.mid === i) {
+                        bgColor = '#ffd93d';
+                    }
+                    
+                    ctx.fillStyle = bgColor;
+                    ctx.strokeStyle = borderColor;
+                    ctx.lineWidth = 3;
+                    ctx.beginPath();
+                    ctx.roundRect(x, slotY, slotWidth, slotHeight, 10);
+                    ctx.fill();
+                    ctx.stroke();
+                    
+                    ctx.fillStyle = '#fff';
+                    ctx.font = 'bold 16px Segoe UI';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(`ts: ${entry.ts}`, x + slotWidth/2, slotY + 30);
+                    ctx.fillText(`mem: ${entry.mem}%`, x + slotWidth/2, slotY + 55);
+                    
+                    ctx.fillStyle = '#888';
+                    ctx.font = '14px Segoe UI';
+                    ctx.fillText(`[${i}]`, x + slotWidth/2, slotY + slotHeight + 20);
+                });
+                
+                const wrapX = startX + this.wrapPoint * (slotWidth + 20);
+                ctx.fillStyle = '#ffd93d';
+                ctx.font = 'bold 14px Segoe UI';
+                ctx.textAlign = 'center';
+                ctx.fillText('↑ WRAP POINT', wrapX + slotWidth/2, slotY + slotHeight + 45);
+                ctx.fillText('(older data starts here)', wrapX + slotWidth/2, slotY + slotHeight + 65);
+                
+                if (this.searchState === 'problem') {
+                    ctx.fillStyle = '#00ff88';
+                    ctx.font = '16px Segoe UI';
+                    ctx.textAlign = 'left';
+                    ctx.fillText('Actual time order: 1200 → 1300 → 1400 → 1600 → 1700 → 1800', 100, 280);
+                    ctx.fillStyle = '#ff4757';
+                    ctx.fillText('Array order:       1600    1700    1800    1200    1300    1400', 100, 310);
+                }
+            }
+        }
+        
+        // ==================== ANIMATION 3: Key Insight ====================
+        class InsightAnimation {
+            constructor(canvasId, statusId) {
+                this.canvas = document.getElementById(canvasId);
+                this.ctx = this.canvas.getContext('2d');
+                this.statusEl = document.getElementById(statusId);
+                this.reset();
+            }
+            
+            reset() {
+                this.array = [4, 5, 6, 7, 0, 1, 2];
+                this.highlightLeft = false;
+                this.highlightRight = false;
+                this.draw();
+                this.statusEl.textContent = 'One half is ALWAYS sorted! Click to see which.';
+            }
+            
+            showLeft() {
+                this.highlightLeft = true;
+                this.highlightRight = false;
+                this.draw();
+                this.statusEl.textContent = 'LEFT half [4,5,6,7] is sorted! (4 < 5 < 6 < 7)';
+            }
+            
+            showRight() {
+                this.highlightLeft = false;
+                this.highlightRight = true;
+                this.draw();
+                this.statusEl.textContent = 'RIGHT half [0,1,2] is also sorted! (0 < 1 < 2) - After the pivot!';
+            }
+            
+            draw() {
+                const ctx = this.ctx;
+                const w = this.canvas.width;
+                const h = this.canvas.height;
+                
+                ctx.fillStyle = '#1a1a2e';
+                ctx.fillRect(0, 0, w, h);
+                
+                ctx.fillStyle = '#fff';
+                ctx.font = 'bold 22px Segoe UI';
+                ctx.textAlign = 'center';
+                ctx.fillText('Rotated Array: [4, 5, 6, 7, 0, 1, 2]', w/2, 40);
+                
+                const boxSize = 70;
+                const startX = (w - this.array.length * (boxSize + 15)) / 2;
+                const arrayY = 120;
+                
+                this.array.forEach((val, i) => {
+                    const x = startX + i * (boxSize + 15);
+                    
+                    let bgColor = '#16213e';
+                    
+                    if (this.highlightLeft && i < 4) {
+                        bgColor = '#00ff88';
+                    } else if (this.highlightRight && i >= 4) {
+                        bgColor = '#00d4ff';
+                    }
+                    
+                    if (i === 4) {
+                        ctx.strokeStyle = '#ff4757';
+                        ctx.lineWidth = 3;
+                    } else {
+                        ctx.strokeStyle = '#333';
+                        ctx.lineWidth = 2;
+                    }
+                    
+                    ctx.fillStyle = bgColor;
+                    ctx.beginPath();
+                    ctx.roundRect(x, arrayY, boxSize, boxSize, 10);
+                    ctx.fill();
+                    ctx.stroke();
+                    
+                    ctx.fillStyle = (this.highlightLeft && i < 4) || (this.highlightRight && i >= 4) ? '#000' : '#fff';
+                    ctx.font = 'bold 28px Segoe UI';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(val, x + boxSize/2, arrayY + boxSize/2 + 10);
+                    
+                    ctx.fillStyle = '#888';
+                    ctx.font = '14px Segoe UI';
+                    ctx.fillText(i, x + boxSize/2, arrayY + boxSize + 25);
+                });
+                
+                const pivotX = startX + 4 * (boxSize + 15);
+                ctx.fillStyle = '#ff4757';
+                ctx.font = 'bold 16px Segoe UI';
+                ctx.fillText('↑ PIVOT', pivotX + boxSize/2, arrayY + boxSize + 50);
+                
+                ctx.fillStyle = '#fff';
+                ctx.font = '18px Segoe UI';
+                ctx.textAlign = 'center';
+                if (this.highlightLeft) {
+                    ctx.fillText('Check: Is nums[left] ≤ nums[mid]?', w/2, 300);
+                    ctx.fillStyle = '#00ff88';
+                    ctx.fillText('YES → Left half is sorted!', w/2, 330);
+                } else if (this.highlightRight) {
+                    ctx.fillText('If left half has the break, right half must be sorted!', w/2, 300);
+                    ctx.fillStyle = '#00d4ff';
+                    ctx.fillText('Use this to decide where to search.', w/2, 330);
+                }
+            }
+        }
+        
+        // ==================== ANIMATION 4: Rotated Search ====================
+        class SearchAnimation {
+            constructor(canvasId, statusId) {
+                this.canvas = document.getElementById(canvasId);
+                this.ctx = this.canvas.getContext('2d');
+                this.statusEl = document.getElementById(statusId);
+                this.reset();
+            }
+            
+            reset() {
+                this.array = [1600, 1700, 1800, 1200, 1300, 1400];
+                this.target = 1300;
+                this.left = 0;
+                this.right = this.array.length - 1;
+                this.mid = -1;
+                this.found = -1;
+                this.steps = [];
+                this.currentStep = 0;
+                this.searching = false;
+                this.draw();
+                this.statusEl.textContent = `Target: ${this.target} (timestamp) | Click "Start Search"`;
+            }
+            
+            search() {
+                this.reset();
+                this.searching = true;
+                this.generateSteps();
+                this.statusEl.textContent = 'Starting rotated binary search...';
+            }
+            
+            generateSteps() {
+                this.steps = [];
+                let left = 0, right = this.array.length - 1;
+                
+                while (left <= right) {
+                    const mid = Math.floor((left + right) / 2);
+                    const leftVal = this.array[left];
+                    const midVal = this.array[mid];
+                    const rightVal = this.array[right];
+                    
+                    this.steps.push({
+                        left, right, mid,
+                        leftSorted: leftVal <= midVal,
+                        msg: `mid=${mid}, value=${midVal}`
+                    });
+                    
+                    if (midVal === this.target) {
+                        this.steps.push({ found: mid, msg: `Found at index ${mid}!` });
+                        return;
+                    }
+                    
+                    if (leftVal <= midVal) {
+                        if (leftVal <= this.target && this.target < midVal) {
+                            right = mid - 1;
+                        } else {
+                            left = mid + 1;
+                        }
+                    } else {
+                        if (midVal < this.target && this.target <= rightVal) {
+                            left = mid + 1;
+                        } else {
+                            right = mid - 1;
+                        }
+                    }
+                }
+                
+                this.steps.push({ notFound: true, msg: 'Not found!' });
+            }
+            
+            step() {
+                if (!this.searching || this.currentStep >= this.steps.length) {
+                    return;
+                }
+                
+                const s = this.steps[this.currentStep];
+                
+                if (s.found !== undefined) {
+                    this.found = s.found;
+                    this.statusEl.textContent = `✅ ${s.msg}`;
+                } else if (s.notFound) {
+                    this.statusEl.textContent = `❌ ${s.msg}`;
+                } else {
+                    this.left = s.left;
+                    this.right = s.right;
+                    this.mid = s.mid;
+                    const sortedSide = s.leftSorted ? 'LEFT' : 'RIGHT';
+                    this.statusEl.textContent = `${s.msg} | ${sortedSide} half is sorted`;
+                }
+                
+                this.currentStep++;
+                this.draw();
+            }
+            
+            draw() {
+                const ctx = this.ctx;
+                const w = this.canvas.width;
+                const h = this.canvas.height;
+                
+                ctx.fillStyle = '#1a1a2e';
+                ctx.fillRect(0, 0, w, h);
+                
+                ctx.fillStyle = '#fff';
+                ctx.font = 'bold 20px Segoe UI';
+                ctx.textAlign = 'center';
+                ctx.fillText(`Searching for ${this.target} in wrapped buffer`, w/2, 35);
+                
+                const boxSize = 90;
+                const startX = (w - this.array.length * (boxSize + 20)) / 2;
+                const arrayY = 100;
+                
+                this.array.forEach((val, i) => {
+                    const x = startX + i * (boxSize + 20);
+                    
+                    let bgColor = '#16213e';
+                    let textColor = '#fff';
+                    
+                    if (i === this.found) {
+                        bgColor = '#00ff88';
+                        textColor = '#000';
+                    } else if (i === this.mid) {
+                        bgColor = '#ffd93d';
+                        textColor = '#000';
+                    } else if (this.searching && (i < this.left || i > this.right)) {
+                        bgColor = '#0d1117';
+                    }
+                    
+                    ctx.fillStyle = bgColor;
+                    ctx.strokeStyle = val === this.target ? '#00ff88' : '#333';
+                    ctx.lineWidth = val === this.target ? 3 : 2;
+                    ctx.beginPath();
+                    ctx.roundRect(x, arrayY, boxSize, 70, 10);
+                    ctx.fill();
+                    ctx.stroke();
+                    
+                    ctx.fillStyle = textColor;
+                    ctx.font = 'bold 22px Segoe UI';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(val, x + boxSize/2, arrayY + 45);
+                    
+                    ctx.fillStyle = '#888';
+                    ctx.font = '14px Segoe UI';
+                    ctx.fillText(`[${i}]`, x + boxSize/2, arrayY + 90);
+                });
+                
+                if (this.searching && this.found === -1) {
+                    const leftX = startX + this.left * (boxSize + 20) + boxSize/2;
+                    const rightX = startX + this.right * (boxSize + 20) + boxSize/2;
+                    
+                    ctx.fillStyle = '#00d4ff';
+                    ctx.font = 'bold 14px Segoe UI';
+                    ctx.fillText('L', leftX, arrayY - 10);
+                    
+                    ctx.fillStyle = '#b388ff';
+                    ctx.fillText('R', rightX, arrayY - 10);
+                }
+                
+                ctx.font = '14px Segoe UI';
+                ctx.textAlign = 'left';
+                
+                ctx.fillStyle = '#ffd93d';
+                ctx.fillRect(50, 280, 15, 15);
+                ctx.fillStyle = '#fff';
+                ctx.fillText('Current Mid', 75, 292);
+                
+                ctx.fillStyle = '#00ff88';
+                ctx.fillRect(200, 280, 15, 15);
+                ctx.fillStyle = '#fff';
+                ctx.fillText('Found / Target', 225, 292);
+            }
+        }
+        
+        // ==================== ANIMATION 5: Break Animation ====================
+        class BreakAnimation {
+            constructor(canvasId, statusId) {
+                this.canvas = document.getElementById(canvasId);
+                this.ctx = this.canvas.getContext('2d');
+                this.statusEl = document.getElementById(statusId);
+                this.reset();
+            }
+            
+            reset() {
+                this.array = [1600, 1700, 1800, 1200, 1300, 1400];
+                this.target = 1300;
+                this.steps = [];
+                this.currentStep = 0;
+                this.searching = false;
+                this.left = 0;
+                this.right = this.array.length - 1;
+                this.mid = -1;
+                this.wrongPath = [];
+                this.draw();
+                this.statusEl.textContent = 'Search for 1300 in wrapped buffer (NAIVE approach)';
+            }
+            
+            search() {
+                this.reset();
+                this.searching = true;
+                this.steps = [
+                    { left: 0, right: 5, mid: 2, val: 1800, msg: 'mid=2, val=1800. 1300 < 1800 → search LEFT' },
+                    { left: 0, right: 1, mid: 0, val: 1600, msg: 'mid=0, val=1600. 1300 < 1600 → search LEFT' },
+                    { left: 0, right: -1, mid: -1, val: null, msg: '❌ FAILED! left > right. But 1300 IS in the array!' },
+                ];
+                this.statusEl.textContent = 'Naive binary search starting...';
+            }
+            
+            step() {
+                if (!this.searching || this.currentStep >= this.steps.length) {
+                    return;
+                }
+                
+                const s = this.steps[this.currentStep];
+                this.left = s.left;
+                this.right = s.right;
+                this.mid = s.mid;
+                if (s.mid >= 0) this.wrongPath.push(s.mid);
+                this.statusEl.textContent = s.msg;
+                this.currentStep++;
+                this.draw();
+            }
+            
+            draw() {
+                const ctx = this.ctx;
+                const w = this.canvas.width;
+                const h = this.canvas.height;
+                
+                ctx.fillStyle = '#1a1a2e';
+                ctx.fillRect(0, 0, w, h);
+                
+                ctx.fillStyle = '#ff4757';
+                ctx.font = 'bold 20px Segoe UI';
+                ctx.textAlign = 'center';
+                ctx.fillText('❌ NAIVE Binary Search (BROKEN!)', w/2, 35);
+                
+                const boxSize = 90;
+                const startX = (w - this.array.length * (boxSize + 20)) / 2;
+                const arrayY = 100;
+                
+                this.array.forEach((val, i) => {
+                    const x = startX + i * (boxSize + 20);
+                    
+                    let bgColor = '#16213e';
+                    let textColor = '#fff';
+                    
+                    if (val === this.target) {
+                        bgColor = '#00ff88';
+                        textColor = '#000';
+                    }
+                    
+                    if (this.wrongPath.includes(i)) {
+                        bgColor = '#ff4757';
+                        textColor = '#fff';
+                    }
+                    
+                    if (i === this.mid && this.mid >= 0) {
+                        bgColor = '#ffd93d';
+                        textColor = '#000';
+                    }
+                    
+                    if (this.searching && this.left <= this.right && (i < this.left || i > this.right)) {
+                        bgColor = '#0d1117';
+                    }
+                    
+                    ctx.fillStyle = bgColor;
+                    ctx.strokeStyle = '#333';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.roundRect(x, arrayY, boxSize, 70, 10);
+                    ctx.fill();
+                    ctx.stroke();
+                    
+                    ctx.fillStyle = textColor;
+                    ctx.font = 'bold 22px Segoe UI';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(val, x + boxSize/2, arrayY + 45);
+                    
+                    ctx.fillStyle = '#888';
+                    ctx.font = '14px Segoe UI';
+                    ctx.fillText(`[${i}]`, x + boxSize/2, arrayY + 90);
+                });
+                
+                ctx.fillStyle = '#ff4757';
+                ctx.font = '16px Segoe UI';
+                ctx.textAlign = 'center';
+                ctx.fillText('Naive search assumes sorted order. It searches LEFT when it should go RIGHT!', w/2, 260);
+                
+                ctx.fillStyle = '#00ff88';
+                ctx.fillText('Target 1300 is at index 4 - but naive search never looks there!', w/2, 290);
+            }
+        }
+        
+        // ==================== ANIMATION 6: Fixed Animation ====================
+        class FixedAnimation {
+            constructor(canvasId, statusId) {
+                this.canvas = document.getElementById(canvasId);
+                this.ctx = this.canvas.getContext('2d');
+                this.statusEl = document.getElementById(statusId);
+                this.reset();
+            }
+            
+            reset() {
+                this.array = [1600, 1700, 1800, 1200, 1300, 1400];
+                this.target = 1300;
+                this.steps = [];
+                this.currentStep = 0;
+                this.searching = false;
+                this.left = 0;
+                this.right = this.array.length - 1;
+                this.mid = -1;
+                this.found = -1;
+                this.draw();
+                this.statusEl.textContent = 'Same buffer, CORRECT algorithm!';
+            }
+            
+            search() {
+                this.reset();
+                this.searching = true;
+                this.steps = [
+                    { left: 0, right: 5, mid: 2, msg: 'mid=2, val=1800. Left[1600]≤Mid[1800] → LEFT sorted. 1300 not in [1600,1800) → go RIGHT' },
+                    { left: 3, right: 5, mid: 4, msg: 'mid=4, val=1300. FOUND IT!' },
+                    { found: 4, msg: '✅ Found at index 4!' }
+                ];
+                this.statusEl.textContent = 'Rotated binary search starting...';
+            }
+            
+            step() {
+                if (!this.searching || this.currentStep >= this.steps.length) {
+                    return;
+                }
+                
+                const s = this.steps[this.currentStep];
+                if (s.found !== undefined) {
+                    this.found = s.found;
+                } else {
+                    this.left = s.left;
+                    this.right = s.right;
+                    this.mid = s.mid;
+                }
+                this.statusEl.textContent = s.msg;
+                this.currentStep++;
+                this.draw();
+            }
+            
+            draw() {
+                const ctx = this.ctx;
+                const w = this.canvas.width;
+                const h = this.canvas.height;
+                
+                ctx.fillStyle = '#1a1a2e';
+                ctx.fillRect(0, 0, w, h);
+                
+                ctx.fillStyle = '#00ff88';
+                ctx.font = 'bold 20px Segoe UI';
+                ctx.textAlign = 'center';
+                ctx.fillText('✅ ROTATED Binary Search (CORRECT!)', w/2, 35);
+                
+                const boxSize = 90;
+                const startX = (w - this.array.length * (boxSize + 20)) / 2;
+                const arrayY = 100;
+                
+                this.array.forEach((val, i) => {
+                    const x = startX + i * (boxSize + 20);
+                    
+                    let bgColor = '#16213e';
+                    let textColor = '#fff';
+                    
+                    if (i === this.found) {
+                        bgColor = '#00ff88';
+                        textColor = '#000';
+                    } else if (i === this.mid) {
+                        bgColor = '#ffd93d';
+                        textColor = '#000';
+                    } else if (this.searching && this.found === -1 && (i < this.left || i > this.right)) {
+                        bgColor = '#0d1117';
+                    }
+                    
+                    ctx.fillStyle = bgColor;
+                    ctx.strokeStyle = val === this.target ? '#00ff88' : '#333';
+                    ctx.lineWidth = val === this.target ? 3 : 2;
+                    ctx.beginPath();
+                    ctx.roundRect(x, arrayY, boxSize, 70, 10);
+                    ctx.fill();
+                    ctx.stroke();
+                    
+                    ctx.fillStyle = textColor;
+                    ctx.font = 'bold 22px Segoe UI';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(val, x + boxSize/2, arrayY + 45);
+                    
+                    ctx.fillStyle = '#888';
+                    ctx.font = '14px Segoe UI';
+                    ctx.fillText(`[${i}]`, x + boxSize/2, arrayY + 90);
+                });
+                
+                ctx.fillStyle = '#00d4ff';
+                ctx.font = '16px Segoe UI';
+                ctx.textAlign = 'center';
+                ctx.fillText('Key: Check which half is sorted, then decide if target is in that range!', w/2, 280);
+            }
+        }
+        
+        // Initialize all animations
+        const ringIntroAnim = new RingIntroAnimation('ringIntroCanvas', 'ringIntroStatus');
+        const crisisAnim = new CrisisAnimation('crisisCanvas', 'crisisStatus');
+        const insightAnim = new InsightAnimation('insightCanvas', 'insightStatus');
+        const searchAnim = new SearchAnimation('searchCanvas', 'searchStatus');
+        const breakAnim = new BreakAnimation('breakCanvas', 'breakStatus');
+        const fixedAnim = new FixedAnimation('fixedCanvas', 'fixedStatus');
+        
+        // Reinitialize on slide change
+        Reveal.on('slidechanged', event => {
+            ringIntroAnim.draw();
+            crisisAnim.draw();
+            insightAnim.draw();
+            searchAnim.draw();
+            breakAnim.draw();
+            fixedAnim.draw();
+        });
+    </script>
+</body>
+</html>

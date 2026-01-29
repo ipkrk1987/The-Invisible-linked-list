@@ -394,23 +394,35 @@
                 </aside>
             </section>
             
-            <!-- Slide 2.2: Core Algorithm (minimal code) -->
+            <!-- Slide 2.2: Core Algorithm (Python code #1) -->
             <section>
                 <span class="act-label">ACT 2: THE PROBLEM</span>
                 <h2>The Core Algorithm</h2>
-                <pre><code class="language-python" data-trim style="font-size: 0.85em;">
-def find_boundary(nums, target, find_first=True):
-    left, right, result = 0, len(nums) - 1, -1
+                <pre><code class="language-python" data-trim style="font-size: 0.75em;">
+def find_first_and_last(nums: list[int], target: int) -> list[int]:
+    """LeetCode #34: Find First and Last Position of Element in Sorted Array"""
     
-    while left <= right:
-        mid = (left + right) // 2
-        if nums[mid] == target:
-            result = mid
-            if find_first: right = mid - 1  # ← Keep searching LEFT
-            else: left = mid + 1            # → Keep searching RIGHT
-        elif nums[mid] < target: left = mid + 1
-        else: right = mid - 1
-    return result
+    def binary_search(find_first: bool) -> int:
+        left, right, result = 0, len(nums) - 1, -1
+        
+        while left <= right:
+            mid = left + (right - left) // 2  # Overflow-safe
+            
+            if nums[mid] == target:
+                result = mid
+                # Don't stop! Keep searching for the boundary
+                if find_first:
+                    right = mid - 1  # ← Search LEFT for first occurrence
+                else:
+                    left = mid + 1   # → Search RIGHT for last occurrence
+            elif nums[mid] < target:
+                left = mid + 1
+            else:
+                right = mid - 1
+        
+        return result
+    
+    return [binary_search(True), binary_search(False)]
                 </code></pre>
                 <div class="fragment insight-box" style="margin-top: 20px;">
                     <strong>Key Insight:</strong> When we find the target, we <em>don't stop</em>. 
@@ -474,15 +486,19 @@ def find_boundary(nums, target, find_first=True):
                 </aside>
             </section>
             
-            <!-- Slide 2.5: The Anti-Pattern -->
+            <!-- Slide 2.5: The Anti-Pattern (pseudocode #1) -->
             <section>
                 <span class="act-label">ACT 2: THE PROBLEM</span>
                 <h2>❌ The Naive Approach: OFFSET</h2>
-                <div class="pseudocode" style="font-size: 1em;">
-                    <span class="comment">-- Page 1</span><br>
-                    <span class="keyword">SELECT</span> * <span class="keyword">FROM</span> posts <span class="keyword">LIMIT</span> 20 <span class="highlight">OFFSET 0</span><br><br>
-                    <span class="comment">-- Page 2</span><br>
-                    <span class="keyword">SELECT</span> * <span class="keyword">FROM</span> posts <span class="keyword">LIMIT</span> 20 <span class="highlight">OFFSET 20</span> <span style="color: var(--primary-red)">⚠️</span>
+                <div class="pseudocode" style="font-size: 0.95em;">
+                    <span class="comment">-- The "simple" pagination everyone starts with</span><br><br>
+                    <span class="keyword">FUNCTION</span> get_feed_page(page_number):<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;offset = page_number × PAGE_SIZE<br><br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">SELECT</span> * <span class="keyword">FROM</span> posts<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">ORDER BY</span> created_at <span class="keyword">DESC</span><br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">LIMIT</span> 20 <span class="highlight">OFFSET</span> offset<br><br>
+                    <span class="comment">-- Page 1: OFFSET 0  → rows 1-20</span><br>
+                    <span class="comment">-- Page 2: OFFSET 20 → rows 21-40 (WRONG if data changed!)</span>
                 </div>
                 <div class="fragment warning-box" style="margin-top: 30px;">
                     <strong>OFFSET = "skip N rows"</strong> ≠ "continue from position X"<br>
@@ -550,25 +566,22 @@ def find_boundary(nums, target, find_first=True):
             
             <!-- ==================== ACT 3: THE SOLUTION ==================== -->
             
-            <!-- Slide 3.1: Cursor Introduction -->
+            <!-- Slide 3.1: Cursor Introduction (pseudocode #2) -->
             <section>
                 <span class="act-label">ACT 3: THE SOLUTION</span>
                 <h2>✅ Cursor Pagination</h2>
                 <div class="highlight-box" style="font-size: 1.2em; text-align: center;">
                     A <strong>cursor</strong> is a stable pointer to a specific position in sorted data.
                 </div>
-                <div class="fragment" style="margin-top: 30px;">
-                    <div class="comparison-grid">
-                        <div class="comparison-card bad">
-                            <h4>❌ OFFSET Says:</h4>
-                            <p>"Give me rows 20-40"</p>
-                            <p style="font-size: 0.8em; color: #888;">(Position shifts when data changes)</p>
-                        </div>
-                        <div class="comparison-card good">
-                            <h4>✅ Cursor Says:</h4>
-                            <p>"Give me rows after <strong>this specific row</strong>"</p>
-                            <p style="font-size: 0.8em; color: #888;">(Stable reference point)</p>
-                        </div>
+                <div class="fragment" style="margin-top: 20px;">
+                    <div class="pseudocode" style="font-size: 0.9em;">
+                        <span class="keyword">FUNCTION</span> get_feed_page(cursor):<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">SELECT</span> * <span class="keyword">FROM</span> posts<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">WHERE</span> created_at <span class="highlight">< cursor.timestamp</span><br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">ORDER BY</span> created_at <span class="keyword">DESC</span><br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">LIMIT</span> 20<br><br>
+                        <span class="comment">-- "Give me 20 posts OLDER than this cursor"</span><br>
+                        <span class="comment">-- New posts at TOP don't affect this query!</span>
                     </div>
                 </div>
                 <aside class="notes">
@@ -769,29 +782,68 @@ def find_boundary(nums, target, find_first=True):
                 </aside>
             </section>
             
-            <!-- Slide 4.2: Composite Cursors -->
+            <!-- Slide 4.2: Composite Cursors (Python code #2) -->
             <section>
                 <span class="act-label">ACT 4: MASTERY</span>
                 <h2>Composite Cursors</h2>
                 <p>A production cursor encodes more than just position:</p>
-                <div class="pseudocode" style="margin-top: 20px; font-size: 1em;">
-                    <span class="keyword">CURSOR</span> = {<br>
-                    &nbsp;&nbsp;&nbsp;&nbsp;<span class="highlight">snapshot_id</span>: "snap_2024_01_15" <span class="comment">// Which frozen timeline</span><br>
-                    &nbsp;&nbsp;&nbsp;&nbsp;<span class="highlight">last_timestamp</span>: 1705320000 <span class="comment">// When we left off</span><br>
-                    &nbsp;&nbsp;&nbsp;&nbsp;<span class="highlight">last_id</span>: "post_abc" <span class="comment">// Tie-breaker</span><br>
-                    &nbsp;&nbsp;&nbsp;&nbsp;<span class="highlight">signature</span>: hmac(...) <span class="comment">// Tamper-proof</span><br>
-                    }<br><br>
-                    <span class="comment">// Sent as: eyJzbmFwc2hvdF9pZCI6Li4u (base64)</span>
-                </div>
-                <div class="fragment insight-box" style="margin-top: 25px;">
-                    <strong>Multi-device sync:</strong> Phone and laptop share the same snapshot,
-                    so they see consistent data!
+                <pre><code class="language-python" data-trim style="font-size: 0.65em;">
+import base64, json, hmac, hashlib
+from dataclasses import dataclass
+
+@dataclass
+class Cursor:
+    snapshot_id: str      # Which frozen timeline
+    last_timestamp: int   # When we left off  
+    last_id: str          # Tie-breaker for same timestamp
+    
+    def encode(self, secret_key: bytes) -> str:
+        """Create tamper-proof cursor token"""
+        payload = json.dumps(self.__dict__)
+        sig = hmac.new(secret_key, payload.encode(), hashlib.sha256).hexdigest()[:16]
+        return base64.urlsafe_b64encode(f"{payload}|{sig}".encode()).decode()
+    
+    @classmethod
+    def decode(cls, token: str, secret_key: bytes) -> 'Cursor':
+        """Decode and verify cursor - raises if tampered"""
+        data = base64.urlsafe_b64decode(token).decode()
+        payload, sig = data.rsplit('|', 1)
+        expected = hmac.new(secret_key, payload.encode(), hashlib.sha256).hexdigest()[:16]
+        if not hmac.compare_digest(sig, expected):
+            raise ValueError("Tampered cursor!")
+        return cls(**json.loads(payload))
+                </code></pre>
+                <div class="fragment insight-box" style="margin-top: 15px;">
+                    <strong>Security:</strong> HMAC signature prevents users from manipulating 
+                    cursors to access unauthorized data.
                 </div>
                 <aside class="notes">
                     Production cursors are opaque tokens that encode snapshot ID, position, 
                     and often a signature to prevent users from tampering. This enables 
                     consistent experiences across devices.
                 </aside>
+            </section>
+            
+            <!-- Slide 4.2.5: Full Handler Pseudocode (pseudocode #3) -->
+            <section>
+                <span class="act-label">ACT 4: MASTERY</span>
+                <h2>Complete Pagination Handler</h2>
+                <div class="pseudocode" style="font-size: 0.85em;">
+                    <span class="keyword">FUNCTION</span> handle_feed_request(cursor_token, limit=20):<br><br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">// Step 1: Decode or create snapshot</span><br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">IF</span> cursor_token is <span class="keyword">NULL</span>:<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;snapshot = <span class="highlight">create_new_snapshot()</span><br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">ELSE</span>:<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;cursor = <span class="highlight">decode_and_verify(cursor_token)</span><br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;snapshot = get_snapshot(cursor.snapshot_id)<br><br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">// Step 2: Range query using lower_bound</span><br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;start_pos = <span class="highlight">lower_bound</span>(snapshot, cursor.last_timestamp)<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;posts = snapshot.read(start_pos, limit + 1)<br><br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">// Step 3: Build response with next cursor</span><br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;has_more = len(posts) > limit<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;next_cursor = <span class="highlight">encode_cursor</span>(posts[limit-1])<br><br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">RETURN</span> { posts[:limit], next_cursor, has_more }
+                </div>
             </section>
             
             <!-- Slide 4.3: When to Use -->

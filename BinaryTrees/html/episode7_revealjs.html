@@ -1,0 +1,957 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Episode 2.7: Hybrid Engines - The Best of Both Worlds (Season Finale)</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@4.5.0/dist/reset.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@4.5.0/dist/reveal.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@4.5.0/dist/theme/black.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@4.5.0/plugin/highlight/monokai.css">
+    <style>
+        :root {
+            --primary-green: #00ff88;
+            --primary-blue: #00d4ff;
+            --primary-purple: #b388ff;
+            --primary-orange: #ff9500;
+            --primary-red: #ff4757;
+            --primary-yellow: #ffd93d;
+            --primary-gold: #ffd700;
+            --bg-dark: #1a1a2e;
+            --bg-card: #16213e;
+        }
+        
+        .reveal { font-family: 'Segoe UI', system-ui, sans-serif; }
+        .reveal h1, .reveal h2, .reveal h3 { text-transform: none; font-weight: 700; }
+        .reveal h1 {
+            font-size: 2.5em;
+            background: linear-gradient(135deg, var(--primary-gold), var(--primary-orange));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .reveal h2 { font-size: 1.8em; color: var(--primary-green); }
+        .reveal h3 { font-size: 1.4em; color: var(--primary-blue); }
+        
+        .subtitle { font-size: 1.2em; color: var(--primary-purple); margin-top: 0.5em; }
+        .episode-badge {
+            display: inline-block;
+            background: linear-gradient(135deg, var(--primary-gold), var(--primary-orange));
+            padding: 0.3em 1em;
+            border-radius: 20px;
+            font-size: 0.8em;
+            margin-bottom: 1em;
+        }
+        .season-badge {
+            display: inline-block;
+            background: linear-gradient(135deg, var(--primary-blue), var(--primary-purple));
+            padding: 0.2em 0.8em;
+            border-radius: 15px;
+            font-size: 0.6em;
+            margin-bottom: 0.5em;
+        }
+        .finale-badge {
+            display: inline-block;
+            background: linear-gradient(135deg, #ff6b6b, #ffd93d, #00ff88);
+            padding: 0.2em 1em;
+            border-radius: 15px;
+            font-size: 0.7em;
+            color: #000;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+        
+        /* ======== AHA MOMENT STYLES ======== */
+        .aha-moment {
+            background: linear-gradient(135deg, rgba(255, 215, 0, 0.2), rgba(255, 140, 0, 0.1));
+            border: 4px solid #ffd700;
+            border-radius: 25px;
+            padding: 50px;
+            margin: 30px auto;
+            max-width: 850px;
+            text-align: center;
+            box-shadow: 0 0 60px rgba(255, 215, 0, 0.4);
+            animation: glow 2s ease-in-out infinite alternate;
+        }
+        @keyframes glow {
+            from { box-shadow: 0 0 40px rgba(255, 215, 0, 0.3); }
+            to { box-shadow: 0 0 80px rgba(255, 215, 0, 0.6); }
+        }
+        .aha-moment h3 {
+            color: #ffd700 !important;
+            font-size: 1.8em;
+            margin-bottom: 25px;
+        }
+        .aha-moment p { font-size: 1.3em; line-height: 1.6; }
+        .aha-icon { font-size: 4em; margin-bottom: 15px; }
+        
+        .big-reveal {
+            font-size: 3em;
+            font-weight: 900;
+            color: var(--primary-green);
+            text-shadow: 0 0 40px rgba(0, 255, 136, 0.6);
+            margin: 30px 0;
+        }
+        
+        .metaphor-card {
+            background: var(--bg-card);
+            border-radius: 20px;
+            padding: 35px;
+            margin: 25px auto;
+            max-width: 800px;
+            border-left: 6px solid var(--primary-purple);
+        }
+        .metaphor-card .emoji { font-size: 4em; margin-bottom: 20px; }
+        .metaphor-card h4 { color: var(--primary-purple); font-size: 1.4em; margin-bottom: 15px; }
+        
+        .versus-container {
+            display: grid;
+            grid-template-columns: 1fr auto 1fr;
+            gap: 40px;
+            align-items: center;
+            margin: 40px 0;
+        }
+        .versus-box {
+            background: var(--bg-card);
+            border-radius: 15px;
+            padding: 30px;
+            text-align: center;
+        }
+        .versus-box.bad { border-top: 5px solid var(--primary-red); }
+        .versus-box.good { border-top: 5px solid var(--primary-green); }
+        .versus-box .number { font-size: 3.5em; font-weight: 900; }
+        .versus-box.bad .number { color: var(--primary-red); }
+        .versus-box.good .number { color: var(--primary-green); }
+        .vs-text { font-size: 3em; color: var(--primary-yellow); font-weight: bold; }
+        
+        .hybrid-box {
+            background: linear-gradient(135deg, rgba(0,255,136,0.1), rgba(179,136,255,0.1));
+            border: 3px solid var(--primary-gold);
+            border-radius: 15px;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .warning-box {
+            background: rgba(255, 71, 87, 0.1);
+            border-left: 4px solid var(--primary-red);
+            padding: 1em;
+            margin: 1em 0;
+            border-radius: 0 10px 10px 0;
+        }
+        .highlight-box {
+            background: rgba(0, 255, 136, 0.1);
+            border-left: 4px solid var(--primary-green);
+            padding: 1em;
+            margin: 1em 0;
+            border-radius: 0 10px 10px 0;
+        }
+        
+        .act-label {
+            position: absolute;
+            top: 10px;
+            right: 20px;
+            font-size: 0.6em;
+            color: var(--primary-purple);
+            opacity: 0.7;
+        }
+        
+        .animation-container {
+            background: var(--bg-card);
+            border-radius: 15px;
+            padding: 20px;
+            margin: 20px auto;
+            max-width: 900px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+        }
+        .animation-canvas {
+            background: var(--bg-dark);
+            border-radius: 10px;
+            display: block;
+            margin: 0 auto;
+        }
+        .control-panel {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 15px;
+            flex-wrap: wrap;
+        }
+        .control-btn {
+            background: linear-gradient(135deg, var(--primary-blue), var(--primary-purple));
+            border: none;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 0.9em;
+            transition: all 0.3s ease;
+        }
+        .control-btn:hover { transform: translateY(-2px); box-shadow: 0 5px 20px rgba(0, 212, 255, 0.4); }
+        .control-btn.active { background: linear-gradient(135deg, var(--primary-green), var(--primary-blue)); }
+        .control-btn.danger { background: linear-gradient(135deg, var(--primary-orange), var(--primary-red)); }
+        .status-display {
+            text-align: center;
+            margin-top: 10px;
+            font-size: 0.9em;
+            color: var(--primary-yellow);
+            min-height: 24px;
+        }
+        
+        .takeaway-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin-top: 20px;
+        }
+        .takeaway-item {
+            background: var(--bg-card);
+            border-radius: 10px;
+            padding: 15px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        .takeaway-item .icon { font-size: 2em; min-width: 50px; text-align: center; }
+        .takeaway-item .text { text-align: left; font-size: 0.85em; }
+        
+        .evolution-step {
+            background: var(--bg-card);
+            border-radius: 10px;
+            padding: 15px;
+            margin: 10px 0;
+            text-align: left;
+        }
+        .evolution-step h4 { color: var(--primary-blue); margin-bottom: 8px; }
+        .evolution-step.current { border: 2px solid var(--primary-gold); background: rgba(255,215,0,0.1); }
+        .evolution-step.complete { border-left: 4px solid var(--primary-green); }
+        
+        .db-card {
+            background: var(--bg-card);
+            border-radius: 10px;
+            padding: 20px;
+            margin: 10px;
+            text-align: center;
+            border-top: 3px solid;
+        }
+        .db-card h4 { margin-bottom: 10px; }
+        .db-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+            margin: 20px 0;
+        }
+        
+        .tiered-container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            max-width: 700px;
+            margin: 20px auto;
+        }
+        .tier {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+        .tier-label {
+            width: 100px;
+            text-align: right;
+            font-weight: bold;
+        }
+        .tier-bar {
+            flex: 1;
+            height: 50px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="reveal">
+        <div class="slides">
+            
+            <!-- ==================== ACT 1: THE HOOK ==================== -->
+            
+            <!-- Slide 1: Title -->
+            <section>
+                <div class="season-badge">Season 2: Binary Trees & Production Systems</div>
+                <div class="episode-badge">Episode 2.7</div>
+                <span class="finale-badge">🏆 SEASON FINALE</span>
+                <h1>Hybrid Engines</h1>
+                <p class="subtitle">The Best of Both Worlds</p>
+                <p style="margin-top: 2em; font-size: 0.9em; color: #888;">
+                    From LeetCode to TiDB - The complete journey
+                </p>
+            </section>
+            
+            <!-- Slide 2: The Recap Crisis -->
+            <section>
+                <span class="act-label">ACT 1: THE HOOK</span>
+                <h2>🤔 The Impossible Choice</h2>
+                <div class="versus-container">
+                    <div class="versus-box">
+                        <p style="font-size: 1.3em;">🌳 B-Tree</p>
+                        <p style="color: var(--primary-green);">Reads: ⚡ Fast</p>
+                        <p style="color: var(--primary-red);">Writes: 🐌 Slow</p>
+                        <p style="margin-top: 15px; font-size: 0.9em; color: #888;">PostgreSQL, MySQL</p>
+                    </div>
+                    <div class="vs-text">OR</div>
+                    <div class="versus-box">
+                        <p style="font-size: 1.3em;">📚 LSM-Tree</p>
+                        <p style="color: var(--primary-yellow);">Reads: Slower</p>
+                        <p style="color: var(--primary-green);">Writes: ⚡ Fast</p>
+                        <p style="margin-top: 15px; font-size: 0.9em; color: #888;">Cassandra, RocksDB</p>
+                    </div>
+                </div>
+                <p class="fragment" style="font-size: 1.3em; color: var(--primary-yellow);">
+                    What if your workload is <strong>50% reads, 50% writes</strong>?
+                </p>
+            </section>
+            
+            <!-- Slide 3: The Story Setup -->
+            <section>
+                <span class="act-label">ACT 1: THE HOOK</span>
+                <h2>📊 The E-Commerce Dashboard</h2>
+                <div class="metaphor-card">
+                    <div class="emoji">🛒</div>
+                    <h4>Real-World Scenario</h4>
+                    <p style="font-size: 1.1em;">
+                        <strong>Hot queries:</strong> "Show me orders from last hour"<br>
+                        <span style="font-size: 0.9em; color: var(--primary-green);">→ Need fast reads (B-Tree territory)</span>
+                    </p>
+                    <p style="font-size: 1.1em; margin-top: 15px;">
+                        <strong>Constant writes:</strong> 10K orders/second streaming in<br>
+                        <span style="font-size: 0.9em; color: var(--primary-blue);">→ Need fast writes (LSM territory)</span>
+                    </p>
+                    <div class="fragment" style="margin-top: 20px;">
+                        <p style="color: var(--primary-yellow); font-size: 1.2em;">
+                            Old answer: "Pick one, compromise on the other"
+                        </p>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- Slide 4: AHA MOMENT #1 - The Hot/Cold Insight -->
+            <section>
+                <span class="act-label">💡 AHA MOMENT</span>
+                <div class="aha-moment">
+                    <div class="aha-icon">🔥❄️</div>
+                    <h3>The Hot/Cold Insight</h3>
+                    <p>
+                        Not all data is created equal!
+                    </p>
+                    <div class="fragment" style="margin: 30px 0;">
+                        <p style="font-size: 1.2em;">
+                            <span style="color: var(--primary-red);">🔥 Hot data:</span> Last hour of orders → queried 100x/minute<br>
+                            <span style="color: var(--primary-blue);">❄️ Cold data:</span> Orders from 2 years ago → queried 1x/month
+                        </p>
+                    </div>
+                    <p class="fragment" style="color: var(--primary-green); font-size: 1.3em;">
+                        Why use the <strong>same structure</strong> for both?
+                    </p>
+                </div>
+            </section>
+            
+            <!-- Slide 5: The Tiered Storage Metaphor -->
+            <section>
+                <span class="act-label">ACT 2: THE SOLUTION</span>
+                <h2>🏢 The Office Filing System</h2>
+                <div class="metaphor-card">
+                    <div class="emoji">🗄️</div>
+                    <h4>Think like an office manager</h4>
+                    <p style="font-size: 1.1em; text-align: left; margin-left: 20px;">
+                        <strong>📋 Your desk:</strong> Current day's documents (memory)<br>
+                        <strong>📁 Filing cabinet:</strong> This week's files (fast SSD)<br>
+                        <strong>📦 Archive room:</strong> Old records (slow, cheap storage)
+                    </p>
+                    <div class="fragment" style="margin-top: 25px; padding: 15px; background: rgba(0,255,136,0.1); border-radius: 10px;">
+                        <p style="color: var(--primary-green);">
+                            You don't treat today's urgent memo the same as<br>
+                            a receipt from 5 years ago!
+                        </p>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- Slide 6: Tiered Storage Visual -->
+            <section>
+                <span class="act-label">ACT 2: THE SOLUTION</span>
+                <h2>📊 Tiered Storage Architecture</h2>
+                <div class="tiered-container">
+                    <div class="tier">
+                        <div class="tier-label" style="color: var(--primary-red);">🔥 HOT</div>
+                        <div class="tier-bar" style="background: linear-gradient(90deg, #ff4757, #ff6b6b); width: 30%;">
+                            Memory / RAM
+                        </div>
+                    </div>
+                    <div class="tier">
+                        <div class="tier-label" style="color: var(--primary-yellow);">⚡ WARM</div>
+                        <div class="tier-bar" style="background: linear-gradient(90deg, #ffd93d, #ffeaa7); color: #000; width: 50%;">
+                            Fast SSD (B-Tree indexed)
+                        </div>
+                    </div>
+                    <div class="tier">
+                        <div class="tier-label" style="color: var(--primary-blue);">❄️ COLD</div>
+                        <div class="tier-bar" style="background: linear-gradient(90deg, #00d4ff, #74b9ff); color: #000; width: 100%;">
+                            Cheap HDD / Object Storage (LSM compacted)
+                        </div>
+                    </div>
+                </div>
+                <p class="fragment" style="margin-top: 20px; color: var(--primary-yellow);">
+                    Data "ages" from hot → warm → cold automatically!
+                </p>
+            </section>
+            
+            <!-- Slide 7: AHA MOMENT #2 - The Hybrid Revelation -->
+            <section>
+                <span class="act-label">💡 AHA MOMENT</span>
+                <div class="aha-moment">
+                    <div class="aha-icon">💡</div>
+                    <h3>The Hybrid Revelation</h3>
+                    <p>
+                        What if one database had <strong>both engines</strong>?
+                    </p>
+                    <div class="fragment" style="margin: 30px 0; padding: 20px; background: rgba(0,0,0,0.3); border-radius: 10px;">
+                        <p style="font-size: 1.2em;">
+                            <span style="color: var(--primary-green);">📝 New writes</span> → LSM (fast append)<br>
+                            <span style="color: var(--primary-blue);">🔍 Hot reads</span> → B-Tree (fast lookup)<br>
+                            <span style="color: var(--primary-purple);">♻️ Background</span> → Migrate data between engines
+                        </p>
+                    </div>
+                    <p class="fragment" style="color: var(--primary-gold); font-size: 1.3em;">
+                        This is <strong>EXACTLY</strong> what TiDB does!
+                    </p>
+                </div>
+            </section>
+            
+            <!-- Slide 8: TiDB Architecture Simplified -->
+            <section>
+                <span class="act-label">ACT 3: PRODUCTION</span>
+                <h2>🏗️ TiDB: Two Engines, One Database</h2>
+                <div class="animation-container">
+                    <canvas id="tidbCanvas" class="animation-canvas" width="800" height="300"></canvas>
+                    <div class="control-panel">
+                        <button class="control-btn" onclick="tidbAnim.writeOLTP()">Write (OLTP)</button>
+                        <button class="control-btn active" onclick="tidbAnim.readOLAP()">Analytics Query</button>
+                        <button class="control-btn" onclick="tidbAnim.showSync()">Background Sync</button>
+                        <button class="control-btn" onclick="tidbAnim.reset()">Reset</button>
+                    </div>
+                    <div class="status-display" id="tidbStatus">TiKV (LSM) for writes, TiFlash (columnar) for analytics</div>
+                </div>
+            </section>
+            
+            <!-- Slide 9: The Journey Complete -->
+            <section>
+                <span class="act-label">ACT 4: THE JOURNEY</span>
+                <h2>🗺️ The Season 2 Journey</h2>
+                <div style="max-width: 700px; margin: 0 auto;">
+                    <div class="evolution-step complete">
+                        <h4>📍 Episode 2.1-2.3: Binary Search → SSTables</h4>
+                        <p style="color: #888; font-size: 0.9em;">Foundation: Searching sorted data</p>
+                    </div>
+                    <div class="evolution-step complete">
+                        <h4>📍 Episode 2.4: BST → AVL Trees</h4>
+                        <p style="color: #888; font-size: 0.9em;">Keeping trees balanced in memory</p>
+                    </div>
+                    <div class="evolution-step complete">
+                        <h4>📍 Episode 2.5: B-Trees</h4>
+                        <p style="color: #888; font-size: 0.9em;">Read-optimized disk storage</p>
+                    </div>
+                    <div class="evolution-step complete">
+                        <h4>📍 Episode 2.6: LSM-Trees</h4>
+                        <p style="color: #888; font-size: 0.9em;">Write-optimized disk storage</p>
+                    </div>
+                    <div class="evolution-step current">
+                        <h4>🏆 Episode 2.7: Hybrid Engines</h4>
+                        <p style="color: var(--primary-gold);">The best of both worlds!</p>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- Slide 10: AHA MOMENT #3 - The Real Secret -->
+            <section>
+                <span class="act-label">💡 AHA MOMENT</span>
+                <div class="aha-moment">
+                    <div class="aha-icon">🎯</div>
+                    <h3>The Database Architect's Secret</h3>
+                    <p>
+                        There is no "best" data structure.
+                    </p>
+                    <div class="fragment" style="margin: 30px 0;">
+                        <p style="font-size: 1.3em;">
+                            There's only the <strong>right structure for your access pattern</strong>.
+                        </p>
+                    </div>
+                    <div class="fragment" style="padding: 20px; background: rgba(0,255,136,0.2); border-radius: 10px;">
+                        <p style="font-size: 1.1em;">
+                            <strong>Read-heavy?</strong> → B-Tree (PostgreSQL)<br>
+                            <strong>Write-heavy?</strong> → LSM (Cassandra)<br>
+                            <strong>Both?</strong> → Hybrid (TiDB, CockroachDB)
+                        </p>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- Slide 11: The Database Landscape -->
+            <section>
+                <span class="act-label">ACT 4: MASTERY</span>
+                <h2>🗺️ The Database Landscape</h2>
+                <div class="db-grid">
+                    <div class="db-card" style="border-color: var(--primary-green);">
+                        <h4 style="color: var(--primary-green);">B-Tree Based</h4>
+                        <p style="font-size: 0.9em;">PostgreSQL<br>MySQL<br>SQL Server</p>
+                        <p style="font-size: 0.8em; color: #888; margin-top: 10px;">Read-optimized</p>
+                    </div>
+                    <div class="db-card" style="border-color: var(--primary-blue);">
+                        <h4 style="color: var(--primary-blue);">LSM-Tree Based</h4>
+                        <p style="font-size: 0.9em;">Cassandra<br>RocksDB<br>LevelDB</p>
+                        <p style="font-size: 0.8em; color: #888; margin-top: 10px;">Write-optimized</p>
+                    </div>
+                    <div class="db-card" style="border-color: var(--primary-gold);">
+                        <h4 style="color: var(--primary-gold);">Hybrid</h4>
+                        <p style="font-size: 0.9em;">TiDB<br>CockroachDB<br>YugabyteDB</p>
+                        <p style="font-size: 0.8em; color: #888; margin-top: 10px;">Balanced</p>
+                    </div>
+                    <div class="db-card" style="border-color: var(--primary-purple);">
+                        <h4 style="color: var(--primary-purple);">Specialized</h4>
+                        <p style="font-size: 0.9em;">ClickHouse<br>TimescaleDB<br>Redis</p>
+                        <p style="font-size: 0.8em; color: #888; margin-top: 10px;">Use-case tuned</p>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- Slide 12: The LeetCode Connection -->
+            <section>
+                <span class="act-label">ACT 5: CONNECTING DOTS</span>
+                <h2>🔗 The LeetCode → Production Path</h2>
+                <div class="animation-container">
+                    <canvas id="journeyCanvas" class="animation-canvas" width="800" height="280"></canvas>
+                    <div class="control-panel">
+                        <button class="control-btn" onclick="journeyAnim.showPhase(1)">LeetCode</button>
+                        <button class="control-btn" onclick="journeyAnim.showPhase(2)">Concepts</button>
+                        <button class="control-btn active" onclick="journeyAnim.showPhase(3)">Production</button>
+                        <button class="control-btn" onclick="journeyAnim.reset()">Full Journey</button>
+                    </div>
+                    <div class="status-display" id="journeyStatus">Every LeetCode problem teaches a production concept!</div>
+                </div>
+            </section>
+            
+            <!-- Slide 13: The Season Summary -->
+            <section>
+                <span class="act-label">ACT 5: CONNECTING DOTS</span>
+                <h2>📚 What LeetCode Actually Teaches</h2>
+                <div class="takeaway-grid">
+                    <div class="takeaway-item">
+                        <div class="icon">🔍</div>
+                        <div class="text">
+                            <strong>Binary Search</strong><br>
+                            → SSTable lookups, B-Tree navigation
+                        </div>
+                    </div>
+                    <div class="takeaway-item">
+                        <div class="icon">🔗</div>
+                        <div class="text">
+                            <strong>Merge K Lists (#23)</strong><br>
+                            → LSM-Tree compaction algorithm
+                        </div>
+                    </div>
+                    <div class="takeaway-item">
+                        <div class="icon">🌳</div>
+                        <div class="text">
+                            <strong>BST Validation (#98)</strong><br>
+                            → Database index verification
+                        </div>
+                    </div>
+                    <div class="takeaway-item">
+                        <div class="icon">⚖️</div>
+                        <div class="text">
+                            <strong>Balanced Trees</strong><br>
+                            → Why B-Trees stay ~4 levels deep
+                        </div>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- Slide 14: AHA MOMENT #4 - The Final Insight -->
+            <section>
+                <span class="act-label">💡 FINAL AHA MOMENT</span>
+                <div class="aha-moment">
+                    <div class="aha-icon">🎓</div>
+                    <h3>The Final Insight</h3>
+                    <p>
+                        You've been learning <strong>database internals</strong><br>
+                        the whole time.
+                    </p>
+                    <div class="fragment" style="margin: 30px 0;">
+                        <p style="font-size: 1.2em;">
+                            Binary search isn't just an algorithm.<br>
+                            It's how <strong>every database query</strong> works.
+                        </p>
+                    </div>
+                    <div class="fragment" style="padding: 20px; background: rgba(255,215,0,0.2); border-radius: 10px;">
+                        <p style="font-size: 1.1em; color: var(--primary-gold);">
+                            LeetCode isn't interview prep.<br>
+                            It's <strong>production system prep</strong>.
+                        </p>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- Slide 15: The 4 Takeaways -->
+            <section>
+                <span class="act-label">ACT 6: MASTERY</span>
+                <h2>🎯 Season 2: The Big 4 Ideas</h2>
+                <div style="max-width: 800px; margin: 0 auto;">
+                    <div class="takeaway-item" style="margin: 20px 0;">
+                        <div class="icon">🔍</div>
+                        <div class="text" style="font-size: 1.1em;">
+                            <strong>Binary search is everywhere</strong><br>
+                            Every database uses it - SSTable, B-Tree, or Bloom Filter
+                        </div>
+                    </div>
+                    <div class="takeaway-item" style="margin: 20px 0;">
+                        <div class="icon">⚖️</div>
+                        <div class="text" style="font-size: 1.1em;">
+                            <strong>Read vs Write is THE tradeoff</strong><br>
+                            Optimize for reads (B-Tree) or writes (LSM) - pick wisely
+                        </div>
+                    </div>
+                    <div class="takeaway-item" style="margin: 20px 0;">
+                        <div class="icon">💾</div>
+                        <div class="text" style="font-size: 1.1em;">
+                            <strong>Disk is 100,000× slower than RAM</strong><br>
+                            Every database design decision fights this reality
+                        </div>
+                    </div>
+                    <div class="takeaway-item" style="margin: 20px 0;">
+                        <div class="icon">🔄</div>
+                        <div class="text" style="font-size: 1.1em;">
+                            <strong>Hybrid is the future</strong><br>
+                            Modern databases combine multiple strategies for different data
+                        </div>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- Slide 16: What's Next -->
+            <section>
+                <span class="act-label">ACT 6: MASTERY</span>
+                <h2>🚀 What's Next?</h2>
+                <div class="metaphor-card" style="border-left-color: var(--primary-gold);">
+                    <h4>Season 3 Preview: Distributed Systems</h4>
+                    <p style="font-size: 1.1em;">
+                        What happens when one machine isn't enough?
+                    </p>
+                    <div style="margin-top: 25px; padding: 15px; background: rgba(0,0,0,0.3); border-radius: 10px;">
+                        <p>
+                            <strong>Sharding:</strong> Splitting data across machines<br>
+                            <strong>Replication:</strong> Keeping copies in sync<br>
+                            <strong>Consensus:</strong> Agreeing on truth (Raft, Paxos)<br>
+                            <strong>CAP Theorem:</strong> The impossible triangle
+                        </p>
+                    </div>
+                    <p style="margin-top: 20px; color: var(--primary-yellow);">
+                        Coming Soon: "From Two Sum to TiKV" 🎬
+                    </p>
+                </div>
+            </section>
+            
+            <!-- Slide 17: Season Finale Credits -->
+            <section>
+                <h2>🎬 Season 2 Complete!</h2>
+                <p class="subtitle">From LeetCode to Production Database Engines</p>
+                <div style="margin-top: 40px;">
+                    <div class="evolution-step" style="display: inline-block; padding: 25px 40px;">
+                        <p style="font-size: 1.3em;">
+                            <span style="color: var(--primary-green);">Binary Search</span> →
+                            <span style="color: var(--primary-blue);">SSTables</span> →
+                            <span style="color: var(--primary-purple);">B-Trees</span> →
+                            <span style="color: var(--primary-orange);">LSM-Trees</span> →
+                            <span style="color: var(--primary-gold);">Hybrid Engines</span>
+                        </p>
+                    </div>
+                </div>
+                <div style="margin-top: 40px; font-size: 0.9em; color: #666;">
+                    <p>You now understand the internals of:</p>
+                    <p>PostgreSQL • MySQL • Cassandra • RocksDB • TiDB • CockroachDB</p>
+                </div>
+            </section>
+            
+            <!-- End Slide -->
+            <section>
+                <div style="font-size: 6em;">🏆</div>
+                <h1>Season 2 Finale</h1>
+                <p class="subtitle">See you in Season 3: Distributed Systems</p>
+                <div style="margin-top: 60px; font-size: 0.8em; color: #888;">
+                    <p>"The best database engineers aren't born knowing this stuff.<br>
+                    They just connected the dots between algorithms and systems."</p>
+                </div>
+            </section>
+            
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/reveal.js@4.5.0/dist/reveal.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/reveal.js@4.5.0/plugin/notes/notes.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/reveal.js@4.5.0/plugin/highlight/highlight.js"></script>
+    
+    <script>
+        Reveal.initialize({
+            hash: true,
+            slideNumber: true,
+            width: 1920,
+            height: 1080,
+            margin: 0.1,
+            plugins: [RevealNotes, RevealHighlight]
+        });
+        
+        // ==================== ANIMATION 1: TiDB Architecture ====================
+        class TiDBAnimation {
+            constructor(canvasId, statusId) {
+                this.canvas = document.getElementById(canvasId);
+                this.ctx = this.canvas.getContext('2d');
+                this.statusEl = document.getElementById(statusId);
+                this.reset();
+            }
+            
+            reset() {
+                this.phase = 'initial';
+                this.draw();
+                this.statusEl.textContent = 'TiKV (LSM) for writes, TiFlash (columnar) for analytics';
+            }
+            
+            writeOLTP() {
+                this.phase = 'oltp';
+                this.draw();
+                this.statusEl.textContent = '📝 Write goes to TiKV (LSM-based) - optimized for fast writes!';
+            }
+            
+            readOLAP() {
+                this.phase = 'olap';
+                this.draw();
+                this.statusEl.textContent = '📊 Analytics query routed to TiFlash - columnar, compressed, fast scans!';
+            }
+            
+            showSync() {
+                this.phase = 'sync';
+                this.draw();
+                this.statusEl.textContent = '🔄 Background: Raft replicates TiKV → TiFlash asynchronously';
+            }
+            
+            draw() {
+                const ctx = this.ctx;
+                const w = this.canvas.width;
+                const h = this.canvas.height;
+                
+                ctx.fillStyle = '#1a1a2e';
+                ctx.fillRect(0, 0, w, h);
+                
+                // TiDB Layer (top)
+                ctx.fillStyle = '#b388ff';
+                ctx.strokeStyle = '#b388ff';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.roundRect(300, 30, 200, 60, 10);
+                ctx.fill();
+                ctx.stroke();
+                
+                ctx.fillStyle = '#000';
+                ctx.font = 'bold 18px Segoe UI';
+                ctx.textAlign = 'center';
+                ctx.fillText('TiDB (SQL Layer)', 400, 65);
+                
+                // TiKV (left)
+                let tikvHL = this.phase === 'oltp' || this.phase === 'sync';
+                ctx.fillStyle = tikvHL ? '#00ff88' : '#16213e';
+                ctx.strokeStyle = '#00ff88';
+                ctx.lineWidth = tikvHL ? 4 : 2;
+                ctx.beginPath();
+                ctx.roundRect(100, 140, 200, 120, 15);
+                ctx.fill();
+                ctx.stroke();
+                
+                ctx.fillStyle = tikvHL ? '#000' : '#00ff88';
+                ctx.font = 'bold 18px Segoe UI';
+                ctx.fillText('TiKV', 200, 175);
+                ctx.fillStyle = tikvHL ? '#000' : '#888';
+                ctx.font = '14px Segoe UI';
+                ctx.fillText('LSM-Tree Engine', 200, 200);
+                ctx.fillText('Row-based', 200, 220);
+                ctx.fillText('OLTP optimized', 200, 240);
+                
+                // TiFlash (right)
+                let flashHL = this.phase === 'olap' || this.phase === 'sync';
+                ctx.fillStyle = flashHL ? '#00d4ff' : '#16213e';
+                ctx.strokeStyle = '#00d4ff';
+                ctx.lineWidth = flashHL ? 4 : 2;
+                ctx.beginPath();
+                ctx.roundRect(500, 140, 200, 120, 15);
+                ctx.fill();
+                ctx.stroke();
+                
+                ctx.fillStyle = flashHL ? '#000' : '#00d4ff';
+                ctx.font = 'bold 18px Segoe UI';
+                ctx.fillText('TiFlash', 600, 175);
+                ctx.fillStyle = flashHL ? '#000' : '#888';
+                ctx.font = '14px Segoe UI';
+                ctx.fillText('Columnar Engine', 600, 200);
+                ctx.fillText('Column-based', 600, 220);
+                ctx.fillText('OLAP optimized', 600, 240);
+                
+                // Arrows from TiDB
+                ctx.strokeStyle = '#888';
+                ctx.lineWidth = 2;
+                ctx.setLineDash([]);
+                
+                // To TiKV
+                if (this.phase === 'oltp') {
+                    ctx.strokeStyle = '#00ff88';
+                    ctx.lineWidth = 4;
+                }
+                ctx.beginPath();
+                ctx.moveTo(350, 90);
+                ctx.lineTo(200, 140);
+                ctx.stroke();
+                
+                // To TiFlash
+                ctx.strokeStyle = '#888';
+                ctx.lineWidth = 2;
+                if (this.phase === 'olap') {
+                    ctx.strokeStyle = '#00d4ff';
+                    ctx.lineWidth = 4;
+                }
+                ctx.beginPath();
+                ctx.moveTo(450, 90);
+                ctx.lineTo(600, 140);
+                ctx.stroke();
+                
+                // Sync arrow between TiKV and TiFlash
+                if (this.phase === 'sync') {
+                    ctx.strokeStyle = '#ffd93d';
+                    ctx.lineWidth = 3;
+                    ctx.setLineDash([5, 5]);
+                    ctx.beginPath();
+                    ctx.moveTo(300, 200);
+                    ctx.lineTo(500, 200);
+                    ctx.stroke();
+                    ctx.setLineDash([]);
+                    
+                    ctx.fillStyle = '#ffd93d';
+                    ctx.font = 'bold 14px Segoe UI';
+                    ctx.fillText('Raft Replication', 400, 190);
+                }
+                
+                // Labels
+                ctx.fillStyle = '#888';
+                ctx.font = '12px Segoe UI';
+                ctx.textAlign = 'left';
+                ctx.fillText('Writes & Point Queries', 90, 280);
+                ctx.textAlign = 'right';
+                ctx.fillText('Analytics & Scans', 710, 280);
+            }
+        }
+        
+        // ==================== ANIMATION 2: Journey Timeline ====================
+        class JourneyAnimation {
+            constructor(canvasId, statusId) {
+                this.canvas = document.getElementById(canvasId);
+                this.ctx = this.canvas.getContext('2d');
+                this.statusEl = document.getElementById(statusId);
+                this.reset();
+            }
+            
+            reset() {
+                this.phase = 0;
+                this.draw();
+                this.statusEl.textContent = 'Every LeetCode problem teaches a production concept!';
+            }
+            
+            showPhase(p) {
+                this.phase = p;
+                this.draw();
+                const messages = [
+                    'Every LeetCode problem teaches a production concept!',
+                    'LeetCode: The algorithms you practice daily',
+                    'Concepts: The patterns behind the problems',
+                    'Production: Where these patterns power real systems'
+                ];
+                this.statusEl.textContent = messages[p];
+            }
+            
+            draw() {
+                const ctx = this.ctx;
+                const w = this.canvas.width;
+                const h = this.canvas.height;
+                
+                ctx.fillStyle = '#1a1a2e';
+                ctx.fillRect(0, 0, w, h);
+                
+                const items = [
+                    { col: 0, label: 'LeetCode', items: ['Binary Search', 'Merge K Lists', 'BST Validate'], color: '#ff4757' },
+                    { col: 1, label: 'Concept', items: ['Log(n) lookup', 'K-way merge', 'Ordered keys'], color: '#ffd93d' },
+                    { col: 2, label: 'Production', items: ['SSTable', 'LSM Compaction', 'B-Tree Index'], color: '#00ff88' }
+                ];
+                
+                const colW = 220;
+                const startX = (w - 3 * colW - 100) / 2;
+                
+                items.forEach((col, ci) => {
+                    const x = startX + ci * (colW + 50);
+                    const highlight = this.phase === 0 || this.phase === ci + 1;
+                    
+                    // Header
+                    ctx.fillStyle = highlight ? col.color : '#444';
+                    ctx.font = 'bold 20px Segoe UI';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(col.label, x + colW/2, 40);
+                    
+                    // Items
+                    col.items.forEach((item, ii) => {
+                        const y = 70 + ii * 65;
+                        ctx.fillStyle = highlight ? col.color : '#333';
+                        ctx.globalAlpha = highlight ? 1 : 0.4;
+                        ctx.beginPath();
+                        ctx.roundRect(x, y, colW, 50, 8);
+                        ctx.fill();
+                        
+                        ctx.globalAlpha = 1;
+                        ctx.fillStyle = highlight ? '#000' : '#666';
+                        ctx.font = '14px Segoe UI';
+                        ctx.fillText(item, x + colW/2, y + 30);
+                    });
+                    
+                    // Arrow to next
+                    if (ci < 2) {
+                        ctx.strokeStyle = highlight && (this.phase === 0 || this.phase === ci + 2) ? '#ffd93d' : '#444';
+                        ctx.lineWidth = 2;
+                        ctx.beginPath();
+                        ctx.moveTo(x + colW + 10, 120);
+                        ctx.lineTo(x + colW + 40, 120);
+                        ctx.stroke();
+                        
+                        // Arrow head
+                        ctx.beginPath();
+                        ctx.moveTo(x + colW + 35, 115);
+                        ctx.lineTo(x + colW + 45, 120);
+                        ctx.lineTo(x + colW + 35, 125);
+                        ctx.stroke();
+                    }
+                });
+            }
+        }
+        
+        // Initialize
+        const tidbAnim = new TiDBAnimation('tidbCanvas', 'tidbStatus');
+        const journeyAnim = new JourneyAnimation('journeyCanvas', 'journeyStatus');
+        
+        Reveal.on('slidechanged', event => {
+            tidbAnim.draw();
+            journeyAnim.draw();
+        });
+    </script>
+</body>
+</html>

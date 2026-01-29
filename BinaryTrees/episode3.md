@@ -1,24 +1,77 @@
-Episode 2.3: "Rotated Search - Managing Multiple Timelines"
+# Episode 2.3: Ring Buffers - When Your Logs Go in Circles
 
-The 2 AM Canary Deployment Disaster
-
-The alert screams at 2 AM: "Error rate spiking to 40%." You just rolled out a new payment processor to 10% of users, and something's catastrophically wrong.
-
-You trigger the rollback immediately. But 15 minutes later, the errors keep pouring in. Some users in the 10% group aren't reverting. Others outside the 10% are suddenly seeing the broken feature. Your monitoring shows multiple overlapping realities across your user base.
-
-This isn't just a deployment bug. It's not even a configuration problem. This is a search problem. You're trying to answer: "Which version should this user see?" when users exist in multiple overlapping timelines.
-
-The algorithm that unlocks this? LeetCode #33: Search in Rotated Sorted Array.
+## Overview
+**LeetCode Problem:** #33 - Search in Rotated Sorted Array  
+**Production System:** Circular Log Buffer / Ring Buffer for Production Monitoring  
+**Core Insight:** Ring buffers wrap around - the "rotation point" is where newest meets oldest. Binary search still works if you find where the order breaks!
 
 ---
 
-LeetCode Core: The Rotated Search Mindset
+## PART 1: THE PRODUCTION PROBLEM
 
-LeetCode #33 presents a fascinating constraint: what if your sorted array has been rotated at an arbitrary pivot?
+### The 2 AM Crisis
+
+```
+Scene: A monitoring dashboard. An SRE stares at a ring buffer visualization
+showing memory metrics. The buffer is lying about what happened.
+
+SRE:      "The memory spike that crashed our service - I need to find when
+          it started. Our ring buffer stores the last 1000 data points."
+
+Manager:  "So search for the timestamp when memory crossed 80%."
+
+SRE:      "I tried binary search. It says the spike started at index 342.
+          But that timestamp is from YESTERDAY."
+
+Manager:  "That's impossible. We restarted the service 2 hours ago."
+
+SRE:      "Here's the thing: it's a RING buffer. It wraps around.
+          Index 0 isn't the oldest entry anymore - index 847 is."
+
+Manager:  "So the data looks sorted but it's actually rotated?"
+
+SRE:      "Exactly. Entries 847-999 are older than entries 0-846.
+          Normal binary search doesn't know about the wrap point."
+
+Manager:  "Can't you just linear scan?"
+
+SRE:      "With a million-entry buffer and queries every 100ms?
+          That's how we got into this mess - I need O(log n)."
+```
+
+### What IS a Ring Buffer?
+
+Think of a circular track with 8 positions. Data goes in one end and pushes out the other:
+
+```
+Step 1: Write A, B, C
+        [A][B][C][ ][ ][ ][ ][ ]
+         ↑ head             
+
+Step 2: Write D, E, F, G, H
+        [A][B][C][D][E][F][G][H]
+         ↑ head              ↑ tail (about to wrap)
+
+Step 3: Write I (WRAPS AROUND!)
+        [I][B][C][D][E][F][G][H]
+            ↑ oldest   ↑ newest
+
+Now: Index 0 has the NEWEST data, index 1 has the OLDEST!
+```
+
+**The Problem:** Data is sorted by time... but it WRAPS. Binary search breaks!
+
+---
+
+## PART 2: THE LEETCODE CORE
+
+### LeetCode #33: Search in Rotated Sorted Array
 
 ```python
-# Classic rotated array: [4, 5, 6, 7, 0, 1, 2]
-# Original sorted: [0, 1, 2, 4, 5, 6, 7], rotated at index 4
+# The array was sorted, then "rotated" at some pivot:
+# Original: [0, 1, 2, 4, 5, 6, 7]
+# Rotated:  [4, 5, 6, 7, 0, 1, 2]  (rotated at index 4)
+#                    ↑ pivot - where order "breaks"
 
 def search_rotated(nums, target):
     left, right = 0, len(nums) - 1
@@ -29,396 +82,452 @@ def search_rotated(nums, target):
         if nums[mid] == target:
             return mid
             
-        # Determine which side is normally sorted
-        if nums[left] <= nums[mid]:  # Left half is normally sorted
+        # KEY INSIGHT: One half is ALWAYS normally sorted!
+        if nums[left] <= nums[mid]:
+            # Left half is sorted [left...mid]
             if nums[left] <= target < nums[mid]:
-                right = mid - 1  # Target in normally sorted left half
+                right = mid - 1  # Target in sorted left half
             else:
                 left = mid + 1   # Target in rotated right half
-        else:  # Right half is normally sorted
+        else:
+            # Right half is sorted [mid...right]
             if nums[mid] < target <= nums[right]:
-                left = mid + 1   # Target in normally sorted right half
+                left = mid + 1   # Target in sorted right half
             else:
                 right = mid - 1  # Target in rotated left half
                 
     return -1
 ```
 
-The conceptual leap: This algorithm teaches us how to search in partially ordered spaces where the sort order exists but starts at an arbitrary pivot point.
+### The Conceptual Leap
 
-Think about feature rollouts:
+**Ring Buffer = Rotated Array**
 
-· Users 0-9%: See Feature X
-· Users 10-100%: See Feature Y
+When a ring buffer wraps, the timestamps ARE still sorted... just rotated at the wrap point!
 
-The user space is "sorted" by a consistent hash, but the "pivot" at 10% creates a rotated view of which feature each user sees. Searching for "which version does user 45 get?" is exactly determining which side of the pivot they fall on.
+```
+Ring buffer state (timestamps in ms):
+[1500, 1550, 1600, 1650, 900, 950, 1000, 1050, 1100]
+                        ↑ wrap point (newest wrote here)
+
+This is EXACTLY like:
+[4, 5, 6, 7, 0, 1, 2, 3]  ← rotated sorted array!
+```
+
+Search for "when did timestamp 1000 occur?" = Rotated binary search!
 
 ---
 
-The Naive Implementation (That Everyone Starts With)
+## PART 3: THE NAIVE IMPLEMENTATION (That Everyone Writes First)
 
 ```python
-# What most engineers write first (and regret later)
-class BrokenFeatureFlag:
-    def __init__(self):
-        self.config = {
-            "new_payment": {
-                "enabled_percentage": 10,
-                "enabled": True
-            }
-        }
-    
-    def is_enabled(self, user_id, feature_name):
-        config = self.config.get(feature_name)
-        if not config:
-            return False
-            
-        # Simple percentage check
-        return hash(user_id) % 100 < config["enabled_percentage"]
-```
-
-The critical insight: The problem isn't the hash distribution. The problem is non-stickiness during configuration changes.
-
-```
-Day 1: Rollout 10% → Users 0-9 get feature
-Day 2: Increase to 50% → Users 10-49 get feature
-Day 3: Roll back to 10% → Users 10-49 LOSE the feature
-
-User experience: "Why did this feature disappear and reappear?"
-```
-
-This flip-flopping creates terrible user experiences and breaks stateful features.
-
----
-
-The Rotated Search Solution
-
-What we actually want: a consistent mapping that respects rollout order. Think of user buckets 0-99 as a sorted array, rotated at the rollout percentage:
-
-```
-Visualizing user space as a sorted array:
-[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, ... 99]
-
-When rollout = 30%:
-Users 0-29: See Feature B (new version)
-Users 30-99: See Feature A (old version)
-
-This creates a "rotated" view:
-[B, B, B, ..., B, A, A, A, ..., A]
- ↑ 30% pivot point
-```
-
-Searching for user 45: Which side of the pivot are they on? That's rotated search.
-
-Building the Core Engine
-
-```python
-class RotatedRolloutEngine:
-    """
-    Core concept: User space as a sorted array rotated at percentage pivot
-    """
-    
-    def __init__(self):
-        self.features = {
-            "new_payment": {
-                "pivot": 30,      # 30% rollout
-                "left_of_pivot": "new",   # Users < pivot
-                "right_of_pivot": "old"   # Users >= pivot
-            }
-        }
-    
-    def _get_user_bucket(self, user_id):
-        """Consistent hash to 0-99"""
-        return (mmh3.hash(str(user_id)) & 0x7fffffff) % 100
-    
-    def get_version(self, user_id, feature_name):
-        """Which side of the pivot is this user on?"""
-        feature = self.features.get(feature_name)
-        if not feature:
-            return "old"
-            
-        bucket = self._get_user_bucket(user_id)
-        pivot = feature["pivot"]
+class BrokenRingBuffer:
+    def __init__(self, capacity=1000):
+        self.capacity = capacity
+        self.buffer = [None] * capacity
+        self.write_index = 0
         
-        # This is the rotated search decision:
-        if bucket < pivot:
-            return feature["left_of_pivot"]   # Left of pivot (new)
-        else:
-            return feature["right_of_pivot"]  # Right of pivot (old)
-```
-
-The elegance: Changing the pivot point from 10 → 50 smoothly expands the "new" zone without affecting users already in it. Going from 50 → 10 smoothly contracts it.
-
----
-
-The Five Real-World Failure Modes
-
-1. The Canary Cascade
-
-Roll out Feature X to 10%. Works. Roll out to 50%. Errors spike. Why? The 10% and 50% weren't nested—users in 40-50% got different configurations than the original 10%.
-
-2. Configuration Drift
-
-Server A: pivot = 30%
-Server B(replication lag): pivot = 31%
-Result:Users at the boundary get different experiences.
-
-3. Rollback Inconsistency
-
-Rolling back from 50% to 10% must preserve the exact same 10% as before. Otherwise, users see features disappear and reappear randomly.
-
-4. Multi-Dimensional Rotations
-
-Need: 10% of all users + all employees + except EU users. Each rule creates a different "rotation" in user space.
-
-5. Stateful Feature Flip-Flop
-
-User gets feature → creates data → loses feature → gets it back → data gone. Features with user state need sticky assignments.
-
----
-
-Production Hardening: The Gradual Rollout Engine
-
-Layer 1: Monotonic Rollouts with Version History
-
-```python
-class VersionedRollout:
-    def __init__(self):
-        self.history = []  # Timeline of pivot changes
+    def write(self, timestamp, value):
+        self.buffer[self.write_index] = (timestamp, value)
+        self.write_index = (self.write_index + 1) % self.capacity
         
-    def set_pivot(self, new_pivot, version="new"):
-        # Rule: Pivot only increases (unless explicit rollback)
-        current = self.current_pivot()
-        if new_pivot < current:
-            raise ExplicitRollbackRequired()
-            
-        self.history.append({
-            "timestamp": time.time(),
-            "pivot": new_pivot,
-            "version": version
-        })
-```
-
-Why this matters: Users never randomly lose features during normal rollout progression.
-
-Layer 2: Sticky Assignments
-
-```python
-class StickyRollout(RotatedRolloutEngine):
-    def __init__(self):
-        super().__init__()
-        self.sticky_map = {}  # user_id -> version
+    def search_timestamp(self, target_ts):
+        """Find entry closest to target timestamp"""
+        # Naive binary search - ASSUMES buffer is sorted!
+        left, right = 0, self.capacity - 1
         
-    def get_version(self, user_id, feature_name):
-        # Once assigned, stick forever (until explicit override)
-        if user_id in self.sticky_map:
-            return self.sticky_map[user_id]
-            
-        # Otherwise use normal pivot logic
-        version = super().get_version(user_id, feature_name)
-        
-        # "Stick" the assignment
-        self.sticky_map[user_id] = version
-        return version
-```
-
-Visual timeline:
-
-```
-Day 1: User@5% → NEW (stuck as NEW)
-Day 2: Rollout 50% → User stays NEW
-Day 3: Rollback 10% → User stays NEW (not affected)
-```
-
-Layer 3: Consistent Hashing Rings
-
-Instead of simple percentages, use a consistent hashing ring that preserves assignments:
-
-```python
-class ConsistentRolloutRing:
-    def __init__(self, slots=1000):
-        self.slots = slots
-        self.ring = [None] * slots
-        self.pivot_point = 0  # Slots 0..pivot_point-1 get new version
-        
-    def set_pivot(self, percentage):
-        # Always allocate from slot 0 outward
-        new_pivot = int(self.slots * percentage / 100)
-        
-        # Only update unassigned slots (preserve existing)
-        for slot in range(self.pivot_point, new_pivot):
-            if self.ring[slot] is None:
-                self.ring[slot] = "new"
+        while left <= right:
+            mid = (left + right) // 2
+            if self.buffer[mid] is None:
+                right = mid - 1
+                continue
                 
-        self.pivot_point = new_pivot
+            if self.buffer[mid][0] == target_ts:
+                return mid
+            elif self.buffer[mid][0] < target_ts:
+                left = mid + 1
+            else:
+                right = mid - 1
+                
+        return -1  # WRONG ANSWER when buffer has wrapped!
 ```
 
-The guarantee: User bucket → slot mapping never changes, so assignments persist.
+### Why This Breaks
 
-Layer 4: Multi-Dimensional Decision Tree
-
-For complex rollout rules, we need to evaluate multiple "rotations":
-
-```python
-class MultiDimensionalRollout:
-    RULE_TYPES = [
-        "explicit_override",  # Specific users first
-        "exclusion",          # GDPR, geo blocks
-        "percentage",         # Our rotated search
-        "default"             # Fallback
-    ]
-    
-    def evaluate(self, user, feature):
-        for rule_type in self.RULE_TYPES:
-            rule = self.get_rule(feature, rule_type)
-            if rule and self.matches(user, rule):
-                return rule.version
-        return "old"
-    
-    def matches(self, user, rule):
-        if rule.type == "percentage":
-            # Our rotated search
-            bucket = self._get_user_bucket(user.id)
-            return bucket < rule.pivot
-        elif rule.type == "exclusion":
-            return user.region not in rule.excluded_regions
-        # ... other rule types
 ```
+Buffer after wrap:
+Index:  [0]    [1]    [2]    [3]    [4]    [5]
+Data:   1600   1700   1800   1200   1300   1400
+                        ↑ wrap point
 
-The insight: Each dimension creates its own "rotation" in user space. We search through them in priority order.
+Search for 1300:
+- mid = 2, buffer[2] = 1800
+- 1300 < 1800, so search LEFT...
+- BUT 1300 is actually to the RIGHT (after wrap point)!
+
+Binary search assumes: if buffer[mid] > target, target is LEFT
+Ring buffer reality: target might be after the wrap point!
+```
 
 ---
 
-[Advanced Pattern] Gossip-Based Configuration
+## PART 4: THE ROTATED SEARCH SOLUTION
 
-(This is bonus content for large-scale systems)
-
-For massive deployments, we use gossip protocols to avoid central configuration bottlenecks:
+### Finding the Wrap Point First
 
 ```python
-class GossipedFeatureFlags:
-    def __init__(self):
-        self.configs = {}
-        self.peers = []
-        self.versions = {}  # feature -> version number
+def find_wrap_point(buffer):
+    """Find where the buffer wraps (minimum timestamp)"""
+    left, right = 0, len(buffer) - 1
+    
+    while left < right:
+        mid = (left + right) // 2
         
-    def update(self, feature, pivot):
-        # Increment version
-        self.versions[feature] = self.versions.get(feature, 0) + 1
-        
-        # Store with version stamp
-        self.configs[feature] = {
-            "pivot": pivot,
-            "version": self.versions[feature]
-        }
-        
-        # Gossip to random peers
-        for peer in random.sample(self.peers, 3):
-            self._send_update(peer, feature)
+        if buffer[mid] > buffer[right]:
+            # Wrap point is in right half
+            left = mid + 1
+        else:
+            # Wrap point is in left half (or mid IS the wrap)
+            right = mid
+            
+    return left  # Index of oldest (smallest) timestamp
 ```
 
-Why gossip matters: No single point of failure, works during network partitions, eventually consistent.
+### The Production Ring Buffer
+
+```python
+class RotatedRingBuffer:
+    """Ring buffer with O(log n) search using rotated binary search"""
+    
+    def __init__(self, capacity=1000):
+        self.capacity = capacity
+        self.buffer = [None] * capacity
+        self.write_index = 0
+        self.count = 0  # Track how many entries exist
+        
+    def write(self, timestamp, value):
+        self.buffer[self.write_index] = (timestamp, value)
+        self.write_index = (self.write_index + 1) % self.capacity
+        self.count = min(self.count + 1, self.capacity)
+        
+    def _get_wrap_point(self):
+        """Where does oldest data start?"""
+        if self.count < self.capacity:
+            return 0  # Not wrapped yet
+        return self.write_index  # Oldest is right after newest
+        
+    def search(self, target_ts):
+        """O(log n) search in rotated buffer"""
+        if self.count == 0:
+            return -1
+            
+        wrap = self._get_wrap_point()
+        
+        if wrap == 0:
+            # Not wrapped - normal binary search
+            return self._binary_search(0, self.count - 1, target_ts)
+            
+        # Wrapped - use rotated search
+        return self._rotated_search(target_ts, wrap)
+        
+    def _rotated_search(self, target_ts, wrap):
+        """Binary search on rotated array"""
+        left, right = 0, self.count - 1
+        
+        while left <= right:
+            mid = (left + right) // 2
+            mid_ts = self.buffer[mid][0]
+            
+            if mid_ts == target_ts:
+                return mid
+                
+            # Is LEFT half sorted? (no wrap in left half)
+            left_ts = self.buffer[left][0]
+            if left_ts <= mid_ts:
+                # Left is sorted
+                if left_ts <= target_ts < mid_ts:
+                    right = mid - 1
+                else:
+                    left = mid + 1
+            else:
+                # Right is sorted
+                right_ts = self.buffer[right][0]
+                if mid_ts < target_ts <= right_ts:
+                    left = mid + 1
+                else:
+                    right = mid - 1
+                    
+        return -1
+```
 
 ---
 
-ProductionX: The Complete Gradual Rollout Engine
+## PART 5: THE FIVE REAL-WORLD FAILURE MODES
+
+### 1. The Midnight Wrap
+
+```
+Problem: Buffer wraps at exactly midnight. Timestamp comparison 
+         crosses date boundary.
+
+23:59:59.999 → 00:00:00.001
+
+Binary search sees: 86399999ms > 1ms → goes wrong direction!
+
+Solution: Use monotonic timestamps (system uptime, not wall clock)
+```
+
+### 2. The Partial Fill
+
+```
+Problem: Buffer isn't full yet. Some indices are None.
+
+[1000, 1100, 1200, None, None, None, None, None]
+                    ↑ search hits None, crashes
+
+Solution: Track count separately, limit search to valid range
+```
+
+### 3. The Duplicate Timestamp
+
+```
+Problem: Two events at same millisecond. Which one?
+
+[1000, 1100, 1100, 1100, 1200]  ← three entries at 1100
+
+Binary search finds ONE, but you needed the FIRST.
+
+Solution: After finding match, scan backward to find first occurrence
+```
+
+### 4. The Range Query
+
+```
+Problem: "Find all entries between timestamp A and B"
+
+Can't just iterate [indexA...indexB] - they might span the wrap!
+
+Index:  [0]    [1]    [2]    [3]    [4]    [5]
+Data:   1600   1700   1800   1200   1300   1400
+        ←newer              ↑wrap   ←older
+
+Range 1250-1650 spans indices: [4, 5, 0] (wraps around!)
+
+Solution: Handle wrap-aware range iteration
+```
+
+### 5. The Concurrent Write
+
+```
+Problem: Reader searches while writer overwrites.
+
+Thread 1 (reader): Binary search, mid = 500
+Thread 2 (writer): Overwrites index 500
+Thread 1 (reader): Reads garbage
+
+Solution: Copy-on-write or sequence locks
+```
+
+---
+
+## PART 6: PRODUCTION HARDENING
+
+### Layer 1: Monotonic Timestamps
 
 ```python
-class GradualRolloutEngine:
+class MonotonicRingBuffer(RotatedRingBuffer):
+    """Use monotonic clock to avoid midnight wrap issues"""
+    
+    def __init__(self, capacity):
+        super().__init__(capacity)
+        self.start_time = time.monotonic_ns()
+        
+    def _get_monotonic_ts(self):
+        """Nanoseconds since buffer creation"""
+        return time.monotonic_ns() - self.start_time
+        
+    def write(self, value):
+        ts = self._get_monotonic_ts()
+        super().write(ts, value)
+```
+
+### Layer 2: Range Queries with Wrap Awareness
+
+```python
+def range_query(self, start_ts, end_ts):
+    """Get all entries in timestamp range, handling wrap"""
+    if self.count == 0:
+        return []
+        
+    results = []
+    wrap = self._get_wrap_point()
+    
+    # Iterate from oldest to newest
+    for i in range(self.count):
+        idx = (wrap + i) % self.capacity
+        entry = self.buffer[idx]
+        
+        if entry and start_ts <= entry[0] <= end_ts:
+            results.append(entry)
+            
+    return results
+```
+
+### Layer 3: Concurrent Access Safety
+
+```python
+class ConcurrentRingBuffer:
+    """Thread-safe ring buffer with sequence locks"""
+    
+    def __init__(self, capacity):
+        self.capacity = capacity
+        self.buffer = [None] * capacity
+        self.write_index = 0
+        self.sequence = 0  # Incremented on each write
+        
+    def write(self, timestamp, value):
+        # Odd sequence = write in progress
+        self.sequence += 1  
+        
+        self.buffer[self.write_index] = (timestamp, value)
+        self.write_index = (self.write_index + 1) % self.capacity
+        
+        # Even sequence = write complete
+        self.sequence += 1  
+        
+    def read_consistent(self, index):
+        """Read with consistency check"""
+        while True:
+            seq_before = self.sequence
+            if seq_before % 2 == 1:
+                continue  # Write in progress, retry
+                
+            value = self.buffer[index]
+            
+            seq_after = self.sequence
+            if seq_before == seq_after:
+                return value  # Consistent read
+            # Else: write happened during read, retry
+```
+
+### Layer 4: The Complete Production Buffer
+
+```python
+class ProductionRingBuffer:
     """
-    Production feature flag system with:
-    1. Versioned history for audit and rollback
-    2. Consistent hashing with sticky assignments
-    3. Multi-dimensional rules (%, geo, user lists)
-    4. Metrics and monitoring hooks
+    Production-ready ring buffer with:
+    1. O(log n) rotated search
+    2. Monotonic timestamps
+    3. Range queries
+    4. Concurrent access safety
+    5. Metrics and monitoring
     """
     
-    def __init__(self):
-        self.rings = {}  # feature -> ConsistentRolloutRing
-        self.history = VersionHistory()
-        self.overrides = StickyAssignmentStore()
-        self.metrics = RolloutMetrics()
+    def __init__(self, capacity, name="default"):
+        self.capacity = capacity
+        self.name = name
+        self.buffer = [None] * capacity
+        self.write_index = 0
+        self.count = 0
+        self.sequence = 0
+        self.start_time = time.monotonic_ns()
+        self.metrics = BufferMetrics(name)
         
-    def rollout(self, feature, percentage, version="new"):
-        """Safely increase rollout percentage"""
-        # 1. Validate monotonic (unless explicit rollback)
-        current = self.get_current_percentage(feature)
-        if percentage < current:
-            raise ExplicitRollbackRequired(percentage)
+    def write(self, value):
+        """Thread-safe write with metrics"""
+        ts = time.monotonic_ns() - self.start_time
+        
+        self.sequence += 1  # Mark write start
+        
+        self.buffer[self.write_index] = (ts, value)
+        self.write_index = (self.write_index + 1) % self.capacity
+        self.count = min(self.count + 1, self.capacity)
+        
+        self.sequence += 1  # Mark write complete
+        
+        self.metrics.record_write()
+        
+    def search(self, target_ts):
+        """O(log n) search with wrap handling"""
+        self.metrics.record_search()
+        
+        # Wait for consistent read window
+        while self.sequence % 2 == 1:
+            pass
             
-        # 2. Update the ring
-        ring = self.rings[feature]
-        ring.set_pivot(percentage)
+        wrap = self._get_wrap_point()
         
-        # 3. Record in history
-        self.history.record(feature, {
-            "timestamp": time.time(),
-            "percentage": percentage,
-            "version": version
-        })
-        
-        # 4. Emit metrics
-        self.metrics.emit_rollout_change(feature, percentage)
-        
-    def get_version(self, user, feature):
-        """Main query: What should this user see?"""
-        
-        # Priority 1: Explicit overrides
-        if self.overrides.has_override(user.id, feature):
-            return self.overrides.get_override(user.id, feature)
+        if wrap == 0 or self.count < self.capacity:
+            return self._binary_search(0, self.count - 1, target_ts)
+        else:
+            return self._rotated_search(target_ts)
             
-        # Priority 2: Exclusions
-        if self.exclusions.is_excluded(user, feature):
-            return "disabled"
-            
-        # Priority 3: Percentage rollout (rotated search)
-        ring = self.rings[feature]
-        return ring.get_version_for_user(user.id)
+    def get_recent(self, n):
+        """Get n most recent entries (efficient: no search needed)"""
+        results = []
+        for i in range(min(n, self.count)):
+            idx = (self.write_index - 1 - i) % self.capacity
+            if self.buffer[idx]:
+                results.append(self.buffer[idx])
+        return results
 ```
 
-Production Guarantees:
+---
 
-· ✅ Monotonic rollouts (no accidental rollbacks)
-· ✅ Sticky assignments (no user flip-flop)
-· ✅ Consistent hashing (same user, same bucket)
-· ✅ Fast rollbacks (to any historical version)
-· ✅ Real-time metrics (adoption, errors by version)
+## PART 7: PRODUCTION GUARANTEES
+
+| Guarantee | How We Achieve It |
+|-----------|-------------------|
+| O(log n) search | Rotated binary search algorithm |
+| No midnight bugs | Monotonic timestamps |
+| Thread safety | Sequence locks for reads |
+| Range queries | Wrap-aware iteration |
+| No data corruption | Atomic write index updates |
+| Observability | Metrics on every operation |
 
 ---
 
-The Next Constraint: When Order Itself Is Dynamic
+## KEY TAKEAWAYS
 
-Our rotated search system elegantly handles feature rollouts. But what happens when the feature itself needs to maintain sorted order dynamically?
+1. **Ring buffers = Rotated arrays**: When they wrap, data is still sorted... just rotated at the wrap point.
 
-Consider: You're building a real-time leaderboard. Users constantly get new scores. You need to:
+2. **Normal binary search breaks on wrapped buffers**: It doesn't know the rotation point.
 
-1. Find a user's position (search in sorted scores)
-2. Insert new scores (maintain sorted order)
-3. Get top N users (range query)
+3. **The key insight**: One half is ALWAYS sorted. Use that to decide which half contains your target.
 
-This is Binary Search Tree territory. But in production, your BST lives in memory—and memory fails. How do we persist sorted trees? How do we keep them balanced under millions of concurrent updates?
+4. **Production concerns beyond the algorithm**:
+   - Monotonic timestamps (avoid clock issues)
+   - Concurrent access (sequence locks)
+   - Range queries (wrap-aware iteration)
+   - Partial fills (track count separately)
 
-In Episode 2.4, we'll take LeetCode #98 (Validate BST) and #701 (Insert into BST) and build an in-memory ordered key-value store that survives process crashes, handles millions of ops/second, and scales beyond RAM using disk-backed structures.
-
-The journey so far:
-
-· 2.1: Search static sorted data on disk
-· 2.2: Search ranges in changing data
-· 2.3: Search rotated/partitioned spaces
-· 2.4: Maintain sorted order dynamically as data constantly changes
-
----
-
-Key Takeaways
-
-1. Feature rollouts = rotated search: Mapping users to versions is determining which side of a pivot they fall on.
-2. Stickiness is non-negotiable: Once a user gets a feature, they should keep it (unless explicitly removed).
-3. Monotonic rollouts prevent chaos: Percentage should only increase unless you explicitly call a rollback method.
-4. Multi-dimensional rollouts stack: Each rule type creates a different "rotation" in user space that must be searched in priority order.
-5. Version everything: Rollback requires knowing exactly what was deployed when. History is your audit trail.
-
-The production insight: Sometimes data isn't just sorted—it's sorted from an arbitrary starting point. Recognizing that "rotation" and building systems that preserve consistency across those boundaries is what separates toy projects from production systems.
+5. **Where you've seen ring buffers**:
+   - Log aggregators (last N errors)
+   - System monitoring (CPU/memory history)
+   - Network packet capture
+   - Audio/video streaming buffers
 
 ---
 
-Next time: We leave the world of static searches and enter dynamic order maintenance with Binary Search Trees, building a production-ready ordered key-value store that must stay sorted even as the world changes around it.
+## TEASER: EPISODE 2.4
+
+Our ring buffer stores data... but what if we need SORTED data that changes dynamically?
+
+Consider a real-time leaderboard:
+- Millions of score updates per second
+- "What's player X's rank?" needs to be FAST
+- Top 100 query runs constantly
+
+Static arrays won't work - we need dynamic sorted structures. That's **Binary Search Trees**.
+
+Next time: LeetCode #98 (Validate BST) and #701 (Insert into BST) become the foundation for an in-memory ordered key-value store.
+
+---
+
+## Animation Notes
+
+1. **Ring Buffer Visualization**: Show circular buffer with head/tail pointers, wrap animation
+2. **Binary Search Failure**: Animate search going wrong direction after wrap
+3. **Rotated Search Success**: Show algorithm identifying sorted half, converging correctly
+4. **Range Query Wrap**: Visualize query spanning the wrap point
+5. **Concurrent Access**: Show sequence number protecting reads during writes

@@ -1,0 +1,1362 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Episode 2.5: B-Trees - The Database Index Engine</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@4.5.0/dist/reset.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@4.5.0/dist/reveal.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@4.5.0/dist/theme/black.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@4.5.0/plugin/highlight/monokai.css">
+    <style>
+        :root {
+            --primary-green: #00ff88;
+            --primary-blue: #00d4ff;
+            --primary-purple: #b388ff;
+            --primary-orange: #ff9500;
+            --primary-red: #ff4757;
+            --primary-yellow: #ffd93d;
+            --bg-dark: #1a1a2e;
+            --bg-card: #16213e;
+        }
+        
+        .reveal { font-family: 'Segoe UI', system-ui, sans-serif; }
+        .reveal h1, .reveal h2, .reveal h3 { text-transform: none; font-weight: 700; }
+        .reveal h1 {
+            font-size: 2.5em;
+            background: linear-gradient(135deg, var(--primary-blue), var(--primary-purple));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .reveal h2 { font-size: 1.8em; color: var(--primary-green); }
+        .reveal h3 { font-size: 1.4em; color: var(--primary-blue); }
+        
+        .subtitle { font-size: 1.2em; color: var(--primary-purple); margin-top: 0.5em; }
+        .episode-badge {
+            display: inline-block;
+            background: linear-gradient(135deg, var(--primary-orange), var(--primary-red));
+            padding: 0.3em 1em;
+            border-radius: 20px;
+            font-size: 0.8em;
+            margin-bottom: 1em;
+        }
+        .season-badge {
+            display: inline-block;
+            background: linear-gradient(135deg, var(--primary-blue), var(--primary-purple));
+            padding: 0.2em 0.8em;
+            border-radius: 15px;
+            font-size: 0.6em;
+            margin-bottom: 0.5em;
+        }
+        
+        /* ======== AHA MOMENT STYLES ======== */
+        .aha-moment {
+            background: linear-gradient(135deg, rgba(255, 215, 0, 0.2), rgba(255, 140, 0, 0.1));
+            border: 4px solid #ffd700;
+            border-radius: 25px;
+            padding: 50px;
+            margin: 30px auto;
+            max-width: 850px;
+            text-align: center;
+            box-shadow: 0 0 60px rgba(255, 215, 0, 0.4);
+            animation: glow 2s ease-in-out infinite alternate;
+        }
+        @keyframes glow {
+            from { box-shadow: 0 0 40px rgba(255, 215, 0, 0.3); }
+            to { box-shadow: 0 0 80px rgba(255, 215, 0, 0.6); }
+        }
+        .aha-moment h3 {
+            color: #ffd700 !important;
+            font-size: 1.8em;
+            margin-bottom: 25px;
+        }
+        .aha-moment p { font-size: 1.3em; line-height: 1.6; }
+        .aha-icon { font-size: 4em; margin-bottom: 15px; }
+        
+        .big-reveal {
+            font-size: 3em;
+            font-weight: 900;
+            color: var(--primary-green);
+            text-shadow: 0 0 40px rgba(0, 255, 136, 0.6);
+            margin: 30px 0;
+        }
+        
+        .metaphor-card {
+            background: var(--bg-card);
+            border-radius: 20px;
+            padding: 35px;
+            margin: 25px auto;
+            max-width: 800px;
+            border-left: 6px solid var(--primary-purple);
+        }
+        .metaphor-card .emoji { font-size: 4em; margin-bottom: 20px; }
+        .metaphor-card h4 { color: var(--primary-purple); font-size: 1.4em; margin-bottom: 15px; }
+        
+        .versus-container {
+            display: grid;
+            grid-template-columns: 1fr auto 1fr;
+            gap: 40px;
+            align-items: center;
+            margin: 40px 0;
+        }
+        .versus-box {
+            background: var(--bg-card);
+            border-radius: 15px;
+            padding: 30px;
+            text-align: center;
+        }
+        .versus-box.bad { border-top: 5px solid var(--primary-red); }
+        .versus-box.good { border-top: 5px solid var(--primary-green); }
+        .versus-box .number { font-size: 4em; font-weight: 900; }
+        .versus-box.bad .number { color: var(--primary-red); }
+        .versus-box.good .number { color: var(--primary-green); }
+        .vs-text { font-size: 3em; color: var(--primary-yellow); font-weight: bold; }
+        
+        .warning-box {
+            background: rgba(255, 71, 87, 0.1);
+            border-left: 4px solid var(--primary-red);
+            padding: 1em;
+            margin: 1em 0;
+            border-radius: 0 10px 10px 0;
+        }
+        .highlight-box {
+            background: rgba(0, 255, 136, 0.1);
+            border-left: 4px solid var(--primary-green);
+            padding: 1em;
+            margin: 1em 0;
+            border-radius: 0 10px 10px 0;
+        }
+        .insight-box {
+            background: rgba(0, 212, 255, 0.1);
+            border-left: 4px solid var(--primary-blue);
+            padding: 1em;
+            margin: 1em 0;
+            border-radius: 0 10px 10px 0;
+        }
+        
+        .act-label {
+            position: absolute;
+            top: 10px;
+            right: 20px;
+            font-size: 0.6em;
+            color: var(--primary-purple);
+            opacity: 0.7;
+        }
+        
+        .animation-container {
+            background: var(--bg-card);
+            border-radius: 15px;
+            padding: 20px;
+            margin: 20px auto;
+            max-width: 900px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+        }
+        .animation-canvas {
+            background: var(--bg-dark);
+            border-radius: 10px;
+            display: block;
+            margin: 0 auto;
+        }
+        .control-panel {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 15px;
+            flex-wrap: wrap;
+        }
+        .control-btn {
+            background: linear-gradient(135deg, var(--primary-blue), var(--primary-purple));
+            border: none;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 0.9em;
+            transition: all 0.3s ease;
+        }
+        .control-btn:hover { transform: translateY(-2px); box-shadow: 0 5px 20px rgba(0, 212, 255, 0.4); }
+        .control-btn.active { background: linear-gradient(135deg, var(--primary-green), var(--primary-blue)); }
+        .control-btn.danger { background: linear-gradient(135deg, var(--primary-orange), var(--primary-red)); }
+        .status-display {
+            text-align: center;
+            margin-top: 10px;
+            font-size: 0.9em;
+            color: var(--primary-yellow);
+            min-height: 24px;
+        }
+        
+        .takeaway-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin-top: 20px;
+        }
+        .takeaway-item {
+            background: var(--bg-card);
+            border-radius: 10px;
+            padding: 15px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        .takeaway-item .icon { font-size: 2em; min-width: 50px; text-align: center; }
+        .takeaway-item .text { text-align: left; font-size: 0.85em; }
+        
+        .evolution-step {
+            background: var(--bg-card);
+            border-radius: 10px;
+            padding: 15px;
+            margin: 10px 0;
+            text-align: left;
+        }
+        .evolution-step h4 { color: var(--primary-blue); margin-bottom: 8px; }
+        .evolution-step.current { border: 2px solid var(--primary-green); }
+    </style>
+</head>
+<body>
+    <div class="reveal">
+        <div class="slides">
+            
+            <!-- ==================== ACT 1: THE HOOK ==================== -->
+            
+            <!-- Slide 1: Title -->
+            <section>
+                <div class="season-badge">Season 2: Binary Trees & Production Systems</div>
+                <div class="episode-badge">Episode 2.5</div>
+                <h1>B-Trees</h1>
+                <p class="subtitle">The Database Index Engine</p>
+                <p style="margin-top: 2em; font-size: 0.9em; color: #888;">
+                    From Episode 2.4's In-Memory BST to Disk-Optimized Storage
+                </p>
+            </section>
+            
+            <!-- Slide 2: The Crisis - Story First -->
+            <section>
+                <span class="act-label">ACT 1: THE HOOK</span>
+                <h2>🚨 The 150GB Cliff</h2>
+                <div class="metaphor-card">
+                    <div class="emoji">📊</div>
+                    <p style="font-size: 1.2em;">Your beautiful BST index worked perfectly for 3 years...</p>
+                    <div class="fragment" style="margin-top: 20px;">
+                        <p><strong>100GB database:</strong> Queries: <span style="color: var(--primary-green);">10ms ✓</span></p>
+                        <p><strong>150GB database:</strong> Queries: <span style="color: var(--primary-red);">500ms 💀</span></p>
+                    </div>
+                    <div class="fragment" style="margin-top: 20px; color: var(--primary-yellow);">
+                        <p>Nothing changed. Same code. Same queries. Same hardware.</p>
+                        <p style="font-size: 1.3em; margin-top: 15px;"><strong>What happened?</strong></p>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- Slide 3: The Real Problem (Visual, No Code) -->
+            <section>
+                <span class="act-label">ACT 1: THE HOOK</span>
+                <h2>The Invisible Enemy</h2>
+                <p style="font-size: 1.3em; margin-bottom: 30px;">Your data crossed a threshold...</p>
+                <div class="versus-container">
+                    <div class="versus-box good">
+                        <p>Data in RAM</p>
+                        <div class="number">100ns</div>
+                        <p>per access</p>
+                    </div>
+                    <div class="vs-text">→</div>
+                    <div class="versus-box bad">
+                        <p>Data on Disk</p>
+                        <div class="number">10ms</div>
+                        <p>per access</p>
+                    </div>
+                </div>
+                <div class="fragment big-reveal">
+                    100,000× SLOWER!
+                </div>
+            </section>
+            
+            <!-- Slide 4: AHA MOMENT #1 - The Library Analogy -->
+            <section>
+                <span class="act-label">💡 AHA MOMENT</span>
+                <div class="aha-moment">
+                    <div class="aha-icon">📚</div>
+                    <h3>The Library Analogy</h3>
+                    <p>
+                        Imagine a library where <strong>every book is in a locked box</strong>.<br><br>
+                        To find one word, you must:<br>
+                        <span style="color: var(--primary-red);">Unlock box → Read → Lock → Walk to next box → Repeat</span><br><br>
+                        <span class="fragment" style="color: var(--primary-green); font-size: 1.2em;">
+                            BST on disk = Opening <strong>20 boxes</strong> for each search!
+                        </span>
+                    </p>
+                </div>
+            </section>
+            
+            <!-- Slide 5: The BST Problem Visualized -->
+            <section>
+                <span class="act-label">ACT 1: THE HOOK</span>
+                <h2>🔴 BST on Disk = Disaster</h2>
+                <div class="animation-container">
+                    <canvas id="bstDiskCanvas" class="animation-canvas" width="800" height="300"></canvas>
+                    <div class="control-panel">
+                        <button class="control-btn danger" onclick="bstDiskAnim.searchBST()">Search BST (20 seeks)</button>
+                        <button class="control-btn active" onclick="bstDiskAnim.searchBTree()">Search B-Tree (3 seeks)</button>
+                        <button class="control-btn" onclick="bstDiskAnim.reset()">Reset</button>
+                    </div>
+                    <div class="status-display" id="bstDiskStatus">Click to compare: Each node = 1 disk seek</div>
+                </div>
+            </section>
+            
+            <!-- Slide 6: AHA MOMENT #2 - THE BREAKTHROUGH -->
+            <section>
+                <span class="act-label">💡 AHA MOMENT</span>
+                <div class="aha-moment">
+                    <div class="aha-icon">💡</div>
+                    <h3>The Disk Block Revelation</h3>
+                    <p style="font-size: 1.5em; margin-bottom: 30px;">
+                        Disks don't read <strong>bytes</strong>.<br>
+                        They read <strong>blocks</strong>!
+                    </p>
+                    <div class="fragment">
+                        <p style="background: rgba(0,0,0,0.3); padding: 20px; border-radius: 10px;">
+                            Reading 1 byte costs the same as reading <strong>4,096 bytes</strong>!<br><br>
+                            <span style="color: var(--primary-green); font-size: 1.3em;">
+                                So why store 1 key per node when you can store <strong>hundreds</strong>?
+                            </span>
+                        </p>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- Slide 7: The Visual Comparison -->
+            <section>
+                <span class="act-label">ACT 2: THE SOLUTION</span>
+                <h2>The B-Tree Insight</h2>
+                <div class="versus-container">
+                    <div class="versus-box bad">
+                        <p style="font-size: 1.2em;">BST: 1 key per node</p>
+                        <div class="number">20</div>
+                        <p>disk reads for 1M keys</p>
+                        <p style="font-size: 0.8em; color: #888;">log₂(1,000,000) = 20</p>
+                    </div>
+                    <div class="vs-text">VS</div>
+                    <div class="versus-box good">
+                        <p style="font-size: 1.2em;">B-Tree: 100+ keys per node</p>
+                        <div class="number">3</div>
+                        <p>disk reads for 1M keys</p>
+                        <p style="font-size: 0.8em; color: #888;">log₁₀₀(1,000,000) = 3</p>
+                    </div>
+                </div>
+                <div class="fragment highlight-box" style="max-width: 700px; margin: 30px auto; text-align: center;">
+                    <strong>Same data. Same algorithm. 7× fewer disk reads.</strong>
+                </div>
+            </section>
+            
+            <!-- Slide 8: B-Tree Visualization -->
+            <section>
+                <span class="act-label">ACT 2: THE SOLUTION</span>
+                <h2>🌳 B-Tree Structure</h2>
+                <div class="animation-container">
+                    <canvas id="btreeCanvas" class="animation-canvas" width="800" height="320"></canvas>
+                    <div class="control-panel">
+                        <button class="control-btn" onclick="btreeAnim.search(42)">Search for 42</button>
+                        <button class="control-btn" onclick="btreeAnim.search(78)">Search for 78</button>
+                        <button class="control-btn" onclick="btreeAnim.reset()">Reset</button>
+                    </div>
+                    <div class="status-display" id="btreeStatus">Each box = one disk block with MANY keys</div>
+                </div>
+            </section>
+            
+            <!-- Slide 9: AHA MOMENT #3 - B+Tree Magic -->
+            <section>
+                <span class="act-label">💡 AHA MOMENT</span>
+                <div class="aha-moment">
+                    <div class="aha-icon">🔗</div>
+                    <h3>The B+Tree Secret</h3>
+                    <p>
+                        What if you're searching for <strong>"all users aged 25-35"</strong>?<br><br>
+                        In a regular tree, you'd search 11 times (25, 26, 27...)
+                    </p>
+                    <div class="fragment" style="margin-top: 30px;">
+                        <p style="background: rgba(0,255,136,0.2); padding: 20px; border-radius: 10px;">
+                            <strong>B+Tree innovation:</strong> Leaves are <span style="color: var(--primary-green);">linked together!</span><br><br>
+                            Find 25 once → Walk right through linked leaves → Done!
+                        </p>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- Slide 10: Range Scan Animation -->
+            <section>
+                <span class="act-label">ACT 2: THE SOLUTION</span>
+                <h2>⚡ Range Scans Made Easy</h2>
+                <div class="animation-container">
+                    <canvas id="rangeScanCanvas" class="animation-canvas" width="800" height="280"></canvas>
+                    <div class="control-panel">
+                        <button class="control-btn" onclick="rangeScanAnim.findStart()">1. Find Start (O(log n))</button>
+                        <button class="control-btn active" onclick="rangeScanAnim.scanRange()">2. Walk Links (Sequential)</button>
+                        <button class="control-btn" onclick="rangeScanAnim.reset()">Reset</button>
+                    </div>
+                    <div class="status-display" id="rangeScanStatus">Query: WHERE price BETWEEN 100 AND 500</div>
+                </div>
+            </section>
+            
+            <!-- Slide 11: B-Tree Split Animation -->
+            <section>
+                <span class="act-label">ACT 2: THE SOLUTION</span>
+                <h2>🔄 Growing UP, Not DOWN</h2>
+                <div class="animation-container">
+                    <canvas id="splitCanvas" class="animation-canvas" width="800" height="320"></canvas>
+                    <div class="control-panel">
+                        <button class="control-btn" onclick="splitAnim.insertUntilFull()">Fill the Node</button>
+                        <button class="control-btn danger" onclick="splitAnim.triggerSplit()">Trigger Split!</button>
+                        <button class="control-btn" onclick="splitAnim.reset()">Reset</button>
+                    </div>
+                    <div class="status-display" id="splitStatus">When full: Split node, promote middle key UP</div>
+                </div>
+                <p class="fragment" style="margin-top: 20px; color: var(--primary-yellow);">
+                    Unlike other trees, B-Trees grow from the <strong>bottom up</strong>!
+                </p>
+            </section>
+            
+            <!-- Slide 12: AHA MOMENT #4 - Buffer Pool -->
+            <section>
+                <span class="act-label">💡 AHA MOMENT</span>
+                <div class="aha-moment">
+                    <div class="aha-icon">🧠</div>
+                    <h3>The Buffer Pool Trick</h3>
+                    <p>
+                        "But wait... disk is STILL slow even with B-Trees!"<br><br>
+                        <span style="color: var(--primary-purple);">True. So we cheat.</span>
+                    </p>
+                    <div class="fragment" style="margin-top: 25px;">
+                        <p style="background: rgba(0,255,136,0.2); padding: 20px; border-radius: 10px;">
+                            <strong>Buffer Pool:</strong> Keep hot B-Tree pages in RAM!<br><br>
+                            Root node? <span style="color: var(--primary-green);">Always cached.</span><br>
+                            Popular indexes? <span style="color: var(--primary-green);">Cached.</span><br>
+                            Most queries? <span style="color: var(--primary-green);">Never touch disk!</span>
+                        </p>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- Slide 13: Buffer Pool Animation -->
+            <section>
+                <span class="act-label">ACT 3: PRODUCTION</span>
+                <h2>🧠 Buffer Pool in Action</h2>
+                <div class="animation-container">
+                    <canvas id="bufferPoolCanvas" class="animation-canvas" width="800" height="300"></canvas>
+                    <div class="control-panel">
+                        <button class="control-btn" onclick="bufferPoolAnim.accessPage(1)">Access Page 1</button>
+                        <button class="control-btn" onclick="bufferPoolAnim.accessPage(2)">Access Page 2</button>
+                        <button class="control-btn" onclick="bufferPoolAnim.accessPage(4)">Access Page 4 (Miss)</button>
+                        <button class="control-btn" onclick="bufferPoolAnim.reset()">Reset</button>
+                    </div>
+                    <div class="status-display" id="bufferPoolStatus">Hot pages stay in RAM - no disk reads!</div>
+                </div>
+            </section>
+            
+            <!-- Slide 14: Production Recipe (Minimal Code) -->
+            <section>
+                <span class="act-label">ACT 3: PRODUCTION</span>
+                <h2>The Production Recipe</h2>
+                <div class="takeaway-grid">
+                    <div class="takeaway-item">
+                        <div class="icon">📦</div>
+                        <div class="text">
+                            <strong>B+Tree Index</strong><br>
+                            Fat nodes = shallow tree = few disk seeks
+                        </div>
+                    </div>
+                    <div class="takeaway-item">
+                        <div class="icon">🧠</div>
+                        <div class="text">
+                            <strong>Buffer Pool</strong><br>
+                            Cache hot pages, evict cold ones (LRU)
+                        </div>
+                    </div>
+                    <div class="takeaway-item">
+                        <div class="icon">📝</div>
+                        <div class="text">
+                            <strong>Write-Ahead Log</strong><br>
+                            Same pattern from Episode 2.1!
+                        </div>
+                    </div>
+                    <div class="takeaway-item">
+                        <div class="icon">🔄</div>
+                        <div class="text">
+                            <strong>Checkpoints</strong><br>
+                            Flush dirty pages periodically
+                        </div>
+                    </div>
+                </div>
+                <div class="fragment highlight-box" style="max-width: 700px; margin: 30px auto; text-align: center;">
+                    This is exactly what PostgreSQL & MySQL do under the hood.
+                </div>
+            </section>
+            
+            <!-- Slide 15: The Limit -->
+            <section>
+                <span class="act-label">ACT 4: THE LIMIT</span>
+                <h2>⚠️ When B-Trees Struggle</h2>
+                <div class="metaphor-card">
+                    <div class="emoji">🔥</div>
+                    <h4>The Write-Heavy Nightmare</h4>
+                    <p style="font-size: 1.1em;">
+                        <strong>Clickstream:</strong> 1M writes/second<br>
+                        <strong>IoT sensors:</strong> 10M events/minute<br>
+                        <strong>Metrics:</strong> 100K samples/second
+                    </p>
+                    <div class="fragment" style="margin-top: 25px; padding: 20px; background: rgba(255,71,87,0.2); border-radius: 10px;">
+                        <p>B-Tree writes: <strong>Read page → Modify → Write page</strong></p>
+                        <p style="color: var(--primary-red);">Every write = 2-4 random I/O operations!</p>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- Slide 16: Write Amplification Visual -->
+            <section>
+                <span class="act-label">ACT 4: THE LIMIT</span>
+                <h2>📝 Write Amplification</h2>
+                <div class="animation-container">
+                    <canvas id="writeAmpCanvas" class="animation-canvas" width="800" height="280"></canvas>
+                    <div class="control-panel">
+                        <button class="control-btn danger" onclick="writeAmpAnim.showBTree()">B-Tree: Random I/O</button>
+                        <button class="control-btn active" onclick="writeAmpAnim.showLSM()">LSM: Sequential I/O</button>
+                        <button class="control-btn" onclick="writeAmpAnim.reset()">Reset</button>
+                    </div>
+                    <div class="status-display" id="writeAmpStatus">Click to compare write paths</div>
+                </div>
+            </section>
+            
+            <!-- Slide 17: Next Episode Teaser -->
+            <section>
+                <span class="act-label">ACT 4: THE LIMIT</span>
+                <h2>🔮 The Question...</h2>
+                <div class="metaphor-card" style="border-left-color: var(--primary-yellow);">
+                    <p style="font-size: 1.4em; margin-bottom: 30px;">
+                        What if we <strong>flipped</strong> the tradeoff?
+                    </p>
+                    <p style="font-size: 1.2em;">
+                        B-Trees: <span style="color: var(--primary-green);">Great reads</span>, <span style="color: var(--primary-red);">slow writes</span>
+                    </p>
+                    <div class="fragment" style="margin-top: 30px;">
+                        <p style="font-size: 1.5em; color: var(--primary-yellow);">
+                            Could we build the opposite?
+                        </p>
+                    </div>
+                </div>
+                <div class="fragment" style="margin-top: 30px;">
+                    <p style="color: var(--primary-purple); font-size: 1.3em;">
+                        <strong>Next Episode:</strong> LSM-Trees - The Write-Optimized Engine
+                    </p>
+                </div>
+            </section>
+            
+            <!-- Slide 18: Key Takeaways -->
+            <section>
+                <span class="act-label">ACT 5: MASTERY</span>
+                <h2>🎯 The 3 Big Ideas</h2>
+                <div style="max-width: 800px; margin: 0 auto;">
+                    <div class="takeaway-item" style="margin: 20px 0;">
+                        <div class="icon">📦</div>
+                        <div class="text" style="font-size: 1.1em;">
+                            <strong>Think in Blocks, Not Bytes</strong><br>
+                            Disks read in chunks - pack more data per read!
+                        </div>
+                    </div>
+                    <div class="takeaway-item" style="margin: 20px 0;">
+                        <div class="icon">🔗</div>
+                        <div class="text" style="font-size: 1.1em;">
+                            <strong>Linked Leaves = Fast Ranges</strong><br>
+                            B+Trees chain leaves for efficient range scans
+                        </div>
+                    </div>
+                    <div class="takeaway-item" style="margin: 20px 0;">
+                        <div class="icon">🧠</div>
+                        <div class="text" style="font-size: 1.1em;">
+                            <strong>Cache is King</strong><br>
+                            Buffer pools turn disk into "almost-RAM"
+                        </div>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- Slide 19: Season Arc -->
+            <section>
+                <span class="act-label">ACT 5: MASTERY</span>
+                <h2>The Season 2 Arc</h2>
+                <div style="max-width: 600px; margin: 0 auto;">
+                    <div class="evolution-step">
+                        <h4>Episodes 2.1-2.4</h4>
+                        <p>Binary Search → SSTables → BSTs</p>
+                    </div>
+                    <div class="evolution-step current">
+                        <h4>Episode 2.5: B-Trees ← You Are Here</h4>
+                        <p>Read-optimized DISK storage</p>
+                    </div>
+                    <div class="evolution-step">
+                        <h4>Episode 2.6: LSM-Trees</h4>
+                        <p>Write-optimized disk storage</p>
+                    </div>
+                    <div class="evolution-step">
+                        <h4>Episode 2.7: Hybrid Engines</h4>
+                        <p>Best of both worlds - Season Finale!</p>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- End Slide -->
+            <section>
+                <h2>🎬 End of Episode 2.5</h2>
+                <p class="subtitle">B-Trees - The Database Index Engine</p>
+                <div style="margin-top: 40px;">
+                    <p>Next: Episode 2.6</p>
+                    <p style="color: var(--primary-purple);">"LSM-Trees - The Write-Optimized Revolution"</p>
+                </div>
+                <div style="margin-top: 40px; font-size: 0.9em; color: #666;">
+                    <p>40+ years of powering PostgreSQL, MySQL, SQLite, MongoDB...</p>
+                </div>
+            </section>
+            
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/reveal.js@4.5.0/dist/reveal.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/reveal.js@4.5.0/plugin/notes/notes.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/reveal.js@4.5.0/plugin/highlight/highlight.js"></script>
+    
+    <script>
+        Reveal.initialize({
+            hash: true,
+            slideNumber: true,
+            width: 1920,
+            height: 1080,
+            margin: 0.1,
+            plugins: [RevealNotes, RevealHighlight]
+        });
+        
+        // ==================== ANIMATION 1: BST vs B-Tree ====================
+        class BSTDiskAnimation {
+            constructor(canvasId, statusId) {
+                this.canvas = document.getElementById(canvasId);
+                this.ctx = this.canvas.getContext('2d');
+                this.statusEl = document.getElementById(statusId);
+                this.reset();
+            }
+            
+            reset() {
+                this.mode = null;
+                this.step = 0;
+                this.draw();
+                this.statusEl.textContent = 'Click to compare: Each node = 1 disk seek';
+            }
+            
+            searchBST() {
+                this.mode = 'bst';
+                this.step = 0;
+                this.animateBST();
+            }
+            
+            searchBTree() {
+                this.mode = 'btree';
+                this.step = 0;
+                this.animateBTree();
+            }
+            
+            animateBST() {
+                this.step++;
+                this.draw();
+                if (this.step < 7) {
+                    this.statusEl.textContent = `🔴 BST: Disk seek ${this.step}... 10ms each... already ${this.step * 10}ms!`;
+                    setTimeout(() => this.animateBST(), 300);
+                } else {
+                    this.statusEl.textContent = `🔴 BST: ${this.step} seeks × 10ms = 70ms+ (and we're only at depth 7 of 20!)`;
+                }
+            }
+            
+            animateBTree() {
+                this.step++;
+                this.draw();
+                if (this.step < 4) {
+                    this.statusEl.textContent = `🟢 B-Tree: Disk seek ${this.step} of 3...`;
+                    setTimeout(() => this.animateBTree(), 500);
+                } else {
+                    this.statusEl.textContent = `🟢 B-Tree: Found in 3 seeks = 30ms. That's 7× fewer than BST!`;
+                }
+            }
+            
+            draw() {
+                const ctx = this.ctx;
+                const w = this.canvas.width;
+                const h = this.canvas.height;
+                
+                ctx.fillStyle = '#1a1a2e';
+                ctx.fillRect(0, 0, w, h);
+                
+                // Labels
+                ctx.fillStyle = '#fff';
+                ctx.font = 'bold 20px Segoe UI';
+                ctx.textAlign = 'center';
+                ctx.fillText('Binary Search Tree', 200, 30);
+                ctx.fillText('B-Tree', 600, 30);
+                
+                // Draw BST (left side)
+                this.drawBST(200, 55);
+                
+                // Draw B-Tree (right side)
+                this.drawBTree(600, 55);
+            }
+            
+            drawBST(centerX, startY) {
+                const ctx = this.ctx;
+                const levels = [
+                    [{x: 0}],
+                    [{x: -60}, {x: 60}],
+                    [{x: -90}, {x: -30}, {x: 30}, {x: 90}],
+                    [{x: -105}, {x: -75}, {x: -45}, {x: -15}, {x: 15}, {x: 45}, {x: 75}, {x: 105}]
+                ];
+                
+                levels.forEach((level, li) => {
+                    level.forEach((node, ni) => {
+                        const x = centerX + node.x;
+                        const y = startY + li * 55;
+                        
+                        let highlight = this.mode === 'bst' && li < this.step;
+                        
+                        ctx.fillStyle = highlight ? '#ff4757' : '#16213e';
+                        ctx.strokeStyle = highlight ? '#ff4757' : '#444';
+                        ctx.lineWidth = 2;
+                        ctx.beginPath();
+                        ctx.arc(x, y, 18, 0, Math.PI * 2);
+                        ctx.fill();
+                        ctx.stroke();
+                        
+                        // Draw edges
+                        if (li < 3) {
+                            ctx.strokeStyle = '#333';
+                            const nextLevel = levels[li + 1];
+                            const leftChild = nextLevel[ni * 2];
+                            const rightChild = nextLevel[ni * 2 + 1];
+                            if (leftChild) {
+                                ctx.beginPath();
+                                ctx.moveTo(x, y + 18);
+                                ctx.lineTo(centerX + leftChild.x, startY + (li + 1) * 55 - 18);
+                                ctx.stroke();
+                            }
+                            if (rightChild) {
+                                ctx.beginPath();
+                                ctx.moveTo(x, y + 18);
+                                ctx.lineTo(centerX + rightChild.x, startY + (li + 1) * 55 - 18);
+                                ctx.stroke();
+                            }
+                        }
+                    });
+                });
+                
+                // Show seek count
+                if (this.mode === 'bst') {
+                    ctx.fillStyle = '#ff4757';
+                    ctx.font = 'bold 18px Segoe UI';
+                    ctx.fillText(`${this.step} disk seeks`, centerX, 280);
+                }
+            }
+            
+            drawBTree(centerX, startY) {
+                const ctx = this.ctx;
+                
+                // Root (Level 0)
+                let hl = this.mode === 'btree' && this.step >= 1;
+                ctx.fillStyle = hl ? '#00ff88' : '#16213e';
+                ctx.strokeStyle = hl ? '#00ff88' : '#444';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.roundRect(centerX - 100, startY, 200, 45, 8);
+                ctx.fill();
+                ctx.stroke();
+                ctx.fillStyle = hl ? '#000' : '#fff';
+                ctx.font = '12px Segoe UI';
+                ctx.fillText('[10|20|30|40|50|60|70|80|90]', centerX, startY + 28);
+                
+                // Level 1 nodes
+                const l1Nodes = [
+                    {x: centerX - 150, text: '[1-9]'},
+                    {x: centerX, text: '[21-49]'},
+                    {x: centerX + 150, text: '[71-99]'}
+                ];
+                
+                l1Nodes.forEach((node, i) => {
+                    let hl2 = this.mode === 'btree' && this.step >= 2 && i === 1;
+                    ctx.fillStyle = hl2 ? '#00ff88' : '#16213e';
+                    ctx.strokeStyle = hl2 ? '#00ff88' : '#444';
+                    ctx.beginPath();
+                    ctx.roundRect(node.x - 50, startY + 70, 100, 40, 6);
+                    ctx.fill();
+                    ctx.stroke();
+                    ctx.fillStyle = hl2 ? '#000' : '#888';
+                    ctx.fillText(node.text, node.x, startY + 95);
+                });
+                
+                // Leaf nodes (level 2)
+                let hl3 = this.mode === 'btree' && this.step >= 3;
+                ctx.fillStyle = hl3 ? '#00ff88' : '#16213e';
+                ctx.strokeStyle = hl3 ? '#00ff88' : '#444';
+                ctx.beginPath();
+                ctx.roundRect(centerX - 50, startY + 140, 100, 35, 6);
+                ctx.fill();
+                ctx.stroke();
+                ctx.fillStyle = hl3 ? '#000' : '#888';
+                ctx.fillText('[31-42]', centerX, startY + 162);
+                
+                // Draw edges
+                ctx.strokeStyle = '#333';
+                ctx.beginPath();
+                ctx.moveTo(centerX, startY + 45);
+                ctx.lineTo(centerX - 150, startY + 70);
+                ctx.moveTo(centerX, startY + 45);
+                ctx.lineTo(centerX, startY + 70);
+                ctx.moveTo(centerX, startY + 45);
+                ctx.lineTo(centerX + 150, startY + 70);
+                ctx.moveTo(centerX, startY + 110);
+                ctx.lineTo(centerX, startY + 140);
+                ctx.stroke();
+                
+                // Show seek count
+                if (this.mode === 'btree') {
+                    ctx.fillStyle = '#00ff88';
+                    ctx.font = 'bold 18px Segoe UI';
+                    ctx.fillText(`${Math.min(this.step, 3)} disk seeks`, centerX, 280);
+                }
+            }
+        }
+        
+        // ==================== ANIMATION 2: B-Tree Structure ====================
+        class BTreeAnimation {
+            constructor(canvasId, statusId) {
+                this.canvas = document.getElementById(canvasId);
+                this.ctx = this.canvas.getContext('2d');
+                this.statusEl = document.getElementById(statusId);
+                this.reset();
+            }
+            
+            reset() {
+                this.searchPath = [];
+                this.targetKey = null;
+                this.draw();
+                this.statusEl.textContent = 'Each box = one disk block with MANY keys';
+            }
+            
+            search(key) {
+                this.targetKey = key;
+                this.searchPath = [];
+                this.animateSearch(0);
+            }
+            
+            animateSearch(level) {
+                this.searchPath.push(level);
+                this.draw();
+                
+                if (level < 2) {
+                    this.statusEl.textContent = `Level ${level + 1}: Binary search WITHIN the block (no disk I/O!)`;
+                    setTimeout(() => this.animateSearch(level + 1), 700);
+                } else {
+                    this.statusEl.textContent = `Found ${this.targetKey}! Only 3 disk reads for millions of keys ✓`;
+                }
+            }
+            
+            draw() {
+                const ctx = this.ctx;
+                const w = this.canvas.width;
+                const h = this.canvas.height;
+                
+                ctx.fillStyle = '#1a1a2e';
+                ctx.fillRect(0, 0, w, h);
+                
+                // Root
+                this.drawNode(400, 30, '[10|20|30|40|50|60|70|80|90]', this.searchPath.includes(0));
+                
+                // Level 1
+                this.drawNode(150, 120, '[1|3|5|7|9]', false);
+                this.drawNode(400, 120, '[22|33|42|46|48]', this.searchPath.includes(1));
+                this.drawNode(650, 120, '[52|63|78|84|92]', false);
+                
+                // Level 2 (leaves)
+                this.drawNode(300, 210, '[35|38|40|41|42]', this.searchPath.includes(2) && this.targetKey === 42);
+                this.drawNode(500, 210, '[72|75|76|78|79]', this.searchPath.includes(2) && this.targetKey === 78);
+                
+                // Draw edges
+                ctx.strokeStyle = '#444';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(400, 70); ctx.lineTo(150, 105);
+                ctx.moveTo(400, 70); ctx.lineTo(400, 105);
+                ctx.moveTo(400, 70); ctx.lineTo(650, 105);
+                ctx.moveTo(400, 160); ctx.lineTo(300, 195);
+                ctx.moveTo(400, 160); ctx.lineTo(500, 195);
+                ctx.stroke();
+                
+                // Leaf links
+                ctx.strokeStyle = '#00d4ff';
+                ctx.setLineDash([4, 4]);
+                ctx.beginPath();
+                ctx.moveTo(370, 235); ctx.lineTo(430, 235);
+                ctx.stroke();
+                ctx.setLineDash([]);
+                
+                ctx.fillStyle = '#00d4ff';
+                ctx.font = '14px Segoe UI';
+                ctx.textAlign = 'center';
+                ctx.fillText('← Linked for range scans →', 400, 280);
+            }
+            
+            drawNode(x, y, text, highlight) {
+                const ctx = this.ctx;
+                const width = 190;
+                
+                ctx.fillStyle = highlight ? '#00ff88' : '#16213e';
+                ctx.strokeStyle = highlight ? '#00ff88' : '#444';
+                ctx.lineWidth = highlight ? 3 : 2;
+                
+                ctx.beginPath();
+                ctx.roundRect(x - width/2, y, width, 45, 8);
+                ctx.fill();
+                ctx.stroke();
+                
+                ctx.fillStyle = highlight ? '#000' : '#fff';
+                ctx.font = '13px Segoe UI';
+                ctx.textAlign = 'center';
+                ctx.fillText(text, x, y + 28);
+            }
+        }
+        
+        // ==================== ANIMATION 3: Range Scan ====================
+        class RangeScanAnimation {
+            constructor(canvasId, statusId) {
+                this.canvas = document.getElementById(canvasId);
+                this.ctx = this.canvas.getContext('2d');
+                this.statusEl = document.getElementById(statusId);
+                this.reset();
+            }
+            
+            reset() {
+                this.phase = 'initial';
+                this.scanIndex = 0;
+                this.draw();
+                this.statusEl.textContent = 'Query: WHERE price BETWEEN 100 AND 500';
+            }
+            
+            findStart() {
+                this.phase = 'finding';
+                this.draw();
+                this.statusEl.textContent = 'Step 1: Binary search to find starting leaf...';
+                setTimeout(() => {
+                    this.phase = 'found';
+                    this.draw();
+                    this.statusEl.textContent = 'Found! Now just walk the linked leaves →';
+                }, 1000);
+            }
+            
+            scanRange() {
+                if (this.phase !== 'found' && this.phase !== 'scanning') {
+                    this.findStart();
+                    return;
+                }
+                this.phase = 'scanning';
+                this.animateScan();
+            }
+            
+            animateScan() {
+                this.scanIndex++;
+                this.draw();
+                if (this.scanIndex < 5) {
+                    this.statusEl.textContent = `Scanning leaf ${this.scanIndex}... Sequential read = FAST!`;
+                    setTimeout(() => this.animateScan(), 400);
+                } else {
+                    this.statusEl.textContent = '✓ Range scan complete! No re-traversal needed. Just follow the links!';
+                }
+            }
+            
+            draw() {
+                const ctx = this.ctx;
+                const w = this.canvas.width;
+                const h = this.canvas.height;
+                
+                ctx.fillStyle = '#1a1a2e';
+                ctx.fillRect(0, 0, w, h);
+                
+                const leaves = [
+                    {x: 50, text: '[50-99]', inRange: false},
+                    {x: 180, text: '[100-199]', inRange: true},
+                    {x: 310, text: '[200-299]', inRange: true},
+                    {x: 440, text: '[300-399]', inRange: true},
+                    {x: 570, text: '[400-500]', inRange: true},
+                    {x: 700, text: '[501-600]', inRange: false}
+                ];
+                
+                leaves.forEach((leaf, i) => {
+                    let color = '#16213e';
+                    if (this.phase === 'finding' && i === 1) color = '#ffd93d';
+                    else if (this.phase === 'found' && i === 1) color = '#00ff88';
+                    else if (this.phase === 'scanning' && i >= 1 && i <= this.scanIndex) color = '#00ff88';
+                    
+                    ctx.fillStyle = color;
+                    ctx.strokeStyle = leaf.inRange ? '#00d4ff' : '#333';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.roundRect(leaf.x, 100, 110, 55, 10);
+                    ctx.fill();
+                    ctx.stroke();
+                    
+                    ctx.fillStyle = color === '#16213e' ? '#666' : '#000';
+                    ctx.font = '14px Segoe UI';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(leaf.text, leaf.x + 55, 132);
+                });
+                
+                // Draw links
+                ctx.strokeStyle = '#00d4ff';
+                ctx.lineWidth = 2;
+                for (let i = 0; i < leaves.length - 1; i++) {
+                    ctx.beginPath();
+                    ctx.moveTo(leaves[i].x + 110, 127);
+                    ctx.lineTo(leaves[i + 1].x, 127);
+                    ctx.stroke();
+                }
+                
+                // Range label
+                ctx.fillStyle = '#ffd93d';
+                ctx.font = '16px Segoe UI';
+                ctx.fillText('Range: 100 → 500', 400, 200);
+            }
+        }
+        
+        // ==================== ANIMATION 4: B-Tree Split ====================
+        class SplitAnimation {
+            constructor(canvasId, statusId) {
+                this.canvas = document.getElementById(canvasId);
+                this.ctx = this.canvas.getContext('2d');
+                this.statusEl = document.getElementById(statusId);
+                this.reset();
+            }
+            
+            reset() {
+                this.keys = [10, 20, 30];
+                this.phase = 'initial';
+                this.draw();
+                this.statusEl.textContent = 'When full: Split node, promote middle key UP';
+            }
+            
+            insertUntilFull() {
+                this.keys = [10, 20, 30, 40, 50];
+                this.phase = 'full';
+                this.draw();
+                this.statusEl.textContent = '⚠️ Node is FULL (max 5 keys). Next insert will split!';
+            }
+            
+            triggerSplit() {
+                if (this.phase !== 'full') { this.insertUntilFull(); return; }
+                this.phase = 'splitting';
+                this.draw();
+                this.statusEl.textContent = 'Inserting 25... SPLIT! Middle key (30) goes UP to parent!';
+                setTimeout(() => {
+                    this.phase = 'done';
+                    this.draw();
+                    this.statusEl.textContent = '✓ Split complete! Tree grows UP, not down. Stays balanced!';
+                }, 1500);
+            }
+            
+            draw() {
+                const ctx = this.ctx;
+                const w = this.canvas.width;
+                const h = this.canvas.height;
+                
+                ctx.fillStyle = '#1a1a2e';
+                ctx.fillRect(0, 0, w, h);
+                
+                if (this.phase === 'initial' || this.phase === 'full') {
+                    // Single node
+                    ctx.fillStyle = this.phase === 'full' ? '#ff4757' : '#16213e';
+                    ctx.strokeStyle = this.phase === 'full' ? '#ff4757' : '#444';
+                    ctx.lineWidth = 3;
+                    ctx.beginPath();
+                    ctx.roundRect(250, 130, 300, 60, 12);
+                    ctx.fill();
+                    ctx.stroke();
+                    
+                    ctx.fillStyle = '#fff';
+                    ctx.font = 'bold 22px Segoe UI';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(this.keys.join(' | '), 400, 168);
+                    
+                    if (this.phase === 'full') {
+                        ctx.fillStyle = '#ffd93d';
+                        ctx.font = '16px Segoe UI';
+                        ctx.fillText('⚠️ FULL!', 400, 220);
+                    }
+                } else {
+                    // Split state - new parent
+                    ctx.fillStyle = '#00ff88';
+                    ctx.strokeStyle = '#00ff88';
+                    ctx.lineWidth = 3;
+                    ctx.beginPath();
+                    ctx.roundRect(350, 40, 100, 50, 10);
+                    ctx.fill();
+                    ctx.stroke();
+                    
+                    ctx.fillStyle = '#000';
+                    ctx.font = 'bold 28px Segoe UI';
+                    ctx.textAlign = 'center';
+                    ctx.fillText('30', 400, 75);
+                    
+                    // Left child
+                    ctx.fillStyle = '#00d4ff';
+                    ctx.beginPath();
+                    ctx.roundRect(150, 180, 180, 50, 10);
+                    ctx.fill();
+                    ctx.stroke();
+                    ctx.fillStyle = '#000';
+                    ctx.font = 'bold 20px Segoe UI';
+                    ctx.fillText('10 | 20 | 25', 240, 212);
+                    
+                    // Right child
+                    ctx.fillStyle = '#b388ff';
+                    ctx.beginPath();
+                    ctx.roundRect(470, 180, 180, 50, 10);
+                    ctx.fill();
+                    ctx.stroke();
+                    ctx.fillStyle = '#000';
+                    ctx.fillText('40 | 50', 560, 212);
+                    
+                    // Edges
+                    ctx.strokeStyle = '#444';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.moveTo(380, 90); ctx.lineTo(240, 180);
+                    ctx.moveTo(420, 90); ctx.lineTo(560, 180);
+                    ctx.stroke();
+                    
+                    // Promotion arrow
+                    if (this.phase === 'splitting') {
+                        ctx.strokeStyle = '#ffd93d';
+                        ctx.setLineDash([5, 5]);
+                        ctx.beginPath();
+                        ctx.moveTo(400, 160);
+                        ctx.lineTo(400, 95);
+                        ctx.stroke();
+                        ctx.setLineDash([]);
+                        ctx.fillStyle = '#ffd93d';
+                        ctx.font = '14px Segoe UI';
+                        ctx.fillText('↑ Promote', 400, 140);
+                    }
+                }
+            }
+        }
+        
+        // ==================== ANIMATION 5: Buffer Pool ====================
+        class BufferPoolAnimation {
+            constructor(canvasId, statusId) {
+                this.canvas = document.getElementById(canvasId);
+                this.ctx = this.canvas.getContext('2d');
+                this.statusEl = document.getElementById(statusId);
+                this.reset();
+            }
+            
+            reset() {
+                this.cache = [1, 2, 3];
+                this.lastAccess = null;
+                this.hitMiss = null;
+                this.draw();
+                this.statusEl.textContent = 'Hot pages stay in RAM - no disk reads!';
+            }
+            
+            accessPage(pageId) {
+                this.lastAccess = pageId;
+                const idx = this.cache.indexOf(pageId);
+                
+                if (idx >= 0) {
+                    this.hitMiss = 'hit';
+                    this.cache.splice(idx, 1);
+                    this.cache.unshift(pageId);
+                    this.statusEl.textContent = `Page ${pageId}: CACHE HIT! ⚡ Instant access from RAM!`;
+                } else {
+                    this.hitMiss = 'miss';
+                    const evicted = this.cache.pop();
+                    this.cache.unshift(pageId);
+                    this.statusEl.textContent = `Page ${pageId}: Cache miss. Loaded from disk, evicted page ${evicted}.`;
+                }
+                this.draw();
+            }
+            
+            draw() {
+                const ctx = this.ctx;
+                const w = this.canvas.width;
+                const h = this.canvas.height;
+                
+                ctx.fillStyle = '#1a1a2e';
+                ctx.fillRect(0, 0, w, h);
+                
+                // Disk
+                ctx.fillStyle = '#333';
+                ctx.strokeStyle = '#666';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.roundRect(50, 150, 250, 100, 10);
+                ctx.fill();
+                ctx.stroke();
+                ctx.fillStyle = '#888';
+                ctx.font = 'bold 16px Segoe UI';
+                ctx.textAlign = 'center';
+                ctx.fillText('DISK (Slow: 10ms)', 175, 230);
+                
+                // Buffer Pool
+                ctx.fillStyle = '#1a3a5c';
+                ctx.strokeStyle = '#00d4ff';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.roundRect(450, 60, 300, 180, 15);
+                ctx.fill();
+                ctx.stroke();
+                ctx.fillStyle = '#00d4ff';
+                ctx.fillText('BUFFER POOL (Fast: 100ns)', 600, 50);
+                
+                // Cached pages
+                this.cache.forEach((page, i) => {
+                    const x = 490 + i * 85;
+                    let color = '#00ff88';
+                    if (page === this.lastAccess) {
+                        color = this.hitMiss === 'hit' ? '#00ff88' : '#ffd93d';
+                    }
+                    
+                    ctx.fillStyle = color;
+                    ctx.strokeStyle = '#fff';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.roundRect(x, 100, 70, 80, 10);
+                    ctx.fill();
+                    ctx.stroke();
+                    
+                    ctx.fillStyle = '#000';
+                    ctx.font = 'bold 28px Segoe UI';
+                    ctx.fillText(page, x + 35, 150);
+                    
+                    ctx.font = '11px Segoe UI';
+                    ctx.fillText(i === 0 ? 'MRU' : (i === 2 ? 'LRU' : ''), x + 35, 190);
+                });
+                
+                // Hit/miss indicator
+                if (this.hitMiss) {
+                    ctx.fillStyle = this.hitMiss === 'hit' ? '#00ff88' : '#ffd93d';
+                    ctx.font = 'bold 24px Segoe UI';
+                    ctx.fillText(this.hitMiss === 'hit' ? '✓ CACHE HIT!' : '⚠ CACHE MISS', 175, 120);
+                }
+            }
+        }
+        
+        // ==================== ANIMATION 6: Write Amplification ====================
+        class WriteAmpAnimation {
+            constructor(canvasId, statusId) {
+                this.canvas = document.getElementById(canvasId);
+                this.ctx = this.canvas.getContext('2d');
+                this.statusEl = document.getElementById(statusId);
+                this.reset();
+            }
+            
+            reset() {
+                this.mode = null;
+                this.draw();
+                this.statusEl.textContent = 'Click to compare write paths';
+            }
+            
+            showBTree() {
+                this.mode = 'btree';
+                this.draw();
+                this.statusEl.textContent = '🔴 B-Tree: Read-Modify-Write = Multiple Random I/O per write!';
+            }
+            
+            showLSM() {
+                this.mode = 'lsm';
+                this.draw();
+                this.statusEl.textContent = '🟢 LSM: Append to log = Single Sequential I/O per write!';
+            }
+            
+            draw() {
+                const ctx = this.ctx;
+                const w = this.canvas.width;
+                const h = this.canvas.height;
+                
+                ctx.fillStyle = '#1a1a2e';
+                ctx.fillRect(0, 0, w, h);
+                
+                // B-Tree side
+                ctx.fillStyle = '#fff';
+                ctx.font = 'bold 18px Segoe UI';
+                ctx.textAlign = 'center';
+                ctx.fillText('B-Tree Write', 200, 30);
+                
+                const btreeSteps = [
+                    {y: 55, text: '1. Read page from disk', color: '#ff4757'},
+                    {y: 100, text: '2. Modify in memory', color: '#ffd93d'},
+                    {y: 145, text: '3. Write page back', color: '#ff4757'},
+                    {y: 190, text: '4. Maybe split (more I/O)', color: '#ff4757'}
+                ];
+                
+                btreeSteps.forEach(step => {
+                    ctx.fillStyle = this.mode === 'btree' ? step.color : '#333';
+                    ctx.beginPath();
+                    ctx.roundRect(50, step.y, 300, 35, 8);
+                    ctx.fill();
+                    ctx.fillStyle = this.mode === 'btree' ? '#000' : '#666';
+                    ctx.font = '14px Segoe UI';
+                    ctx.fillText(step.text, 200, step.y + 23);
+                });
+                
+                // LSM side
+                ctx.fillStyle = '#fff';
+                ctx.font = 'bold 18px Segoe UI';
+                ctx.fillText('LSM Write', 600, 30);
+                
+                const lsmSteps = [
+                    {y: 55, text: '1. Append to log (seq)', color: '#00ff88'},
+                    {y: 100, text: '2. Done! ✓', color: '#00ff88'}
+                ];
+                
+                lsmSteps.forEach(step => {
+                    ctx.fillStyle = this.mode === 'lsm' ? step.color : '#333';
+                    ctx.beginPath();
+                    ctx.roundRect(450, step.y, 300, 35, 8);
+                    ctx.fill();
+                    ctx.fillStyle = this.mode === 'lsm' ? '#000' : '#666';
+                    ctx.font = '14px Segoe UI';
+                    ctx.fillText(step.text, 600, step.y + 23);
+                });
+                
+                // Result labels
+                if (this.mode === 'btree') {
+                    ctx.fillStyle = '#ff4757';
+                    ctx.font = 'bold 16px Segoe UI';
+                    ctx.fillText('2-4 Random I/O ops', 200, 250);
+                }
+                if (this.mode === 'lsm') {
+                    ctx.fillStyle = '#00ff88';
+                    ctx.font = 'bold 16px Segoe UI';
+                    ctx.fillText('1 Sequential I/O op', 600, 250);
+                }
+            }
+        }
+        
+        // Initialize
+        const bstDiskAnim = new BSTDiskAnimation('bstDiskCanvas', 'bstDiskStatus');
+        const btreeAnim = new BTreeAnimation('btreeCanvas', 'btreeStatus');
+        const rangeScanAnim = new RangeScanAnimation('rangeScanCanvas', 'rangeScanStatus');
+        const splitAnim = new SplitAnimation('splitCanvas', 'splitStatus');
+        const bufferPoolAnim = new BufferPoolAnimation('bufferPoolCanvas', 'bufferPoolStatus');
+        const writeAmpAnim = new WriteAmpAnimation('writeAmpCanvas', 'writeAmpStatus');
+        
+        Reveal.on('slidechanged', event => {
+            bstDiskAnim.draw();
+            btreeAnim.draw();
+            rangeScanAnim.draw();
+            splitAnim.draw();
+            bufferPoolAnim.draw();
+            writeAmpAnim.draw();
+        });
+    </script>
+</body>
+</html>

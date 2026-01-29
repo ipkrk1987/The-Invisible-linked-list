@@ -1,0 +1,1172 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Episode 2.6: LSM-Trees - The Write-Optimized Engine</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@4.5.0/dist/reset.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@4.5.0/dist/reveal.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@4.5.0/dist/theme/black.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@4.5.0/plugin/highlight/monokai.css">
+    <style>
+        :root {
+            --primary-green: #00ff88;
+            --primary-blue: #00d4ff;
+            --primary-purple: #b388ff;
+            --primary-orange: #ff9500;
+            --primary-red: #ff4757;
+            --primary-yellow: #ffd93d;
+            --bg-dark: #1a1a2e;
+            --bg-card: #16213e;
+        }
+        
+        .reveal { font-family: 'Segoe UI', system-ui, sans-serif; }
+        .reveal h1, .reveal h2, .reveal h3 { text-transform: none; font-weight: 700; }
+        .reveal h1 {
+            font-size: 2.5em;
+            background: linear-gradient(135deg, var(--primary-blue), var(--primary-purple));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .reveal h2 { font-size: 1.8em; color: var(--primary-green); }
+        .reveal h3 { font-size: 1.4em; color: var(--primary-blue); }
+        
+        .subtitle { font-size: 1.2em; color: var(--primary-purple); margin-top: 0.5em; }
+        .episode-badge {
+            display: inline-block;
+            background: linear-gradient(135deg, var(--primary-orange), var(--primary-red));
+            padding: 0.3em 1em;
+            border-radius: 20px;
+            font-size: 0.8em;
+            margin-bottom: 1em;
+        }
+        .season-badge {
+            display: inline-block;
+            background: linear-gradient(135deg, var(--primary-blue), var(--primary-purple));
+            padding: 0.2em 0.8em;
+            border-radius: 15px;
+            font-size: 0.6em;
+            margin-bottom: 0.5em;
+        }
+        .leetcode-badge {
+            display: inline-block;
+            background: linear-gradient(135deg, #ffa116, #ff6b00);
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.9em;
+        }
+        
+        /* ======== AHA MOMENT STYLES ======== */
+        .aha-moment {
+            background: linear-gradient(135deg, rgba(255, 215, 0, 0.2), rgba(255, 140, 0, 0.1));
+            border: 4px solid #ffd700;
+            border-radius: 25px;
+            padding: 50px;
+            margin: 30px auto;
+            max-width: 850px;
+            text-align: center;
+            box-shadow: 0 0 60px rgba(255, 215, 0, 0.4);
+            animation: glow 2s ease-in-out infinite alternate;
+        }
+        @keyframes glow {
+            from { box-shadow: 0 0 40px rgba(255, 215, 0, 0.3); }
+            to { box-shadow: 0 0 80px rgba(255, 215, 0, 0.6); }
+        }
+        .aha-moment h3 {
+            color: #ffd700 !important;
+            font-size: 1.8em;
+            margin-bottom: 25px;
+        }
+        .aha-moment p { font-size: 1.3em; line-height: 1.6; }
+        .aha-icon { font-size: 4em; margin-bottom: 15px; }
+        
+        .big-reveal {
+            font-size: 3em;
+            font-weight: 900;
+            color: var(--primary-green);
+            text-shadow: 0 0 40px rgba(0, 255, 136, 0.6);
+            margin: 30px 0;
+        }
+        
+        .metaphor-card {
+            background: var(--bg-card);
+            border-radius: 20px;
+            padding: 35px;
+            margin: 25px auto;
+            max-width: 800px;
+            border-left: 6px solid var(--primary-purple);
+        }
+        .metaphor-card .emoji { font-size: 4em; margin-bottom: 20px; }
+        .metaphor-card h4 { color: var(--primary-purple); font-size: 1.4em; margin-bottom: 15px; }
+        
+        .versus-container {
+            display: grid;
+            grid-template-columns: 1fr auto 1fr;
+            gap: 40px;
+            align-items: center;
+            margin: 40px 0;
+        }
+        .versus-box {
+            background: var(--bg-card);
+            border-radius: 15px;
+            padding: 30px;
+            text-align: center;
+        }
+        .versus-box.bad { border-top: 5px solid var(--primary-red); }
+        .versus-box.good { border-top: 5px solid var(--primary-green); }
+        .versus-box .number { font-size: 3.5em; font-weight: 900; }
+        .versus-box.bad .number { color: var(--primary-red); }
+        .versus-box.good .number { color: var(--primary-green); }
+        .vs-text { font-size: 3em; color: var(--primary-yellow); font-weight: bold; }
+        
+        .warning-box {
+            background: rgba(255, 71, 87, 0.1);
+            border-left: 4px solid var(--primary-red);
+            padding: 1em;
+            margin: 1em 0;
+            border-radius: 0 10px 10px 0;
+        }
+        .highlight-box {
+            background: rgba(0, 255, 136, 0.1);
+            border-left: 4px solid var(--primary-green);
+            padding: 1em;
+            margin: 1em 0;
+            border-radius: 0 10px 10px 0;
+        }
+        
+        .act-label {
+            position: absolute;
+            top: 10px;
+            right: 20px;
+            font-size: 0.6em;
+            color: var(--primary-purple);
+            opacity: 0.7;
+        }
+        
+        .animation-container {
+            background: var(--bg-card);
+            border-radius: 15px;
+            padding: 20px;
+            margin: 20px auto;
+            max-width: 900px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+        }
+        .animation-canvas {
+            background: var(--bg-dark);
+            border-radius: 10px;
+            display: block;
+            margin: 0 auto;
+        }
+        .control-panel {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 15px;
+            flex-wrap: wrap;
+        }
+        .control-btn {
+            background: linear-gradient(135deg, var(--primary-blue), var(--primary-purple));
+            border: none;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 0.9em;
+            transition: all 0.3s ease;
+        }
+        .control-btn:hover { transform: translateY(-2px); box-shadow: 0 5px 20px rgba(0, 212, 255, 0.4); }
+        .control-btn.active { background: linear-gradient(135deg, var(--primary-green), var(--primary-blue)); }
+        .control-btn.danger { background: linear-gradient(135deg, var(--primary-orange), var(--primary-red)); }
+        .status-display {
+            text-align: center;
+            margin-top: 10px;
+            font-size: 0.9em;
+            color: var(--primary-yellow);
+            min-height: 24px;
+        }
+        
+        .takeaway-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin-top: 20px;
+        }
+        .takeaway-item {
+            background: var(--bg-card);
+            border-radius: 10px;
+            padding: 15px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        .takeaway-item .icon { font-size: 2em; min-width: 50px; text-align: center; }
+        .takeaway-item .text { text-align: left; font-size: 0.85em; }
+        
+        .evolution-step {
+            background: var(--bg-card);
+            border-radius: 10px;
+            padding: 15px;
+            margin: 10px 0;
+            text-align: left;
+        }
+        .evolution-step h4 { color: var(--primary-blue); margin-bottom: 8px; }
+        .evolution-step.current { border: 2px solid var(--primary-green); }
+        
+        .flow-diagram {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+            margin: 30px 0;
+            flex-wrap: wrap;
+        }
+        .flow-step {
+            background: var(--bg-card);
+            border-radius: 10px;
+            padding: 20px 25px;
+            text-align: center;
+        }
+        .flow-step.active { border: 2px solid var(--primary-green); background: rgba(0,255,136,0.1); }
+        .flow-arrow { font-size: 2em; color: var(--primary-yellow); }
+    </style>
+</head>
+<body>
+    <div class="reveal">
+        <div class="slides">
+            
+            <!-- ==================== ACT 1: THE HOOK ==================== -->
+            
+            <!-- Slide 1: Title -->
+            <section>
+                <div class="season-badge">Season 2: Binary Trees & Production Systems</div>
+                <div class="episode-badge">Episode 2.6</div>
+                <h1>LSM-Trees</h1>
+                <p class="subtitle">The Write-Optimized Engine</p>
+                <p style="margin-top: 2em; font-size: 0.9em; color: #888;">
+                    Flipping the tradeoff: What if we optimized for writes?
+                </p>
+            </section>
+            
+            <!-- Slide 2: The Crisis Story -->
+            <section>
+                <span class="act-label">ACT 1: THE HOOK</span>
+                <h2>🚨 When PostgreSQL Cried</h2>
+                <div class="metaphor-card">
+                    <div class="emoji">📊</div>
+                    <h4>Clickstream Analytics Dashboard</h4>
+                    <p style="font-size: 1.1em;">
+                        <strong>Day 1:</strong> 10K writes/sec → <span style="color: var(--primary-green);">PostgreSQL: "Easy!"</span><br>
+                        <strong>Day 30:</strong> 50K writes/sec → <span style="color: var(--primary-yellow);">"I'm sweating..."</span><br>
+                        <strong>Day 60:</strong> 100K writes/sec → <span style="color: var(--primary-red);">"I give up! 💀"</span>
+                    </p>
+                    <div class="fragment" style="margin-top: 20px;">
+                        <p style="color: var(--primary-yellow); font-size: 1.2em;">
+                            The disk was at 100%. But queries were simple. What's happening?
+                        </p>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- Slide 3: AHA MOMENT #1 - The B-Tree Tax -->
+            <section>
+                <span class="act-label">💡 AHA MOMENT</span>
+                <div class="aha-moment">
+                    <div class="aha-icon">💸</div>
+                    <h3>The B-Tree Tax</h3>
+                    <p>
+                        Every B-Tree write pays a <strong>tax</strong>:
+                    </p>
+                    <div style="margin: 30px 0; padding: 20px; background: rgba(0,0,0,0.3); border-radius: 10px;">
+                        <p style="font-size: 1.4em;">
+                            <span style="color: var(--primary-red);">Read page</span> →
+                            Modify →
+                            <span style="color: var(--primary-red);">Write page</span>
+                        </p>
+                        <p class="fragment" style="margin-top: 20px; font-size: 1.2em;">
+                            1 logical write = <span style="color: var(--primary-red);">2-4 physical I/O operations</span>
+                        </p>
+                    </div>
+                    <p class="fragment" style="color: var(--primary-green); font-size: 1.3em;">
+                        What if we could pay this tax <strong>later</strong>?
+                    </p>
+                </div>
+            </section>
+            
+            <!-- Slide 4: The Flip -->
+            <section>
+                <span class="act-label">ACT 1: THE HOOK</span>
+                <h2>🔄 Flipping the Tradeoff</h2>
+                <div class="versus-container">
+                    <div class="versus-box">
+                        <p style="font-size: 1.2em;">B-Tree</p>
+                        <p style="color: var(--primary-green);">Reads: ⭐⭐⭐⭐⭐</p>
+                        <p style="color: var(--primary-red);">Writes: ⭐⭐</p>
+                    </div>
+                    <div class="vs-text">→</div>
+                    <div class="versus-box good">
+                        <p style="font-size: 1.2em;">LSM-Tree</p>
+                        <p style="color: var(--primary-yellow);">Reads: ⭐⭐⭐</p>
+                        <p style="color: var(--primary-green);">Writes: ⭐⭐⭐⭐⭐</p>
+                    </div>
+                </div>
+                <div class="fragment big-reveal">
+                    What if writes were O(1)?
+                </div>
+            </section>
+            
+            <!-- Slide 5: AHA MOMENT #2 - The Notebook Analogy -->
+            <section>
+                <span class="act-label">💡 AHA MOMENT</span>
+                <div class="aha-moment">
+                    <div class="aha-icon">📓</div>
+                    <h3>The Notebook Method</h3>
+                    <p>
+                        Imagine you're taking notes all day...
+                    </p>
+                    <div class="fragment" style="margin: 30px 0;">
+                        <p style="font-size: 1.2em;">
+                            <strong>B-Tree approach:</strong> Find the right page, erase, rewrite<br>
+                            <span style="color: var(--primary-red);">Slow! Disruptive!</span>
+                        </p>
+                    </div>
+                    <div class="fragment" style="margin: 30px 0;">
+                        <p style="font-size: 1.2em;">
+                            <strong>LSM approach:</strong> Just write on the next blank line!<br>
+                            <span style="color: var(--primary-green);">Fast! Sequential!</span>
+                        </p>
+                    </div>
+                    <p class="fragment" style="color: var(--primary-yellow); font-size: 1.1em;">
+                        Sort and organize the notebook <strong>later, in the background</strong>.
+                    </p>
+                </div>
+            </section>
+            
+            <!-- Slide 6: The LSM Write Path (Visual) -->
+            <section>
+                <span class="act-label">ACT 2: THE SOLUTION</span>
+                <h2>📝 The LSM Write Path</h2>
+                <div class="flow-diagram">
+                    <div class="flow-step active">
+                        <div style="font-size: 2em;">📝</div>
+                        <p>Write to<br>Memory</p>
+                        <p style="color: var(--primary-green); font-size: 0.8em;">~100ns</p>
+                    </div>
+                    <div class="flow-arrow">→</div>
+                    <div class="flow-step">
+                        <div style="font-size: 2em;">✓</div>
+                        <p>Done!</p>
+                        <p style="color: var(--primary-green); font-size: 0.8em;">Return to user</p>
+                    </div>
+                </div>
+                <div class="fragment" style="margin-top: 30px;">
+                    <p style="font-size: 1.3em; color: var(--primary-yellow);">Wait... that's it? Where's the disk write?</p>
+                </div>
+                <div class="fragment highlight-box" style="max-width: 700px; margin: 20px auto;">
+                    Disk writes happen <strong>asynchronously in the background</strong>.<br>
+                    User doesn't wait for them!
+                </div>
+            </section>
+            
+            <!-- Slide 7: LSM Write Animation -->
+            <section>
+                <span class="act-label">ACT 2: THE SOLUTION</span>
+                <h2>🚀 LSM Write in Action</h2>
+                <div class="animation-container">
+                    <canvas id="lsmWriteCanvas" class="animation-canvas" width="800" height="300"></canvas>
+                    <div class="control-panel">
+                        <button class="control-btn" onclick="lsmWriteAnim.writeToMemtable()">Write to Memory</button>
+                        <button class="control-btn active" onclick="lsmWriteAnim.flush()">Flush to Disk</button>
+                        <button class="control-btn" onclick="lsmWriteAnim.reset()">Reset</button>
+                    </div>
+                    <div class="status-display" id="lsmWriteStatus">Writes go to memory instantly, flush later</div>
+                </div>
+            </section>
+            
+            <!-- Slide 8: The LeetCode Connection -->
+            <section>
+                <span class="act-label">ACT 2: THE LEETCODE</span>
+                <div class="leetcode-badge">LeetCode #23</div>
+                <h2>Merge K Sorted Lists</h2>
+                <div class="metaphor-card" style="border-left-color: var(--primary-orange);">
+                    <p style="font-size: 1.2em; margin-bottom: 20px;">
+                        You have k sorted lists. Merge them into one sorted list.
+                    </p>
+                    <div class="fragment">
+                        <p style="color: var(--primary-green); font-size: 1.3em;">
+                            This IS the LSM compaction algorithm!
+                        </p>
+                        <p style="margin-top: 15px;">
+                            Each "sorted list" = a file on disk (SSTable)<br>
+                            The "merge" = compaction operation
+                        </p>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- Slide 9: AHA MOMENT #3 - Read Amplification -->
+            <section>
+                <span class="act-label">💡 AHA MOMENT</span>
+                <div class="aha-moment">
+                    <div class="aha-icon">🔍</div>
+                    <h3>The Read Problem</h3>
+                    <p>
+                        "But wait... if data is scattered across many files..."
+                    </p>
+                    <div class="fragment" style="margin: 30px 0;">
+                        <p style="font-size: 1.3em;">
+                            To find one key, you might check:<br>
+                            <span style="color: var(--primary-red);">Memtable → 5 SSTables → 10 SSTables → ...</span>
+                        </p>
+                    </div>
+                    <div class="fragment">
+                        <p style="background: rgba(0,0,0,0.3); padding: 20px; border-radius: 10px;">
+                            100 files = 100 potential lookups? 💀<br><br>
+                            <span style="color: var(--primary-yellow);">This is called <strong>Read Amplification</strong></span>
+                        </p>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- Slide 10: The Read Path Animation -->
+            <section>
+                <span class="act-label">ACT 3: SCALE BREAKS</span>
+                <h2>🔍 LSM Read Path</h2>
+                <div class="animation-container">
+                    <canvas id="lsmReadCanvas" class="animation-canvas" width="800" height="300"></canvas>
+                    <div class="control-panel">
+                        <button class="control-btn" onclick="lsmReadAnim.findKey('found')">Find user:123 (exists)</button>
+                        <button class="control-btn danger" onclick="lsmReadAnim.findKey('missing')">Find user:999 (missing)</button>
+                        <button class="control-btn" onclick="lsmReadAnim.reset()">Reset</button>
+                    </div>
+                    <div class="status-display" id="lsmReadStatus">Check memtable first, then files newest to oldest</div>
+                </div>
+            </section>
+            
+            <!-- Slide 11: AHA MOMENT #4 - Bloom Filter Magic -->
+            <section>
+                <span class="act-label">💡 AHA MOMENT</span>
+                <div class="aha-moment">
+                    <div class="aha-icon">🎯</div>
+                    <h3>The Bloom Filter Trick</h3>
+                    <p>
+                        What if each file could answer one question <strong>instantly</strong>?
+                    </p>
+                    <div class="fragment" style="margin: 30px 0;">
+                        <p style="font-size: 1.3em;">
+                            "Is this key <strong>definitely NOT</strong> in this file?"
+                        </p>
+                    </div>
+                    <div class="fragment" style="padding: 20px; background: rgba(0,255,136,0.2); border-radius: 10px;">
+                        <p style="font-size: 1.2em;">
+                            <strong>Bloom Filter:</strong> A tiny bit array that can say...<br><br>
+                            ✓ "Definitely NOT here" (skip file!)<br>
+                            ? "Maybe here" (check file)
+                        </p>
+                        <p style="margin-top: 15px; color: var(--primary-green);">
+                            Eliminates <strong>95%+</strong> of unnecessary file reads!
+                        </p>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- Slide 12: Bloom Filter Animation -->
+            <section>
+                <span class="act-label">ACT 4: PRODUCTION</span>
+                <h2>🎯 Bloom Filter in Action</h2>
+                <div class="animation-container">
+                    <canvas id="bloomCanvas" class="animation-canvas" width="800" height="280"></canvas>
+                    <div class="control-panel">
+                        <button class="control-btn" onclick="bloomAnim.checkKey('user:123')">Check user:123 (exists)</button>
+                        <button class="control-btn active" onclick="bloomAnim.checkKey('user:999')">Check user:999 (skip!)</button>
+                        <button class="control-btn" onclick="bloomAnim.reset()">Reset</button>
+                    </div>
+                    <div class="status-display" id="bloomStatus">Bloom filter: "Definitely NOT here" or "Maybe here"</div>
+                </div>
+            </section>
+            
+            <!-- Slide 13: Leveled Compaction Visual -->
+            <section>
+                <span class="act-label">ACT 4: PRODUCTION</span>
+                <h2>📚 Organizing the Files</h2>
+                <div class="animation-container">
+                    <canvas id="leveledCanvas" class="animation-canvas" width="800" height="300"></canvas>
+                    <div class="control-panel">
+                        <button class="control-btn" onclick="leveledAnim.showLevels()">Show Levels</button>
+                        <button class="control-btn active" onclick="leveledAnim.compact()">Compact!</button>
+                        <button class="control-btn" onclick="leveledAnim.reset()">Reset</button>
+                    </div>
+                    <div class="status-display" id="leveledStatus">Organize files into levels - read only 1 file per level!</div>
+                </div>
+            </section>
+            
+            <!-- Slide 14: The Compaction Insight -->
+            <section>
+                <span class="act-label">ACT 4: PRODUCTION</span>
+                <h2>🔄 The Compaction Dance</h2>
+                <div class="metaphor-card">
+                    <div class="emoji">📚</div>
+                    <h4>Think of it like organizing books</h4>
+                    <p style="font-size: 1.1em;">
+                        <strong>Level 0:</strong> Inbox (messy, overlapping)<br>
+                        <strong>Level 1:</strong> Shelf A-M (organized)<br>
+                        <strong>Level 2:</strong> Bigger shelf, non-overlapping<br>
+                        <strong>Level 3:</strong> Even bigger, perfectly sorted
+                    </p>
+                    <div class="fragment" style="margin-top: 20px; padding: 15px; background: rgba(0,255,136,0.1); border-radius: 10px;">
+                        <p style="color: var(--primary-green);">
+                            At each level, key ranges <strong>don't overlap</strong>!<br>
+                            → Only check 1 file per level (not all 100!)
+                        </p>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- Slide 15: The Complete Picture -->
+            <section>
+                <span class="act-label">ACT 4: PRODUCTION</span>
+                <h2>The Production Recipe</h2>
+                <div class="takeaway-grid">
+                    <div class="takeaway-item">
+                        <div class="icon">🧠</div>
+                        <div class="text">
+                            <strong>Memtable</strong><br>
+                            In-memory buffer for fast writes
+                        </div>
+                    </div>
+                    <div class="takeaway-item">
+                        <div class="icon">📝</div>
+                        <div class="text">
+                            <strong>WAL</strong><br>
+                            Write-ahead log for durability
+                        </div>
+                    </div>
+                    <div class="takeaway-item">
+                        <div class="icon">🎯</div>
+                        <div class="text">
+                            <strong>Bloom Filters</strong><br>
+                            Skip files that don't have your key
+                        </div>
+                    </div>
+                    <div class="takeaway-item">
+                        <div class="icon">📚</div>
+                        <div class="text">
+                            <strong>Leveled Compaction</strong><br>
+                            Keep files organized in levels
+                        </div>
+                    </div>
+                </div>
+                <div class="fragment highlight-box" style="max-width: 700px; margin: 30px auto; text-align: center;">
+                    This is how Cassandra handles <strong>1M+ writes/second</strong>!
+                </div>
+            </section>
+            
+            <!-- Slide 16: The Remaining Problem -->
+            <section>
+                <span class="act-label">ACT 5: THE LIMIT</span>
+                <h2>⚠️ But There's a Catch...</h2>
+                <div class="metaphor-card" style="border-left-color: var(--primary-red);">
+                    <p style="font-size: 1.2em; margin-bottom: 25px;">
+                        What if your workload is <strong>50% reads, 50% writes</strong>?
+                    </p>
+                    <div class="fragment">
+                        <p>
+                            <span style="color: var(--primary-yellow);">B-Tree:</span> Great reads, slow writes<br>
+                            <span style="color: var(--primary-yellow);">LSM-Tree:</span> Great writes, slow reads
+                        </p>
+                    </div>
+                    <div class="fragment" style="margin-top: 25px;">
+                        <p style="font-size: 1.4em; color: var(--primary-purple);">
+                            What if we could have <strong>both</strong>?
+                        </p>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- Slide 17: Next Episode Teaser -->
+            <section>
+                <span class="act-label">ACT 5: THE LIMIT</span>
+                <h2>🔮 The Ultimate Question</h2>
+                <div class="versus-container">
+                    <div class="versus-box">
+                        <p>Hot data needs</p>
+                        <p style="font-size: 1.5em; color: var(--primary-blue);">Fast Reads</p>
+                        <p style="font-size: 0.9em;">(B-Tree territory)</p>
+                    </div>
+                    <div class="vs-text">+</div>
+                    <div class="versus-box">
+                        <p>Incoming data needs</p>
+                        <p style="font-size: 1.5em; color: var(--primary-green);">Fast Writes</p>
+                        <p style="font-size: 0.9em;">(LSM territory)</p>
+                    </div>
+                </div>
+                <div class="fragment" style="margin-top: 30px;">
+                    <p style="font-size: 1.5em; color: var(--primary-yellow);">
+                        <strong>Next Episode:</strong> Hybrid Engines - The Best of Both Worlds
+                    </p>
+                </div>
+            </section>
+            
+            <!-- Slide 18: Key Takeaways -->
+            <section>
+                <span class="act-label">ACT 6: MASTERY</span>
+                <h2>🎯 The 3 Big Ideas</h2>
+                <div style="max-width: 800px; margin: 0 auto;">
+                    <div class="takeaway-item" style="margin: 20px 0;">
+                        <div class="icon">📝</div>
+                        <div class="text" style="font-size: 1.1em;">
+                            <strong>Sequential Beats Random</strong><br>
+                            Append-only writes are 100x faster than random updates
+                        </div>
+                    </div>
+                    <div class="takeaway-item" style="margin: 20px 0;">
+                        <div class="icon">⏰</div>
+                        <div class="text" style="font-size: 1.1em;">
+                            <strong>Pay Later</strong><br>
+                            Do expensive work in the background, not during user requests
+                        </div>
+                    </div>
+                    <div class="takeaway-item" style="margin: 20px 0;">
+                        <div class="icon">🎯</div>
+                        <div class="text" style="font-size: 1.1em;">
+                            <strong>Bloom Filters Are Magic</strong><br>
+                            A tiny bit array eliminates 95%+ of wasted reads
+                        </div>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- Slide 19: Season Arc -->
+            <section>
+                <span class="act-label">ACT 6: MASTERY</span>
+                <h2>The Season 2 Arc</h2>
+                <div style="max-width: 600px; margin: 0 auto;">
+                    <div class="evolution-step">
+                        <h4>Episodes 2.1-2.4</h4>
+                        <p>Binary Search → SSTables → BSTs</p>
+                    </div>
+                    <div class="evolution-step">
+                        <h4>Episode 2.5: B-Trees</h4>
+                        <p>Read-optimized disk storage</p>
+                    </div>
+                    <div class="evolution-step current">
+                        <h4>Episode 2.6: LSM-Trees ← You Are Here</h4>
+                        <p>Write-optimized disk storage</p>
+                    </div>
+                    <div class="evolution-step">
+                        <h4>Episode 2.7: Hybrid Engines</h4>
+                        <p>Best of both worlds - Season Finale!</p>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- End Slide -->
+            <section>
+                <h2>🎬 End of Episode 2.6</h2>
+                <p class="subtitle">LSM-Trees - The Write-Optimized Engine</p>
+                <div style="margin-top: 40px;">
+                    <p>Next: Episode 2.7 (Season Finale)</p>
+                    <p style="color: var(--primary-purple);">"Hybrid Engines - The Best of Both Worlds"</p>
+                </div>
+                <div style="margin-top: 40px; font-size: 0.9em; color: #666;">
+                    <p>Powering Cassandra, RocksDB, LevelDB, ScyllaDB...</p>
+                </div>
+            </section>
+            
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/reveal.js@4.5.0/dist/reveal.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/reveal.js@4.5.0/plugin/notes/notes.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/reveal.js@4.5.0/plugin/highlight/highlight.js"></script>
+    
+    <script>
+        Reveal.initialize({
+            hash: true,
+            slideNumber: true,
+            width: 1920,
+            height: 1080,
+            margin: 0.1,
+            plugins: [RevealNotes, RevealHighlight]
+        });
+        
+        // ==================== ANIMATION 1: LSM Write Path ====================
+        class LSMWriteAnimation {
+            constructor(canvasId, statusId) {
+                this.canvas = document.getElementById(canvasId);
+                this.ctx = this.canvas.getContext('2d');
+                this.statusEl = document.getElementById(statusId);
+                this.reset();
+            }
+            
+            reset() {
+                this.memtableKeys = [];
+                this.sstables = [];
+                this.phase = 'initial';
+                this.draw();
+                this.statusEl.textContent = 'Writes go to memory instantly, flush later';
+            }
+            
+            writeToMemtable() {
+                this.memtableKeys = ['user:1', 'user:2', 'user:3', 'user:4'];
+                this.phase = 'writing';
+                this.draw();
+                this.statusEl.textContent = '⚡ Written to memory in ~100 nanoseconds! User gets instant response.';
+            }
+            
+            flush() {
+                if (this.memtableKeys.length === 0) {
+                    this.writeToMemtable();
+                    return;
+                }
+                this.phase = 'flushing';
+                this.draw();
+                this.statusEl.textContent = '📦 Memtable full! Flushing to SSTable (in background)...';
+                
+                setTimeout(() => {
+                    this.sstables.push({keys: [...this.memtableKeys]});
+                    this.memtableKeys = [];
+                    this.phase = 'flushed';
+                    this.draw();
+                    this.statusEl.textContent = '✓ SSTable created! Memtable cleared. User never waited for this!';
+                }, 1500);
+            }
+            
+            draw() {
+                const ctx = this.ctx;
+                const w = this.canvas.width;
+                const h = this.canvas.height;
+                
+                ctx.fillStyle = '#1a1a2e';
+                ctx.fillRect(0, 0, w, h);
+                
+                // Memtable
+                ctx.fillStyle = this.phase === 'writing' || this.phase === 'flushing' ? '#00ff88' : '#16213e';
+                ctx.strokeStyle = '#00ff88';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.roundRect(50, 50, 200, 180, 15);
+                ctx.fill();
+                ctx.stroke();
+                
+                ctx.fillStyle = '#fff';
+                ctx.font = 'bold 18px Segoe UI';
+                ctx.textAlign = 'center';
+                ctx.fillText('Memtable', 150, 85);
+                ctx.font = '12px Segoe UI';
+                ctx.fillText('(In RAM)', 150, 105);
+                
+                // Memtable keys
+                ctx.fillStyle = '#ffd93d';
+                ctx.font = '14px Segoe UI';
+                this.memtableKeys.forEach((key, i) => {
+                    ctx.fillText(key, 150, 135 + i * 22);
+                });
+                
+                // Arrow
+                if (this.phase === 'flushing') {
+                    ctx.strokeStyle = '#ffd93d';
+                    ctx.setLineDash([5, 5]);
+                    ctx.lineWidth = 3;
+                    ctx.beginPath();
+                    ctx.moveTo(260, 140);
+                    ctx.lineTo(360, 140);
+                    ctx.stroke();
+                    ctx.setLineDash([]);
+                    ctx.fillStyle = '#ffd93d';
+                    ctx.font = '14px Segoe UI';
+                    ctx.fillText('FLUSH', 310, 125);
+                }
+                
+                // SSTables area
+                ctx.fillStyle = '#fff';
+                ctx.font = 'bold 18px Segoe UI';
+                ctx.textAlign = 'center';
+                ctx.fillText('SSTables (Disk)', 560, 40);
+                
+                // Draw SSTables
+                this.sstables.forEach((sst, i) => {
+                    ctx.fillStyle = '#b388ff';
+                    ctx.strokeStyle = '#b388ff';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.roundRect(400 + i * 140, 60, 120, 160, 10);
+                    ctx.fill();
+                    ctx.stroke();
+                    
+                    ctx.fillStyle = '#000';
+                    ctx.font = 'bold 14px Segoe UI';
+                    ctx.fillText(`SSTable ${i}`, 460 + i * 140, 90);
+                    ctx.font = '12px Segoe UI';
+                    sst.keys.forEach((k, j) => {
+                        ctx.fillText(k, 460 + i * 140, 115 + j * 20);
+                    });
+                });
+                
+                // Speed indicator
+                ctx.fillStyle = '#00ff88';
+                ctx.font = 'bold 16px Segoe UI';
+                ctx.textAlign = 'left';
+                ctx.fillText('💨 Write: ~100ns', 50, 260);
+                ctx.fillStyle = '#888';
+                ctx.fillText('📦 Flush: Async', 200, 260);
+            }
+        }
+        
+        // ==================== ANIMATION 2: LSM Read Path ====================
+        class LSMReadAnimation {
+            constructor(canvasId, statusId) {
+                this.canvas = document.getElementById(canvasId);
+                this.ctx = this.canvas.getContext('2d');
+                this.statusEl = document.getElementById(statusId);
+                this.reset();
+            }
+            
+            reset() {
+                this.memtable = ['user:123', 'user:456'];
+                this.sstables = [
+                    {name: 'SST2', keys: ['user:789']},
+                    {name: 'SST1', keys: ['user:100']},
+                    {name: 'SST0', keys: ['user:001']}
+                ];
+                this.searchPhase = -1;
+                this.keyType = null;
+                this.draw();
+                this.statusEl.textContent = 'Check memtable first, then files newest to oldest';
+            }
+            
+            findKey(type) {
+                this.keyType = type;
+                this.searchPhase = 0;
+                this.animateSearch();
+            }
+            
+            animateSearch() {
+                this.searchPhase++;
+                this.draw();
+                
+                if (this.keyType === 'found' && this.searchPhase === 1) {
+                    this.statusEl.textContent = '✓ Found in memtable! Fastest possible path - no disk I/O!';
+                    return;
+                }
+                
+                if (this.searchPhase < 5) {
+                    const names = ['Memtable', 'SST2', 'SST1', 'SST0', 'End'];
+                    this.statusEl.textContent = `🔍 Checking ${names[this.searchPhase - 1]}... not found, continue...`;
+                    setTimeout(() => this.animateSearch(), 500);
+                } else {
+                    this.statusEl.textContent = '❌ Key not found! Had to check ALL files (read amplification!)';
+                }
+            }
+            
+            draw() {
+                const ctx = this.ctx;
+                const w = this.canvas.width;
+                const h = this.canvas.height;
+                
+                ctx.fillStyle = '#1a1a2e';
+                ctx.fillRect(0, 0, w, h);
+                
+                // Memtable
+                let memHL = this.searchPhase === 1;
+                let memFound = this.keyType === 'found' && this.searchPhase === 1;
+                
+                ctx.fillStyle = memFound ? '#00ff88' : (memHL ? '#ffd93d' : '#16213e');
+                ctx.strokeStyle = '#00ff88';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.roundRect(50, 80, 140, 140, 10);
+                ctx.fill();
+                ctx.stroke();
+                
+                ctx.fillStyle = memFound ? '#000' : '#fff';
+                ctx.font = 'bold 14px Segoe UI';
+                ctx.textAlign = 'center';
+                ctx.fillText('Memtable', 120, 105);
+                ctx.font = '12px Segoe UI';
+                this.memtable.forEach((k, i) => {
+                    ctx.fillText(k, 120, 130 + i * 20);
+                });
+                
+                if (memFound) {
+                    ctx.fillStyle = '#000';
+                    ctx.font = 'bold 16px Segoe UI';
+                    ctx.fillText('✓ FOUND!', 120, 200);
+                }
+                
+                // SSTables
+                this.sstables.forEach((sst, i) => {
+                    const x = 230 + i * 170;
+                    let hl = this.searchPhase >= i + 2 && !memFound;
+                    let checking = this.searchPhase === i + 2 && !memFound;
+                    
+                    ctx.fillStyle = checking ? '#ffd93d' : (hl ? '#444' : '#16213e');
+                    ctx.strokeStyle = '#b388ff';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.roundRect(x, 80, 140, 140, 10);
+                    ctx.fill();
+                    ctx.stroke();
+                    
+                    ctx.fillStyle = checking ? '#000' : '#fff';
+                    ctx.font = 'bold 14px Segoe UI';
+                    ctx.fillText(sst.name, x + 70, 105);
+                    ctx.font = '12px Segoe UI';
+                    sst.keys.forEach((k, j) => {
+                        ctx.fillText(k, x + 70, 130 + j * 20);
+                    });
+                    
+                    if (checking) {
+                        ctx.fillStyle = '#000';
+                        ctx.fillText('🔍 Checking...', x + 70, 200);
+                    }
+                });
+                
+                // Search order arrow
+                ctx.strokeStyle = '#00d4ff';
+                ctx.setLineDash([4, 4]);
+                ctx.beginPath();
+                ctx.moveTo(190, 150);
+                ctx.lineTo(230, 150);
+                ctx.moveTo(370, 150);
+                ctx.lineTo(400, 150);
+                ctx.moveTo(540, 150);
+                ctx.lineTo(570, 150);
+                ctx.stroke();
+                ctx.setLineDash([]);
+                
+                ctx.fillStyle = '#00d4ff';
+                ctx.font = '12px Segoe UI';
+                ctx.fillText('Search order: Newest → Oldest', 400, 260);
+            }
+        }
+        
+        // ==================== ANIMATION 3: Bloom Filter ====================
+        class BloomAnimation {
+            constructor(canvasId, statusId) {
+                this.canvas = document.getElementById(canvasId);
+                this.ctx = this.canvas.getContext('2d');
+                this.statusEl = document.getElementById(statusId);
+                this.reset();
+            }
+            
+            reset() {
+                this.bits = [1,0,1,1,0,0,1,0,1,0,1,1,0,0,1,0];
+                this.checkingKey = null;
+                this.result = null;
+                this.draw();
+                this.statusEl.textContent = 'Bloom filter: "Definitely NOT here" or "Maybe here"';
+            }
+            
+            checkKey(key) {
+                this.checkingKey = key;
+                if (key === 'user:123') {
+                    this.hashPositions = [2, 6, 10];
+                    this.result = 'maybe';
+                } else {
+                    this.hashPositions = [1, 5, 13];
+                    this.result = 'no';
+                }
+                this.draw();
+                
+                if (this.result === 'maybe') {
+                    this.statusEl.textContent = '⚠️ All bits set! Key MIGHT be here. Must check the file.';
+                } else {
+                    this.statusEl.textContent = '✓ Bit at position 1 is 0! Key DEFINITELY NOT here. SKIP! ⚡';
+                }
+            }
+            
+            draw() {
+                const ctx = this.ctx;
+                const w = this.canvas.width;
+                const h = this.canvas.height;
+                
+                ctx.fillStyle = '#1a1a2e';
+                ctx.fillRect(0, 0, w, h);
+                
+                // Title
+                ctx.fillStyle = '#fff';
+                ctx.font = 'bold 20px Segoe UI';
+                ctx.textAlign = 'center';
+                ctx.fillText('Bloom Filter Bit Array', 400, 35);
+                
+                // Bit array
+                const bitW = 45;
+                const startX = (w - this.bits.length * bitW) / 2;
+                const y = 70;
+                
+                this.bits.forEach((bit, i) => {
+                    let color = bit ? '#00ff88' : '#333';
+                    let border = '#444';
+                    
+                    if (this.hashPositions && this.hashPositions.includes(i)) {
+                        border = bit ? '#00ff88' : '#ff4757';
+                        ctx.lineWidth = 4;
+                    } else {
+                        ctx.lineWidth = 2;
+                    }
+                    
+                    ctx.fillStyle = color;
+                    ctx.strokeStyle = border;
+                    ctx.beginPath();
+                    ctx.roundRect(startX + i * bitW, y, bitW - 5, 50, 6);
+                    ctx.fill();
+                    ctx.stroke();
+                    
+                    ctx.fillStyle = bit ? '#000' : '#666';
+                    ctx.font = 'bold 20px Segoe UI';
+                    ctx.fillText(bit, startX + i * bitW + bitW/2 - 2, y + 33);
+                    
+                    ctx.fillStyle = '#666';
+                    ctx.font = '10px Segoe UI';
+                    ctx.fillText(i, startX + i * bitW + bitW/2 - 2, y + 60);
+                });
+                
+                // Result
+                if (this.result) {
+                    const ry = 170;
+                    if (this.result === 'maybe') {
+                        ctx.fillStyle = '#ffd93d';
+                        ctx.font = 'bold 24px Segoe UI';
+                        ctx.fillText('⚠️ MAYBE IN FILE', 400, ry);
+                        ctx.font = '16px Segoe UI';
+                        ctx.fillText('All hash bits (2, 6, 10) are 1 - must check file', 400, ry + 30);
+                    } else {
+                        ctx.fillStyle = '#00ff88';
+                        ctx.font = 'bold 24px Segoe UI';
+                        ctx.fillText('✓ DEFINITELY NOT IN FILE - SKIP!', 400, ry);
+                        ctx.font = '16px Segoe UI';
+                        ctx.fillText('Hash bit at position 1 is 0 - saved a disk read!', 400, ry + 30);
+                    }
+                }
+                
+                // Legend
+                ctx.font = '12px Segoe UI';
+                ctx.fillStyle = '#00ff88';
+                ctx.fillRect(200, 230, 15, 15);
+                ctx.fillStyle = '#fff';
+                ctx.textAlign = 'left';
+                ctx.fillText('= 1 (some key hashed here)', 220, 242);
+                
+                ctx.fillStyle = '#333';
+                ctx.fillRect(450, 230, 15, 15);
+                ctx.fillStyle = '#fff';
+                ctx.fillText('= 0 (no key hashed here)', 470, 242);
+            }
+        }
+        
+        // ==================== ANIMATION 4: Leveled Compaction ====================
+        class LeveledAnimation {
+            constructor(canvasId, statusId) {
+                this.canvas = document.getElementById(canvasId);
+                this.ctx = this.canvas.getContext('2d');
+                this.statusEl = document.getElementById(statusId);
+                this.reset();
+            }
+            
+            reset() {
+                this.levels = [
+                    [{keys: 'a-m'}, {keys: 'f-z'}],
+                    [{keys: 'a-d'}, {keys: 'e-m'}, {keys: 'n-z'}],
+                    [{keys: 'a-g'}, {keys: 'h-p'}, {keys: 'q-z'}]
+                ];
+                this.compacting = false;
+                this.draw();
+                this.statusEl.textContent = 'Organize files into levels - read only 1 file per level!';
+            }
+            
+            showLevels() {
+                this.draw();
+                this.statusEl.textContent = 'L0 can overlap. L1+ has non-overlapping key ranges!';
+            }
+            
+            compact() {
+                this.compacting = true;
+                this.draw();
+                this.statusEl.textContent = '🔄 Compacting L0 → L1: Merging overlapping ranges...';
+                
+                setTimeout(() => {
+                    this.levels[0] = [];
+                    this.levels[1] = [{keys: 'a-f'}, {keys: 'g-m'}, {keys: 'n-z'}];
+                    this.compacting = false;
+                    this.draw();
+                    this.statusEl.textContent = '✓ Done! L0 cleared. L1 has clean, non-overlapping files.';
+                }, 1500);
+            }
+            
+            draw() {
+                const ctx = this.ctx;
+                const w = this.canvas.width;
+                const h = this.canvas.height;
+                
+                ctx.fillStyle = '#1a1a2e';
+                ctx.fillRect(0, 0, w, h);
+                
+                const colors = ['#ff4757', '#ffd93d', '#00ff88'];
+                const labels = ['L0 (new flushes)', 'L1 (10MB)', 'L2 (100MB)'];
+                const sizes = ['⚠️ May overlap!', '✓ Non-overlapping', '✓ Non-overlapping'];
+                
+                this.levels.forEach((level, li) => {
+                    const y = 40 + li * 85;
+                    
+                    ctx.fillStyle = colors[li];
+                    ctx.font = 'bold 16px Segoe UI';
+                    ctx.textAlign = 'left';
+                    ctx.fillText(labels[li], 30, y + 10);
+                    ctx.fillStyle = '#888';
+                    ctx.font = '12px Segoe UI';
+                    ctx.fillText(sizes[li], 30, y + 28);
+                    
+                    level.forEach((file, fi) => {
+                        let hl = this.compacting && li === 0;
+                        ctx.fillStyle = hl ? '#ffd93d' : colors[li];
+                        ctx.globalAlpha = this.compacting && li === 0 ? 0.5 : 1;
+                        ctx.strokeStyle = colors[li];
+                        ctx.lineWidth = 2;
+                        ctx.beginPath();
+                        ctx.roundRect(200 + fi * 160, y - 15, 140, 50, 8);
+                        ctx.fill();
+                        ctx.stroke();
+                        ctx.globalAlpha = 1;
+                        
+                        ctx.fillStyle = '#000';
+                        ctx.font = '14px Segoe UI';
+                        ctx.textAlign = 'center';
+                        ctx.fillText(file.keys, 270 + fi * 160, y + 15);
+                    });
+                });
+                
+                // Compaction arrow
+                if (this.compacting) {
+                    ctx.strokeStyle = '#ffd93d';
+                    ctx.lineWidth = 3;
+                    ctx.setLineDash([5, 5]);
+                    ctx.beginPath();
+                    ctx.moveTo(350, 65);
+                    ctx.lineTo(350, 110);
+                    ctx.stroke();
+                    ctx.setLineDash([]);
+                    
+                    ctx.fillStyle = '#ffd93d';
+                    ctx.font = 'bold 16px Segoe UI';
+                    ctx.textAlign = 'center';
+                    ctx.fillText('⬇ MERGE', 350, 92);
+                }
+            }
+        }
+        
+        // Initialize
+        const lsmWriteAnim = new LSMWriteAnimation('lsmWriteCanvas', 'lsmWriteStatus');
+        const lsmReadAnim = new LSMReadAnimation('lsmReadCanvas', 'lsmReadStatus');
+        const bloomAnim = new BloomAnimation('bloomCanvas', 'bloomStatus');
+        const leveledAnim = new LeveledAnimation('leveledCanvas', 'leveledStatus');
+        
+        Reveal.on('slidechanged', event => {
+            lsmWriteAnim.draw();
+            lsmReadAnim.draw();
+            bloomAnim.draw();
+            leveledAnim.draw();
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,1147 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Episode 2.4: Binary Search Trees - Dynamic Ordered Storage</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@4.5.0/dist/reset.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@4.5.0/dist/reveal.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@4.5.0/dist/theme/black.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@4.5.0/plugin/highlight/monokai.css">
+    <style>
+        :root {
+            --primary-green: #00ff88;
+            --primary-blue: #00d4ff;
+            --primary-purple: #b388ff;
+            --primary-orange: #ff9500;
+            --primary-red: #ff4757;
+            --primary-yellow: #ffd93d;
+            --bg-dark: #1a1a2e;
+            --bg-card: #16213e;
+        }
+        
+        .reveal { font-family: 'Segoe UI', system-ui, sans-serif; }
+        .reveal h1, .reveal h2, .reveal h3 { text-transform: none; font-weight: 700; }
+        .reveal h1 {
+            font-size: 2.5em;
+            background: linear-gradient(135deg, var(--primary-blue), var(--primary-purple));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .reveal h2 { font-size: 1.8em; color: var(--primary-green); }
+        .reveal h3 { font-size: 1.4em; color: var(--primary-blue); }
+        
+        .subtitle { font-size: 1.2em; color: var(--primary-purple); margin-top: 0.5em; }
+        .episode-badge {
+            display: inline-block;
+            background: linear-gradient(135deg, var(--primary-orange), var(--primary-red));
+            padding: 0.3em 1em;
+            border-radius: 20px;
+            font-size: 0.8em;
+            margin-bottom: 1em;
+        }
+        .season-badge {
+            display: inline-block;
+            background: linear-gradient(135deg, var(--primary-blue), var(--primary-purple));
+            padding: 0.2em 0.8em;
+            border-radius: 15px;
+            font-size: 0.6em;
+            margin-bottom: 0.5em;
+        }
+        .leetcode-badge {
+            display: inline-block;
+            background: linear-gradient(135deg, #ffa116, #ff6b00);
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.9em;
+        }
+        
+        /* ======== AHA MOMENT STYLES ======== */
+        .aha-moment {
+            background: linear-gradient(135deg, rgba(255, 215, 0, 0.2), rgba(255, 140, 0, 0.1));
+            border: 4px solid #ffd700;
+            border-radius: 25px;
+            padding: 50px;
+            margin: 30px auto;
+            max-width: 850px;
+            text-align: center;
+            box-shadow: 0 0 60px rgba(255, 215, 0, 0.4);
+            animation: glow 2s ease-in-out infinite alternate;
+        }
+        @keyframes glow {
+            from { box-shadow: 0 0 40px rgba(255, 215, 0, 0.3); }
+            to { box-shadow: 0 0 80px rgba(255, 215, 0, 0.6); }
+        }
+        .aha-moment h3 {
+            color: #ffd700 !important;
+            font-size: 1.8em;
+            margin-bottom: 25px;
+        }
+        .aha-moment p { font-size: 1.3em; line-height: 1.6; }
+        .aha-icon { font-size: 4em; margin-bottom: 15px; }
+        
+        .big-reveal {
+            font-size: 3em;
+            font-weight: 900;
+            color: var(--primary-green);
+            text-shadow: 0 0 40px rgba(0, 255, 136, 0.6);
+            margin: 30px 0;
+        }
+        
+        .metaphor-card {
+            background: var(--bg-card);
+            border-radius: 20px;
+            padding: 35px;
+            margin: 25px auto;
+            max-width: 800px;
+            border-left: 6px solid var(--primary-purple);
+        }
+        .metaphor-card .emoji { font-size: 4em; margin-bottom: 20px; }
+        .metaphor-card h4 { color: var(--primary-purple); font-size: 1.4em; margin-bottom: 15px; }
+        
+        .versus-container {
+            display: grid;
+            grid-template-columns: 1fr auto 1fr;
+            gap: 40px;
+            align-items: center;
+            margin: 40px 0;
+        }
+        .versus-box {
+            background: var(--bg-card);
+            border-radius: 15px;
+            padding: 30px;
+            text-align: center;
+        }
+        .versus-box.bad { border-top: 5px solid var(--primary-red); }
+        .versus-box.good { border-top: 5px solid var(--primary-green); }
+        .versus-box .number { font-size: 3.5em; font-weight: 900; }
+        .versus-box.bad .number { color: var(--primary-red); }
+        .versus-box.good .number { color: var(--primary-green); }
+        .vs-text { font-size: 3em; color: var(--primary-yellow); font-weight: bold; }
+        
+        .warning-box {
+            background: rgba(255, 71, 87, 0.1);
+            border-left: 4px solid var(--primary-red);
+            padding: 1em;
+            margin: 1em 0;
+            border-radius: 0 10px 10px 0;
+        }
+        .highlight-box {
+            background: rgba(0, 255, 136, 0.1);
+            border-left: 4px solid var(--primary-green);
+            padding: 1em;
+            margin: 1em 0;
+            border-radius: 0 10px 10px 0;
+        }
+        
+        .act-label {
+            position: absolute;
+            top: 10px;
+            right: 20px;
+            font-size: 0.6em;
+            color: var(--primary-purple);
+            opacity: 0.7;
+        }
+        
+        .animation-container {
+            background: var(--bg-card);
+            border-radius: 15px;
+            padding: 20px;
+            margin: 20px auto;
+            max-width: 900px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+        }
+        .animation-canvas {
+            background: var(--bg-dark);
+            border-radius: 10px;
+            display: block;
+            margin: 0 auto;
+        }
+        .control-panel {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 15px;
+            flex-wrap: wrap;
+        }
+        .control-btn {
+            background: linear-gradient(135deg, var(--primary-blue), var(--primary-purple));
+            border: none;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 0.9em;
+            transition: all 0.3s ease;
+        }
+        .control-btn:hover { transform: translateY(-2px); box-shadow: 0 5px 20px rgba(0, 212, 255, 0.4); }
+        .control-btn.active { background: linear-gradient(135deg, var(--primary-green), var(--primary-blue)); }
+        .control-btn.danger { background: linear-gradient(135deg, var(--primary-orange), var(--primary-red)); }
+        .status-display {
+            text-align: center;
+            margin-top: 10px;
+            font-size: 0.9em;
+            color: var(--primary-yellow);
+            min-height: 24px;
+        }
+        
+        .takeaway-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin-top: 20px;
+        }
+        .takeaway-item {
+            background: var(--bg-card);
+            border-radius: 10px;
+            padding: 15px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        .takeaway-item .icon { font-size: 2em; min-width: 50px; text-align: center; }
+        .takeaway-item .text { text-align: left; font-size: 0.85em; }
+        
+        .evolution-step {
+            background: var(--bg-card);
+            border-radius: 10px;
+            padding: 15px;
+            margin: 10px 0;
+            text-align: left;
+        }
+        .evolution-step h4 { color: var(--primary-blue); margin-bottom: 8px; }
+        .evolution-step.current { border: 2px solid var(--primary-green); }
+        
+        .tree-stat {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin: 10px 0;
+            padding: 15px;
+            background: var(--bg-card);
+            border-radius: 10px;
+        }
+        .tree-stat .label { flex: 1; text-align: left; }
+        .tree-stat .value { font-size: 1.5em; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="reveal">
+        <div class="slides">
+            
+            <!-- ==================== ACT 1: THE HOOK ==================== -->
+            
+            <!-- Slide 1: Title -->
+            <section>
+                <div class="season-badge">Season 2: Binary Trees & Production Systems</div>
+                <div class="episode-badge">Episode 2.4</div>
+                <h1>Binary Search Trees</h1>
+                <p class="subtitle">Dynamic Ordered Storage</p>
+                <p style="margin-top: 2em; font-size: 0.9em; color: #888;">
+                    Why arrays aren't enough, and why balance matters
+                </p>
+            </section>
+            
+            <!-- Slide 2: The Crisis Story -->
+            <section>
+                <span class="act-label">ACT 1: THE HOOK</span>
+                <h2>🚨 The Leaderboard Meltdown</h2>
+                <div class="metaphor-card" style="border-left-color: var(--primary-red);">
+                    <div class="emoji">🎮</div>
+                    <h4>Game Launch Day</h4>
+                    <p style="font-size: 1.1em;">
+                        <strong>10:00 AM:</strong> 10K players → Leaderboard updates: 2ms ✓<br>
+                        <strong>2:00 PM:</strong> 100K players → Updates: 200ms ⚠️<br>
+                        <strong>6:00 PM:</strong> 1M players → Updates: 30 SECONDS 💀
+                    </p>
+                    <div class="fragment" style="margin-top: 20px;">
+                        <p style="color: var(--primary-yellow); font-size: 1.2em;">
+                            "But binary search is O(log n)! What's happening?!"
+                        </p>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- Slide 3: AHA MOMENT #1 - The Hidden Cost -->
+            <section>
+                <span class="act-label">💡 AHA MOMENT</span>
+                <div class="aha-moment">
+                    <div class="aha-icon">💡</div>
+                    <h3>The Hidden O(n)</h3>
+                    <p>
+                        Binary search finds the spot in O(log n)...<br>
+                        but then you have to <strong>make room</strong>!
+                    </p>
+                    <div class="fragment" style="margin: 30px 0; padding: 20px; background: rgba(0,0,0,0.3); border-radius: 10px;">
+                        <p style="font-size: 1.2em;">
+                            Insert at position 5?<br>
+                            <span style="color: var(--primary-red);">Shift positions 5, 6, 7, ... 999,999</span>
+                        </p>
+                    </div>
+                    <p class="fragment" style="color: var(--primary-green); font-size: 1.3em;">
+                        O(log n) + O(n) = <strong>O(n)</strong> 💀
+                    </p>
+                </div>
+            </section>
+            
+            <!-- Slide 4: The Array Problem Visualized -->
+            <section>
+                <span class="act-label">ACT 1: THE HOOK</span>
+                <h2>📦 The Array Insert Problem</h2>
+                <div class="animation-container">
+                    <canvas id="shiftCanvas" class="animation-canvas" width="800" height="250"></canvas>
+                    <div class="control-panel">
+                        <button class="control-btn" onclick="shiftAnim.findPosition()">1. Find Position</button>
+                        <button class="control-btn danger" onclick="shiftAnim.insertShift()">2. The Costly Shift</button>
+                        <button class="control-btn" onclick="shiftAnim.reset()">Reset</button>
+                    </div>
+                    <div class="status-display" id="shiftStatus">Arrays need to shift everything to make room</div>
+                </div>
+            </section>
+            
+            <!-- Slide 5: The Solution Intuition -->
+            <section>
+                <span class="act-label">ACT 2: THE SOLUTION</span>
+                <h2>🤔 What If We Didn't Shift?</h2>
+                <div class="metaphor-card">
+                    <div class="emoji">🪜</div>
+                    <h4>Think of a filing cabinet...</h4>
+                    <p style="font-size: 1.1em;">
+                        <strong>Array way:</strong> Files must be contiguous. Insert = shuffle everything.<br><br>
+                        <strong>Better way:</strong> What if each file could point to the next one?
+                    </p>
+                    <div class="fragment" style="margin-top: 20px; padding: 15px; background: rgba(0,255,136,0.1); border-radius: 10px;">
+                        <p style="color: var(--primary-green);">
+                            Insert = just change two pointers!<br>
+                            No shifting. No copying. O(1)!
+                        </p>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- Slide 6: AHA MOMENT #2 - The Tree Insight -->
+            <section>
+                <span class="act-label">💡 AHA MOMENT</span>
+                <div class="aha-moment">
+                    <div class="aha-icon">🌳</div>
+                    <h3>The Binary Search Tree</h3>
+                    <p>
+                        What if we could <strong>binary search AND insert fast</strong>?
+                    </p>
+                    <div class="fragment" style="margin: 30px 0;">
+                        <p style="font-size: 1.2em;">
+                            Make the binary search path <strong>the data structure itself!</strong>
+                        </p>
+                    </div>
+                    <div class="fragment" style="padding: 20px; background: rgba(0,255,136,0.2); border-radius: 10px;">
+                        <p style="font-size: 1.1em;">
+                            <strong>Left child:</strong> smaller values<br>
+                            <strong>Right child:</strong> larger values<br>
+                            <strong>Search AND Insert:</strong> both O(log n)!
+                        </p>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- Slide 7: BST Animation -->
+            <section>
+                <span class="act-label">ACT 2: THE SOLUTION</span>
+                <h2>🌳 BST in Action</h2>
+                <div class="animation-container">
+                    <canvas id="bstCanvas" class="animation-canvas" width="800" height="300"></canvas>
+                    <div class="control-panel">
+                        <button class="control-btn" onclick="bstAnim.search(42)">Search for 42</button>
+                        <button class="control-btn active" onclick="bstAnim.insert(35)">Insert 35</button>
+                        <button class="control-btn" onclick="bstAnim.reset()">Reset</button>
+                    </div>
+                    <div class="status-display" id="bstStatus">Follow left/right pointers - no shifting needed!</div>
+                </div>
+            </section>
+            
+            <!-- Slide 8: The LeetCode Connection -->
+            <section>
+                <span class="act-label">ACT 2: THE LEETCODE</span>
+                <div class="leetcode-badge">LeetCode #98</div>
+                <h2>Validate Binary Search Tree</h2>
+                <div class="metaphor-card" style="border-left-color: var(--primary-orange);">
+                    <p style="font-size: 1.2em; margin-bottom: 20px;">
+                        "Check if a tree is a valid BST"
+                    </p>
+                    <div class="fragment">
+                        <p style="color: var(--primary-green); font-size: 1.3em;">
+                            This is <strong>index integrity checking</strong>!
+                        </p>
+                        <p style="margin-top: 15px;">
+                            Every database index must maintain BST property.<br>
+                            Corrupted index = data disaster.
+                        </p>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- Slide 9: AHA MOMENT #3 - The Balance Problem -->
+            <section>
+                <span class="act-label">💡 AHA MOMENT</span>
+                <div class="aha-moment">
+                    <div class="aha-icon">⚠️</div>
+                    <h3>The Catch: Balance Matters!</h3>
+                    <p>
+                        What if we insert data in sorted order?
+                    </p>
+                    <div class="fragment" style="margin: 30px 0; padding: 20px; background: rgba(255,71,87,0.2); border-radius: 10px;">
+                        <p style="font-size: 1.2em;">
+                            1, 2, 3, 4, 5, 6, 7, 8...<br>
+                            <span style="color: var(--primary-red);">The tree becomes a LINKED LIST!</span>
+                        </p>
+                    </div>
+                    <p class="fragment" style="font-size: 1.3em;">
+                        O(log n) degrades to <strong style="color: var(--primary-red);">O(n)</strong> 💀
+                    </p>
+                </div>
+            </section>
+            
+            <!-- Slide 10: Degenerate Tree Animation -->
+            <section>
+                <span class="act-label">ACT 3: SCALE BREAKS</span>
+                <h2>😱 The Degenerate Case</h2>
+                <div class="animation-container">
+                    <canvas id="degenerateCanvas" class="animation-canvas" width="800" height="280"></canvas>
+                    <div class="control-panel">
+                        <button class="control-btn" onclick="degenerateAnim.buildBalanced()">Random Inserts (Balanced)</button>
+                        <button class="control-btn danger" onclick="degenerateAnim.buildDegenerate()">Sorted Inserts (Disaster!)</button>
+                        <button class="control-btn" onclick="degenerateAnim.reset()">Reset</button>
+                    </div>
+                    <div class="status-display" id="degenerateStatus">Insert order determines tree shape!</div>
+                </div>
+            </section>
+            
+            <!-- Slide 11: The Height Insight -->
+            <section>
+                <span class="act-label">ACT 3: SCALE BREAKS</span>
+                <h2>📏 Why Height Matters</h2>
+                <div class="versus-container">
+                    <div class="versus-box bad">
+                        <p style="font-size: 1.2em;">Unbalanced</p>
+                        <p class="number">n</p>
+                        <p>height</p>
+                        <p style="color: var(--primary-red); margin-top: 10px;">Search: O(n)</p>
+                    </div>
+                    <div class="vs-text">vs</div>
+                    <div class="versus-box good">
+                        <p style="font-size: 1.2em;">Balanced</p>
+                        <p class="number">log n</p>
+                        <p>height</p>
+                        <p style="color: var(--primary-green); margin-top: 10px;">Search: O(log n)</p>
+                    </div>
+                </div>
+                <p class="fragment" style="margin-top: 20px; color: var(--primary-yellow);">
+                    1 million nodes: Height 20 (balanced) vs Height 1,000,000 (degenerate)
+                </p>
+            </section>
+            
+            <!-- Slide 12: AHA MOMENT #4 - The AVL Solution -->
+            <section>
+                <span class="act-label">💡 AHA MOMENT</span>
+                <div class="aha-moment">
+                    <div class="aha-icon">⚖️</div>
+                    <h3>The AVL Revelation</h3>
+                    <p>
+                        What if the tree <strong>fixed itself</strong> after every insert?
+                    </p>
+                    <div class="fragment" style="margin: 30px 0; padding: 20px; background: rgba(0,0,0,0.3); border-radius: 10px;">
+                        <p style="font-size: 1.2em;">
+                            <strong>Rule:</strong> Left and right subtrees<br>
+                            can differ by at most <span style="color: var(--primary-green);">1 level</span>
+                        </p>
+                    </div>
+                    <p class="fragment" style="color: var(--primary-green); font-size: 1.1em;">
+                        Violation? <strong>Rotate!</strong> Fix in O(log n) time.
+                    </p>
+                </div>
+            </section>
+            
+            <!-- Slide 13: Rotation Visualization -->
+            <section>
+                <span class="act-label">ACT 4: PRODUCTION</span>
+                <h2>🔄 The Magic of Rotation</h2>
+                <div class="animation-container">
+                    <canvas id="rotationCanvas" class="animation-canvas" width="800" height="300"></canvas>
+                    <div class="control-panel">
+                        <button class="control-btn" onclick="rotationAnim.showUnbalanced()">Show Imbalance</button>
+                        <button class="control-btn active" onclick="rotationAnim.rotate()">Rotate!</button>
+                        <button class="control-btn" onclick="rotationAnim.reset()">Reset</button>
+                    </div>
+                    <div class="status-display" id="rotationStatus">Rotations rebalance in O(1) time</div>
+                </div>
+            </section>
+            
+            <!-- Slide 14: The Numbers Game -->
+            <section>
+                <span class="act-label">ACT 4: PRODUCTION</span>
+                <h2>📊 Real Numbers</h2>
+                <div style="max-width: 700px; margin: 0 auto;">
+                    <div class="tree-stat">
+                        <div class="label">1 Million Records</div>
+                        <div class="value" style="color: var(--primary-green);">~20 comparisons</div>
+                    </div>
+                    <div class="tree-stat">
+                        <div class="label">1 Billion Records</div>
+                        <div class="value" style="color: var(--primary-green);">~30 comparisons</div>
+                    </div>
+                    <div class="tree-stat">
+                        <div class="label">Every website on Earth</div>
+                        <div class="value" style="color: var(--primary-green);">~40 comparisons</div>
+                    </div>
+                </div>
+                <p class="fragment" style="margin-top: 30px; font-size: 1.3em; color: var(--primary-yellow);">
+                    That's the power of <strong>log₂(n)</strong>!
+                </p>
+            </section>
+            
+            <!-- Slide 15: Production Connection -->
+            <section>
+                <span class="act-label">ACT 4: PRODUCTION</span>
+                <h2>🏭 Where BSTs Live in Production</h2>
+                <div class="takeaway-grid">
+                    <div class="takeaway-item">
+                        <div class="icon">🗄️</div>
+                        <div class="text">
+                            <strong>Database Indexes</strong><br>
+                            Every MySQL, PostgreSQL index is a tree variant
+                        </div>
+                    </div>
+                    <div class="takeaway-item">
+                        <div class="icon">🧠</div>
+                        <div class="text">
+                            <strong>In-Memory Caches</strong><br>
+                            Redis sorted sets use skip lists (tree-like)
+                        </div>
+                    </div>
+                    <div class="takeaway-item">
+                        <div class="icon">📁</div>
+                        <div class="text">
+                            <strong>File Systems</strong><br>
+                            Directory trees, B-trees for disk
+                        </div>
+                    </div>
+                    <div class="takeaway-item">
+                        <div class="icon">🎮</div>
+                        <div class="text">
+                            <strong>Game Engines</strong><br>
+                            Spatial trees for collision detection
+                        </div>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- Slide 16: The Teaser -->
+            <section>
+                <span class="act-label">ACT 5: THE LIMIT</span>
+                <h2>⚠️ But There's a Catch...</h2>
+                <div class="metaphor-card" style="border-left-color: var(--primary-red);">
+                    <p style="font-size: 1.2em; margin-bottom: 25px;">
+                        BSTs and AVL trees work great <strong>in memory</strong>.
+                    </p>
+                    <div class="fragment">
+                        <p style="color: var(--primary-red);">
+                            But what happens when data doesn't fit in RAM?
+                        </p>
+                        <p style="margin-top: 15px;">
+                            A 1 billion record BST with 20 levels...<br>
+                            = 20 <strong>random disk reads</strong> per query 💀
+                        </p>
+                    </div>
+                    <div class="fragment" style="margin-top: 25px;">
+                        <p style="font-size: 1.4em; color: var(--primary-purple);">
+                            Next episode: How to make trees <strong>disk-friendly</strong>
+                        </p>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- Slide 17: Key Takeaways -->
+            <section>
+                <span class="act-label">ACT 6: MASTERY</span>
+                <h2>🎯 The 3 Big Ideas</h2>
+                <div style="max-width: 800px; margin: 0 auto;">
+                    <div class="takeaway-item" style="margin: 20px 0;">
+                        <div class="icon">📦</div>
+                        <div class="text" style="font-size: 1.1em;">
+                            <strong>Arrays Have Hidden Costs</strong><br>
+                            Binary search + insert = O(n) because of shifting
+                        </div>
+                    </div>
+                    <div class="takeaway-item" style="margin: 20px 0;">
+                        <div class="icon">🌳</div>
+                        <div class="text" style="font-size: 1.1em;">
+                            <strong>BSTs Eliminate Shifting</strong><br>
+                            Pointers let us insert without moving data
+                        </div>
+                    </div>
+                    <div class="takeaway-item" style="margin: 20px 0;">
+                        <div class="icon">⚖️</div>
+                        <div class="text" style="font-size: 1.1em;">
+                            <strong>Balance Is Everything</strong><br>
+                            Unbalanced = O(n). AVL rotations keep it O(log n)
+                        </div>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- Slide 18: Season Arc -->
+            <section>
+                <span class="act-label">ACT 6: MASTERY</span>
+                <h2>The Season 2 Arc</h2>
+                <div style="max-width: 600px; margin: 0 auto;">
+                    <div class="evolution-step">
+                        <h4>Episodes 2.1-2.3</h4>
+                        <p>Binary Search → SSTables → Indexes</p>
+                    </div>
+                    <div class="evolution-step current">
+                        <h4>Episode 2.4: BST/AVL ← You Are Here</h4>
+                        <p>Dynamic ordered storage in memory</p>
+                    </div>
+                    <div class="evolution-step">
+                        <h4>Episode 2.5: B-Trees</h4>
+                        <p>Read-optimized disk storage</p>
+                    </div>
+                    <div class="evolution-step">
+                        <h4>Episode 2.6: LSM-Trees</h4>
+                        <p>Write-optimized disk storage</p>
+                    </div>
+                    <div class="evolution-step">
+                        <h4>Episode 2.7: Hybrid Engines</h4>
+                        <p>Best of both worlds - Season Finale!</p>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- End Slide -->
+            <section>
+                <h2>🎬 End of Episode 2.4</h2>
+                <p class="subtitle">Binary Search Trees - Dynamic Ordered Storage</p>
+                <div style="margin-top: 40px;">
+                    <p>Next: Episode 2.5</p>
+                    <p style="color: var(--primary-purple);">"B-Trees - When RAM Isn't Enough"</p>
+                </div>
+                <div style="margin-top: 40px; font-size: 0.9em; color: #666;">
+                    <p>LeetCode #98 (Validate BST) | LeetCode #701 (Insert into BST)</p>
+                </div>
+            </section>
+            
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/reveal.js@4.5.0/dist/reveal.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/reveal.js@4.5.0/plugin/notes/notes.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/reveal.js@4.5.0/plugin/highlight/highlight.js"></script>
+    
+    <script>
+        Reveal.initialize({
+            hash: true,
+            slideNumber: true,
+            width: 1920,
+            height: 1080,
+            margin: 0.1,
+            plugins: [RevealNotes, RevealHighlight]
+        });
+        
+        // ==================== ANIMATION 1: Array Shift Problem ====================
+        class ShiftAnimation {
+            constructor(canvasId, statusId) {
+                this.canvas = document.getElementById(canvasId);
+                this.ctx = this.canvas.getContext('2d');
+                this.statusEl = document.getElementById(statusId);
+                this.reset();
+            }
+            
+            reset() {
+                this.array = [10, 20, 40, 50, 60, 70, 80];
+                this.insertValue = 35;
+                this.insertPos = -1;
+                this.phase = 'initial';
+                this.draw();
+                this.statusEl.textContent = 'Arrays need to shift everything to make room';
+            }
+            
+            findPosition() {
+                this.phase = 'found';
+                this.insertPos = 2;
+                this.draw();
+                this.statusEl.textContent = '✓ Found position 2 in O(log n) using binary search!';
+            }
+            
+            insertShift() {
+                if (this.insertPos < 0) this.findPosition();
+                this.phase = 'shifting';
+                this.draw();
+                this.statusEl.textContent = '💀 Now we must shift 5 elements to make room... O(n)!';
+                
+                setTimeout(() => {
+                    this.array.splice(this.insertPos, 0, this.insertValue);
+                    this.phase = 'done';
+                    this.draw();
+                    this.statusEl.textContent = '✓ Done! But with 1M elements, thats 1M shifts!';
+                }, 1500);
+            }
+            
+            draw() {
+                const ctx = this.ctx;
+                const w = this.canvas.width;
+                const h = this.canvas.height;
+                
+                ctx.fillStyle = '#1a1a2e';
+                ctx.fillRect(0, 0, w, h);
+                
+                const boxW = 80;
+                const startX = (w - this.array.length * (boxW + 10)) / 2;
+                const y = 100;
+                
+                this.array.forEach((val, i) => {
+                    let highlight = false;
+                    let shift = false;
+                    
+                    if (this.phase === 'found' && i >= this.insertPos) highlight = true;
+                    if (this.phase === 'shifting' && i >= this.insertPos) shift = true;
+                    
+                    ctx.fillStyle = shift ? '#ff4757' : (highlight ? '#ffd93d' : '#00ff88');
+                    ctx.beginPath();
+                    ctx.roundRect(startX + i * (boxW + 10), y, boxW, 60, 8);
+                    ctx.fill();
+                    
+                    ctx.fillStyle = '#000';
+                    ctx.font = 'bold 24px Segoe UI';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(val, startX + i * (boxW + 10) + boxW/2, y + 38);
+                    
+                    // Show shift arrows
+                    if (shift) {
+                        ctx.fillStyle = '#ff4757';
+                        ctx.font = '20px Segoe UI';
+                        ctx.fillText('→', startX + i * (boxW + 10) + boxW/2, y - 15);
+                    }
+                });
+                
+                // Show insert position
+                if (this.phase === 'found' || this.phase === 'shifting') {
+                    ctx.fillStyle = '#ffd93d';
+                    ctx.font = 'bold 20px Segoe UI';
+                    ctx.textAlign = 'center';
+                    ctx.fillText('Insert 35 here ↓', startX + this.insertPos * (boxW + 10) + boxW/2, y - 35);
+                }
+                
+                // Legend
+                ctx.fillStyle = '#888';
+                ctx.font = '14px Segoe UI';
+                ctx.textAlign = 'left';
+                ctx.fillText('Find: O(log n) ✓', 50, 220);
+                ctx.fillStyle = '#ff4757';
+                ctx.fillText('Shift: O(n) 💀', 200, 220);
+            }
+        }
+        
+        // ==================== ANIMATION 2: BST Operations ====================
+        class BSTAnimation {
+            constructor(canvasId, statusId) {
+                this.canvas = document.getElementById(canvasId);
+                this.ctx = this.canvas.getContext('2d');
+                this.statusEl = document.getElementById(statusId);
+                this.reset();
+            }
+            
+            reset() {
+                this.nodes = [
+                    { val: 50, x: 400, y: 50, left: 1, right: 2 },
+                    { val: 30, x: 250, y: 120, left: 3, right: 4 },
+                    { val: 70, x: 550, y: 120, left: 5, right: 6 },
+                    { val: 20, x: 175, y: 190, left: -1, right: -1 },
+                    { val: 40, x: 325, y: 190, left: -1, right: -1 },
+                    { val: 60, x: 475, y: 190, left: -1, right: -1 },
+                    { val: 80, x: 625, y: 190, left: -1, right: -1 }
+                ];
+                this.path = [];
+                this.newNode = null;
+                this.phase = 'initial';
+                this.draw();
+                this.statusEl.textContent = 'Follow left/right pointers - no shifting needed!';
+            }
+            
+            search(val) {
+                this.path = [];
+                this.phase = 'searching';
+                let curr = 0;
+                while (curr >= 0) {
+                    this.path.push(curr);
+                    if (this.nodes[curr].val === val) break;
+                    curr = val < this.nodes[curr].val ? this.nodes[curr].left : this.nodes[curr].right;
+                }
+                this.animatePath(0);
+            }
+            
+            insert(val) {
+                this.path = [];
+                this.phase = 'inserting';
+                let curr = 0;
+                let parent = -1;
+                let direction = '';
+                
+                while (curr >= 0) {
+                    this.path.push(curr);
+                    parent = curr;
+                    if (val < this.nodes[curr].val) {
+                        direction = 'left';
+                        curr = this.nodes[curr].left;
+                    } else {
+                        direction = 'right';
+                        curr = this.nodes[curr].right;
+                    }
+                }
+                
+                // Add new node
+                const px = this.nodes[parent].x;
+                const py = this.nodes[parent].y;
+                const newX = direction === 'left' ? px - 50 : px + 50;
+                this.newNode = { val: val, x: newX, y: py + 70 };
+                
+                this.animatePath(0);
+            }
+            
+            animatePath(idx) {
+                if (idx >= this.path.length) {
+                    if (this.phase === 'inserting') {
+                        this.statusEl.textContent = `✓ Insert at leaf - O(log n) - no shifting!`;
+                    } else {
+                        this.statusEl.textContent = `✓ Found in ${this.path.length} steps - O(log n)!`;
+                    }
+                    return;
+                }
+                
+                this.currentHighlight = idx;
+                this.draw();
+                this.statusEl.textContent = `Step ${idx + 1}: Visit node ${this.nodes[this.path[idx]].val}`;
+                setTimeout(() => this.animatePath(idx + 1), 600);
+            }
+            
+            draw() {
+                const ctx = this.ctx;
+                const w = this.canvas.width;
+                const h = this.canvas.height;
+                
+                ctx.fillStyle = '#1a1a2e';
+                ctx.fillRect(0, 0, w, h);
+                
+                // Draw edges
+                ctx.strokeStyle = '#444';
+                ctx.lineWidth = 2;
+                this.nodes.forEach(node => {
+                    if (node.left >= 0) {
+                        ctx.beginPath();
+                        ctx.moveTo(node.x, node.y + 25);
+                        ctx.lineTo(this.nodes[node.left].x, this.nodes[node.left].y - 25);
+                        ctx.stroke();
+                    }
+                    if (node.right >= 0) {
+                        ctx.beginPath();
+                        ctx.moveTo(node.x, node.y + 25);
+                        ctx.lineTo(this.nodes[node.right].x, this.nodes[node.right].y - 25);
+                        ctx.stroke();
+                    }
+                });
+                
+                // Draw nodes
+                this.nodes.forEach((node, i) => {
+                    const inPath = this.path.includes(i);
+                    const isCurrent = this.path[this.currentHighlight] === i;
+                    
+                    ctx.fillStyle = isCurrent ? '#ffd93d' : (inPath ? '#00ff88' : '#b388ff');
+                    ctx.beginPath();
+                    ctx.arc(node.x, node.y, 25, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    ctx.fillStyle = '#000';
+                    ctx.font = 'bold 18px Segoe UI';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(node.val, node.x, node.y);
+                });
+                
+                // Draw new node if inserting
+                if (this.newNode && this.currentHighlight >= this.path.length - 1) {
+                    ctx.strokeStyle = '#00ff88';
+                    ctx.setLineDash([5, 5]);
+                    ctx.beginPath();
+                    const parent = this.nodes[this.path[this.path.length - 1]];
+                    ctx.moveTo(parent.x, parent.y + 25);
+                    ctx.lineTo(this.newNode.x, this.newNode.y - 25);
+                    ctx.stroke();
+                    ctx.setLineDash([]);
+                    
+                    ctx.fillStyle = '#00ff88';
+                    ctx.beginPath();
+                    ctx.arc(this.newNode.x, this.newNode.y, 25, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    ctx.fillStyle = '#000';
+                    ctx.fillText(this.newNode.val, this.newNode.x, this.newNode.y);
+                }
+            }
+        }
+        
+        // ==================== ANIMATION 3: Degenerate Tree ====================
+        class DegenerateAnimation {
+            constructor(canvasId, statusId) {
+                this.canvas = document.getElementById(canvasId);
+                this.ctx = this.canvas.getContext('2d');
+                this.statusEl = document.getElementById(statusId);
+                this.reset();
+            }
+            
+            reset() {
+                this.nodes = [];
+                this.mode = 'initial';
+                this.draw();
+                this.statusEl.textContent = 'Insert order determines tree shape!';
+            }
+            
+            buildBalanced() {
+                this.nodes = [
+                    { val: 4, x: 400, y: 40 },
+                    { val: 2, x: 250, y: 100, parent: 0 },
+                    { val: 6, x: 550, y: 100, parent: 0 },
+                    { val: 1, x: 175, y: 160, parent: 1 },
+                    { val: 3, x: 325, y: 160, parent: 1 },
+                    { val: 5, x: 475, y: 160, parent: 2 },
+                    { val: 7, x: 625, y: 160, parent: 2 }
+                ];
+                this.mode = 'balanced';
+                this.draw();
+                this.statusEl.textContent = '✓ Balanced! Height = 3, Search = O(log n)';
+            }
+            
+            buildDegenerate() {
+                this.nodes = [];
+                for (let i = 1; i <= 7; i++) {
+                    this.nodes.push({
+                        val: i,
+                        x: 200 + i * 70,
+                        y: 40 + (i - 1) * 35,
+                        parent: i > 1 ? i - 2 : -1
+                    });
+                }
+                this.mode = 'degenerate';
+                this.draw();
+                this.statusEl.textContent = '💀 Degenerate! Height = 7, Search = O(n) - its a linked list!';
+            }
+            
+            draw() {
+                const ctx = this.ctx;
+                const w = this.canvas.width;
+                const h = this.canvas.height;
+                
+                ctx.fillStyle = '#1a1a2e';
+                ctx.fillRect(0, 0, w, h);
+                
+                if (this.nodes.length === 0) {
+                    ctx.fillStyle = '#666';
+                    ctx.font = '20px Segoe UI';
+                    ctx.textAlign = 'center';
+                    ctx.fillText('Click a button to see the difference!', w/2, h/2);
+                    return;
+                }
+                
+                // Draw edges
+                ctx.strokeStyle = this.mode === 'degenerate' ? '#ff4757' : '#00ff88';
+                ctx.lineWidth = 2;
+                this.nodes.forEach((node, i) => {
+                    if (node.parent >= 0) {
+                        ctx.beginPath();
+                        ctx.moveTo(this.nodes[node.parent].x, this.nodes[node.parent].y + 20);
+                        ctx.lineTo(node.x, node.y - 20);
+                        ctx.stroke();
+                    }
+                });
+                
+                // Draw nodes
+                this.nodes.forEach(node => {
+                    ctx.fillStyle = this.mode === 'degenerate' ? '#ff4757' : '#00ff88';
+                    ctx.beginPath();
+                    ctx.arc(node.x, node.y, 20, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    ctx.fillStyle = '#000';
+                    ctx.font = 'bold 16px Segoe UI';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(node.val, node.x, node.y);
+                });
+                
+                // Labels
+                ctx.fillStyle = '#fff';
+                ctx.font = '14px Segoe UI';
+                ctx.textAlign = 'left';
+                if (this.mode === 'balanced') {
+                    ctx.fillText('Insert order: 4,2,6,1,3,5,7', 50, 230);
+                    ctx.fillStyle = '#00ff88';
+                    ctx.fillText('Height: 3 ✓', 50, 250);
+                } else {
+                    ctx.fillText('Insert order: 1,2,3,4,5,6,7', 50, 230);
+                    ctx.fillStyle = '#ff4757';
+                    ctx.fillText('Height: 7 💀', 50, 250);
+                }
+            }
+        }
+        
+        // ==================== ANIMATION 4: AVL Rotation ====================
+        class RotationAnimation {
+            constructor(canvasId, statusId) {
+                this.canvas = document.getElementById(canvasId);
+                this.ctx = this.canvas.getContext('2d');
+                this.statusEl = document.getElementById(statusId);
+                this.reset();
+            }
+            
+            reset() {
+                this.phase = 'initial';
+                this.draw();
+                this.statusEl.textContent = 'Rotations rebalance in O(1) time';
+            }
+            
+            showUnbalanced() {
+                this.phase = 'unbalanced';
+                this.draw();
+                this.statusEl.textContent = '⚠️ Unbalanced! Right subtree is 2 levels deeper';
+            }
+            
+            rotate() {
+                if (this.phase !== 'unbalanced') this.showUnbalanced();
+                setTimeout(() => {
+                    this.phase = 'rotating';
+                    this.draw();
+                    this.statusEl.textContent = '🔄 Left rotation in progress...';
+                    
+                    setTimeout(() => {
+                        this.phase = 'balanced';
+                        this.draw();
+                        this.statusEl.textContent = '✓ Balanced! O(1) pointer changes fixed the tree!';
+                    }, 1000);
+                }, 500);
+            }
+            
+            draw() {
+                const ctx = this.ctx;
+                const w = this.canvas.width;
+                const h = this.canvas.height;
+                
+                ctx.fillStyle = '#1a1a2e';
+                ctx.fillRect(0, 0, w, h);
+                
+                if (this.phase === 'initial') {
+                    ctx.fillStyle = '#666';
+                    ctx.font = '20px Segoe UI';
+                    ctx.textAlign = 'center';
+                    ctx.fillText('Click "Show Imbalance" to see the problem', w/2, h/2);
+                    return;
+                }
+                
+                // Before rotation (left side)
+                ctx.fillStyle = '#fff';
+                ctx.font = 'bold 16px Segoe UI';
+                ctx.textAlign = 'center';
+                ctx.fillText(this.phase === 'balanced' ? 'Before' : 'Current', 200, 30);
+                
+                // Unbalanced tree
+                const unbalanced = [
+                    { val: 'A', x: 200, y: 80, children: [null, { val: 'B', x: 280, y: 150, children: [null, { val: 'C', x: 340, y: 220 }] }] }
+                ];
+                
+                this.drawTree(unbalanced[0], this.phase !== 'balanced' ? '#ff4757' : '#666');
+                
+                // Arrow
+                if (this.phase === 'rotating' || this.phase === 'balanced') {
+                    ctx.fillStyle = '#ffd93d';
+                    ctx.font = '40px Segoe UI';
+                    ctx.fillText('→', 400, 150);
+                }
+                
+                // After rotation (right side)
+                if (this.phase === 'rotating' || this.phase === 'balanced') {
+                    ctx.fillStyle = '#fff';
+                    ctx.font = 'bold 16px Segoe UI';
+                    ctx.fillText('After', 600, 30);
+                    
+                    const balanced = {
+                        val: 'B', x: 600, y: 100,
+                        children: [
+                            { val: 'A', x: 520, y: 180 },
+                            { val: 'C', x: 680, y: 180 }
+                        ]
+                    };
+                    this.drawTree(balanced, '#00ff88');
+                }
+                
+                // Height indicators
+                if (this.phase === 'unbalanced') {
+                    ctx.fillStyle = '#ff4757';
+                    ctx.font = '14px Segoe UI';
+                    ctx.fillText('Height: 3', 200, 260);
+                    ctx.fillText('Diff: 2 ⚠️', 200, 280);
+                }
+                if (this.phase === 'balanced') {
+                    ctx.fillStyle = '#00ff88';
+                    ctx.font = '14px Segoe UI';
+                    ctx.fillText('Height: 2', 600, 230);
+                    ctx.fillText('Diff: 0 ✓', 600, 250);
+                }
+            }
+            
+            drawTree(node, color) {
+                if (!node) return;
+                
+                const ctx = this.ctx;
+                
+                // Draw edges to children
+                if (node.children) {
+                    node.children.forEach(child => {
+                        if (child) {
+                            ctx.strokeStyle = color;
+                            ctx.lineWidth = 2;
+                            ctx.beginPath();
+                            ctx.moveTo(node.x, node.y + 20);
+                            ctx.lineTo(child.x, child.y - 20);
+                            ctx.stroke();
+                            this.drawTree(child, color);
+                        }
+                    });
+                }
+                
+                // Draw node
+                ctx.fillStyle = color;
+                ctx.beginPath();
+                ctx.arc(node.x, node.y, 25, 0, Math.PI * 2);
+                ctx.fill();
+                
+                ctx.fillStyle = '#000';
+                ctx.font = 'bold 18px Segoe UI';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(node.val, node.x, node.y);
+            }
+        }
+        
+        // Initialize all animations
+        const shiftAnim = new ShiftAnimation('shiftCanvas', 'shiftStatus');
+        const bstAnim = new BSTAnimation('bstCanvas', 'bstStatus');
+        const degenerateAnim = new DegenerateAnimation('degenerateCanvas', 'degenerateStatus');
+        const rotationAnim = new RotationAnimation('rotationCanvas', 'rotationStatus');
+        
+        // Redraw on slide change
+        Reveal.on('slidechanged', event => {
+            shiftAnim.draw();
+            bstAnim.draw();
+            degenerateAnim.draw();
+            rotationAnim.draw();
+        });
+    </script>
+</body>
+</html>
