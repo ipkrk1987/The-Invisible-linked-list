@@ -1,0 +1,18 @@
+# Database Implementation - Episode 8
+# No external dependencies required for core functionality
+# All implementations use Python standard library only
+
+# Optional: For testing
+pytest>=7.4.0
+pytest-cov>=4.1.0
+
+# Optional: For type checking
+mypy>=1.5.0
+
+# Optional: For formatting
+black>=23.7.0
+isort>=5.12.0
+
+# Optional: For linting
+flake8>=6.1.0
+pylint>=2.17.0

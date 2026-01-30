@@ -1,0 +1,41 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+
+# Database files
+*.db
+*.wal
+*.log
+*.dat
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+temp/
+tmp/
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Virtual environment
+venv/
+env/
+ENV/
