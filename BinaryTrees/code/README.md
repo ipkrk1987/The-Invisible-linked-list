@@ -1,102 +1,117 @@
-# Database Implementation Code - Episode 8
+# Database Implementation Code - LeetCode to Production
 
-This directory contains all the working code examples from Episode 8: "Building a Database - The Complete Architecture"
+This directory contains working code implementations for each episode of the Binary Trees series, progressing from simple data structures to complete database systems.
 
-## Structure
+## 📁 Structure
 
 ```
 code/
 ├── README.md                    # This file
-├── storage_engine.py           # Layer 1: B-Tree, LSM, Hybrid storage engines
-├── free_list.py                # Space management and page recycling
-├── buffer_pool.py              # Layer 2: Memory management with LRU cache
-├── wal.py                      # Layer 3: Write-Ahead Log for durability
-├── transaction_manager.py      # Layer 4: MVCC, locks, isolation
-├── table.py                    # Tables, schemas, row encoding
-├── indexes.py                  # Secondary indexes, composite indexes
-├── query_processor.py          # Layer 5: SQL parser, optimizer, executor
-├── minidb.py                   # Complete working database (~500 lines)
-└── examples/
-    ├── basic_usage.py          # Simple CRUD operations
-    ├── transactions.py         # Transaction examples
-    ├── indexing.py             # Index creation and queries
-    └── performance_tests.py    # Benchmarks and comparisons
+├── episode4/                    # BST & AVL Trees (in-memory)
+│   ├── bst_avl.py              # Binary Search Trees + self-balancing
+│   └── README.md
+├── episode5/                    # B-Trees (disk-optimized)
+│   ├── btree.py                # B-Tree and B+Tree implementations
+│   └── README.md
+├── episode6/                    # LSM-Trees (write-optimized)
+│   ├── lsm_tree.py             # MemTable, SSTables, Bloom filters
+│   └── README.md
+├── episode7/                    # Hybrid Storage (adaptive)
+│   ├── hybrid_storage.py       # Hot/cold tiering, access tracking
+│   └── README.md
+├── episode8/                    # Complete Database (5-layer architecture)
+│   ├── storage_engine.py       # B-Tree, LSM, Hybrid engines
+│   ├── free_list.py            # Space management
+│   ├── buffer_pool.py          # LRU caching
+│   ├── wal.py                  # Write-Ahead Log
+│   ├── transaction_manager.py  # MVCC, locks, isolation
+│   └── examples/
+│       ├── basic_usage.py      # CRUD operations
+│       └── transactions.py     # Transaction demos
+├── LICENSE                      # MIT License
+├── requirements.txt             # Dependencies
+├── .gitignore                  # Git ignore patterns
+└── quickstart.py               # Quick demo
 ```
 
-## Quick Start
+## 🎯 Learning Path
 
-```python
-from minidb import MiniDB
+Each episode builds on the previous one, showing the evolution from simple data structures to production database systems:
 
-# Create database
-db = MiniDB()
+### Episode 4: In-Memory Trees
+**Concepts**: BST, AVL rotations, balance factors  
+**Why**: Foundation - understand tree structures  
+**Limitation**: O(n) worst case (BST), no persistence  
+→ [episode4/](episode4/)
 
-# Create table
-db.execute("""
-    CREATE TABLE users (
-        id INTEGER PRIMARY KEY,
-        name TEXT NOT NULL,
-        age INTEGER
-    )
-""")
+### Episode 5: Disk-Optimized Trees
+**Concepts**: B-Trees, high fanout, page-based storage  
+**Why**: Minimize disk I/O - log₁₀₀(1M) = 3 seeks vs log₂(1M) = 20  
+**Used by**: PostgreSQL, MySQL, SQLite  
+→ [episode5/](episode5/)
 
-# Insert data
-db.execute("INSERT INTO users VALUES (1, 'Alice', 30)")
-db.execute("INSERT INTO users VALUES (2, 'Bob', 25)")
+### Episode 6: Write-Optimized Trees
+**Concepts**: LSM-Tree, MemTable, SSTables, compaction  
+**Why**: 100× faster writes - append-only storage  
+**Used by**: Cassandra, RocksDB, LevelDB  
+→ [episode6/](episode6/)
 
-# Query
-results = db.execute("SELECT * FROM users WHERE age > 25")
-print(results)  # [{'id': 1, 'name': 'Alice', 'age': 30}]
-```
+### Episode 7: Hybrid Storage
+**Concepts**: Hot/cold tiering, access pattern tracking  
+**Why**: Best of both worlds - fast reads + fast writes  
+**Used by**: TiDB, CockroachDB, YugabyteDB  
+→ [episode7/](episode7/)
 
-## Components
+### Episode 8: Complete Database
+**Concepts**: 5-layer architecture, ACID, query processing  
+**Why**: Integration - how all components work together  
+**Architecture**: Storage → Buffer Pool → WAL → Transactions → SQL  
+→ [episode8/](episode8/)
 
-### Layer 1: Storage Engine
-- **BTreeStorage**: Disk-optimized, fast reads (PostgreSQL style)
-- **LSMStorage**: Write-optimized, append-only (Cassandra style)
-- **HybridStorage**: Best of both worlds (TiDB style)
+## ⚡ Quick Start
 
-### Layer 2: Buffer Pool
-- LRU caching for hot pages
-- Dirty page tracking
-- Eviction policies
-
-### Layer 3: Write-Ahead Log (WAL)
-- Durability guarantees
-- Crash recovery
-- Checkpoint mechanism
-
-### Layer 4: Transaction Manager
-- MVCC (Multi-Version Concurrency Control)
-- Lock management (shared/exclusive)
-- Isolation levels
-
-### Layer 5: Query Processor
-- SQL lexer and parser
-- Query optimization
-- Execution engine
-
-## Running Tests
-
+### Episode 4: BST/AVL Trees
 ```bash
-# From the code directory
-python -m pytest tests/
+cd episode4
+python bst_avl.py
+```
 
-# Or run individual examples
+### Episode 5: B-Trees
+```bash
+cd episode5
+python btree.py
+```
+
+### Episode 6: LSM-Trees
+```bash
+cd episode6
+python lsm_tree.py
+```
+
+### Episode 7: Hybrid Storage
+```bash
+cd episode7
+python hybrid_storage.py
+```
+
+### Episode 8: Complete Database
+```bash
+cd episode8
 python examples/basic_usage.py
 python examples/transactions.py
-python examples/performance_tests.py
 ```
 
-## Learning Path
+## 📊 Performance Comparison
 
-1. Start with `storage_engine.py` - understand the foundation
-2. Read `buffer_pool.py` - see how caching works
-3. Study `wal.py` - learn about durability
-4. Explore `transaction_manager.py` - understand ACID
-5. Dive into `query_processor.py` - see SQL → operations
-6. Run `examples/` - practical usage patterns
-7. Finally, `minidb.py` - see how it all integrates
+| Operation | BST/AVL | B-Tree | LSM-Tree | Hybrid |
+|-----------|---------|--------|----------|--------|
+| **Insert** | 0.01ms | 10ms | 0.1ms | 0.1-10ms |
+| **Search** | 0.01ms | 3ms | 10ms | 3-10ms |
+| **Scan** | O(n) | O(log n + k) | O(k log k) | O(log n + k) |
+| **Disk I/O** | None | 3 seeks | Multiple | Adaptive |
+| **Use Case** | In-memory | OLTP | Write-heavy | Mixed |
+
+**Key Insight**: No single data structure is perfect! Choose based on workload.
 
 ## Key Concepts Demonstrated
 
@@ -126,3 +141,86 @@ This is educational code. For production, you'd need:
 ## License
 
 MIT License - Educational purposes
+🎓 Key Concepts by Episode
+
+### Episode 4: Trees & Rotations
+- Binary Search Trees (unbalanced)
+- AVL Trees (self-balancing with rotations)
+- Height calculation, balance factors
+- **Trade-off**: O(n) worst case vs guaranteed O(log n)
+
+### Episode 5: Page-Based Storage
+- B-Tree with high fanout (100+ keys/node)
+- Disk page management (4KB pages)
+- Split operations to maintain balance
+- **Trade-off**: Disk seeks minimized but complex splits
+
+### Episode 6: Append-Only Architecture
+- MemTable (in-memory buffer)
+- SSTables (immutable disk files)
+- Bloom filters (probabilistic "not here!")
+- Compaction (K-way merge = LeetCode #23!)
+- **Trade-off**: Fast writes but read amplification
+
+### Episode 7: Intelligent Tiering
+- Access pattern tracking
+- Hot tier (B-Tree) for frequently accessed data
+- Cold tier (LSM-Tree) for rarely accessed data
+- Automatic promotion/demotion
+- **Trade-off**: Complexity for optimization
+
+### Episode 8: Complete System
+- 5-layer architecture
+- Buffer pool (LRU caching)
+- Write-Ahead Log (durability)
+- MVCC transactions (isolation)
+- SQL query processing
+- **Trade-off**: Full features but high complexity
+
+## 🔧 Production Considerations
+
+This is educational code demonstrating core concepts. Production databases need:
+
+**Must Have:**
+- ✅ Comprehensive error handling and validation
+- ✅ Extensive testing (unit, integration, stress, chaos)
+- ✅ Monitoring, metrics, and observability
+- ✅ Backup and point-in-time recovery
+- ✅ Crash recovery and data integrity checks
+
+**Scale & Performance:**
+- ✅ Query optimization (cost-based optimizer)
+- ✅ Index selection and statistics
+- ✅ Connection pooling
+- ✅ Replication (leader-follower, multi-leader)
+- ✅ Sharding for horizontal scale
+
+**Security:**
+- ✅ Authentication (username/password, certificates)
+- ✅ Authorization (role-based access control)
+- ✅ Encryption at rest and in transit
+- ✅ Audit logging
+
+## 📚 References
+
+**Books:**
+- "Build Your Own Database From Scratch" by James Smith (https://build-your-own.org/database/)
+- "Database Internals" by Alex Petrov
+- "Designing Data-Intensive Applications" by Martin Kleppmann
+
+**Source Code:**
+- PostgreSQL: https://github.com/postgres/postgres
+- RocksDB: https://github.com/facebook/rocksdb
+- TiDB: https://github.com/pingcap/tidb
+- CockroachDB: https://github.com/cockroachdb/cockroach
+
+**Papers:**
+- "The Design and Implementation of a Log-Structured File System" (LFS, 1992)
+- "The Log-Structured Merge-Tree" (LSM-Tree, 1996)
+- "Bigtable: A Distributed Storage System" (Google, 2006)
+
+## 📝 License
+
+MIT License - Educational purposes
+
+See [LICENSE](LICENSE) for details.
