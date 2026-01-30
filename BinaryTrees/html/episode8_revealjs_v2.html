@@ -1,0 +1,1363 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Episode 2.8: Building a Complete Database - From Primitives to Production</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@4.5.0/dist/reset.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@4.5.0/dist/reveal.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@4.5.0/dist/theme/black.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@4.5.0/plugin/highlight/monokai.css">
+    <style>
+        :root {
+            --primary-green: #00ff88;
+            --primary-blue: #00d4ff;
+            --primary-purple: #b388ff;
+            --primary-orange: #ff9500;
+            --primary-red: #ff4757;
+            --primary-yellow: #ffd93d;
+            --primary-gold: #ffd700;
+            --bg-dark: #1a1a2e;
+            --bg-card: #16213e;
+        }
+        
+        .reveal { font-family: 'Segoe UI', system-ui, sans-serif; }
+        .reveal h1, .reveal h2, .reveal h3 { text-transform: none; font-weight: 700; }
+        .reveal h1 {
+            font-size: 2.5em;
+            background: linear-gradient(135deg, var(--primary-gold), var(--primary-orange));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .reveal h2 { font-size: 1.8em; color: var(--primary-green); }
+        .reveal h3 { font-size: 1.4em; color: var(--primary-blue); }
+        
+        .subtitle { font-size: 1.2em; color: var(--primary-purple); margin-top: 0.5em; }
+        .episode-badge {
+            display: inline-block;
+            background: linear-gradient(135deg, var(--primary-gold), var(--primary-orange));
+            padding: 0.3em 1em;
+            border-radius: 20px;
+            font-size: 0.8em;
+            margin-bottom: 1em;
+        }
+        .season-badge {
+            display: inline-block;
+            background: linear-gradient(135deg, var(--primary-blue), var(--primary-purple));
+            padding: 0.2em 0.8em;
+            border-radius: 15px;
+            font-size: 0.6em;
+            margin-bottom: 0.5em;
+        }
+        
+        .aha-moment {
+            background: linear-gradient(135deg, rgba(255, 215, 0, 0.2), rgba(255, 140, 0, 0.1));
+            border: 4px solid #ffd700;
+            border-radius: 25px;
+            padding: 50px;
+            margin: 30px auto;
+            max-width: 850px;
+            text-align: center;
+            box-shadow: 0 0 60px rgba(255, 215, 0, 0.4);
+        }
+        .aha-moment h3 { color: #ffd700 !important; font-size: 1.8em; margin-bottom: 25px; }
+        .aha-moment p { font-size: 1.3em; line-height: 1.6; }
+        
+        .big-reveal {
+            font-size: 3em;
+            font-weight: 900;
+            color: var(--primary-green);
+            text-shadow: 0 0 40px rgba(0, 255, 136, 0.6);
+            margin: 30px 0;
+        }
+        
+        .metaphor-card {
+            background: var(--bg-card);
+            border-radius: 20px;
+            padding: 35px;
+            margin: 25px auto;
+            max-width: 800px;
+            border-left: 6px solid var(--primary-purple);
+        }
+        .metaphor-card .emoji { font-size: 4em; margin-bottom: 20px; }
+        
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+            margin: 30px 0;
+        }
+        .feature-box {
+            background: var(--bg-card);
+            border-radius: 15px;
+            padding: 20px;
+            border-top: 3px solid var(--primary-blue);
+        }
+        
+        .warning-box {
+            background: rgba(255, 71, 87, 0.1);
+            border-left: 4px solid var(--primary-red);
+            padding: 1em;
+            margin: 1em 0;
+            border-radius: 0 10px 10px 0;
+        }
+        .highlight-box {
+            background: rgba(0, 255, 136, 0.1);
+            border-left: 4px solid var(--primary-green);
+            padding: 1em;
+            margin: 1em 0;
+            border-radius: 0 10px 10px 0;
+        }
+        
+        table {
+            font-size: 0.8em;
+            margin: 20px auto;
+            border-collapse: collapse;
+            width: 90%;
+        }
+        table th {
+            background: var(--primary-purple);
+            color: #000;
+            padding: 12px;
+            font-weight: bold;
+        }
+        table td {
+            padding: 10px;
+            border-bottom: 1px solid #444;
+        }
+        table tr:nth-child(even) { background: rgba(255,255,255,0.05); }
+        
+        pre { font-size: 0.5em; }
+        code { font-family: 'Consolas', 'Monaco', monospace; }
+        
+        .code-ref {
+            font-size: 0.8em;
+            color: var(--primary-blue);
+            font-style: italic;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="reveal">
+        <div class="slides">
+
+            <!-- Slide 1: Title -->
+            <section>
+                <div class="season-badge">Season 2: Binary Trees</div>
+                <div class="episode-badge">Episode 2.8 (Season Finale)</div>
+                <h1>Building a Complete Database</h1>
+                <p class="subtitle">From Primitives to Production</p>
+                <p style="margin-top: 2em; color: var(--primary-purple);">
+                    🔧 5 Layers • 🏗️ Real Architecture • 🎯 LeetCode to PostgreSQL
+                </p>
+            </section>
+
+            <!-- Slide 2: The Journey -->
+            <section>
+                <h2>🗺️ The Journey So Far</h2>
+                <div style="text-align: left; max-width: 900px; margin: 0 auto;">
+                    <p><strong style="color: var(--primary-green);">Episodes 2.1-2.3:</strong> Binary Search → SSTables → Sorted Data Structures</p>
+                    <p><strong style="color: var(--primary-blue);">Episode 2.4:</strong> BST/AVL Trees (In-Memory)</p>
+                    <p><strong style="color: var(--primary-purple);">Episode 2.5:</strong> B-Trees (PostgreSQL-style reads)</p>
+                    <p><strong style="color: var(--primary-orange);">Episode 2.6:</strong> LSM-Trees (Cassandra-style writes)</p>
+                    <p><strong style="color: var(--primary-yellow);">Episode 2.7:</strong> Hybrid Engines (TiDB-style adaptive)</p>
+                    <p><strong style="color: var(--primary-gold);">Episode 2.8 (Today):</strong> Complete Database Architecture</p>
+                </div>
+                <div class="highlight-box" style="margin-top: 2em;">
+                    <p><strong>Today's Goal:</strong> Assemble all pieces into a <strong>production database</strong>!</p>
+                </div>
+            </section>
+
+            <!-- Slide 3: The Big Picture -->
+            <section>
+                <h2>🏛️ The 5 Layers of a Database</h2>
+                <pre><code class="language-plaintext">┌─────────────────────────────────────────────────┐
+│  Layer 5: Query Processor (SQL -> Results)     │  ← Usability
+├─────────────────────────────────────────────────┤
+│  Layer 4: Transaction Manager (ACID)           │  ← Correctness
+├─────────────────────────────────────────────────┤
+│  Layer 3: Durability (Write-Ahead Log)         │  ← Crash Recovery
+├─────────────────────────────────────────────────┤
+│  Layer 2: Buffer Pool (LRU Cache)              │  ← Performance
+├─────────────────────────────────────────────────┤
+│  Layer 1: Storage Engine (B-Tree / LSM / Hybrid)│  ← Data Structure
+└─────────────────────────────────────────────────┘</code></pre>
+                <div class="aha-moment">
+                    <div class="aha-icon">💡</div>
+                    <p><strong>Production databases = Data structures + 4 engineering layers!</strong></p>
+                </div>
+            </section>
+
+            <!-- Slide 4: Layer 1 - Storage Engines -->
+            <section>
+                <h2>Layer 1: Storage Engine Design</h2>
+                <h3 style="color: var(--primary-gold);">🎯 Data Structure Choice</h3>
+                <div class="feature-grid">
+                    <div class="feature-box">
+                        <h4 style="color: var(--primary-blue);">B-Tree Storage</h4>
+                        <p><strong>Reads:</strong> O(log n)<br>
+                        <strong>Writes:</strong> O(log n)<br>
+                        <strong>Best for:</strong> OLTP, point queries</p>
+                    </div>
+                    <div class="feature-box">
+                        <h4 style="color: var(--primary-orange);">LSM Storage</h4>
+                        <p><strong>Reads:</strong> O(k log n)<br>
+                        <strong>Writes:</strong> O(1) amortized<br>
+                        <strong>Best for:</strong> Write-heavy, time-series</p>
+                    </div>
+                </div>
+                <pre><code class="language-python"># DESIGN: Storage engine interface
+class BTreeStorageEngine:
+    # Read-modify-write pattern
+    def get(key):
+        page = find_leaf_page(key)  # O(log n) seeks
+        return page.search(key)     # Binary search
+    
+    def put(key, value):
+        page = find_leaf_page(key)  # Navigate B-Tree
+        if page.is_full():
+            split_page(page)        # Keep tree balanced
+        page.insert(key, value)     # In-place update</code></pre>
+                <p class="code-ref">👉 Working implementation: <a href="../code/episode5/btree.py">code/episode5/btree.py</a></p>
+            </section>
+
+            <!-- Slide 5: Layer 2 - Buffer Pool -->
+            <section>
+                <h2>Layer 2: Buffer Pool (LeetCode #146!)</h2>
+                <h3 style="color: var(--primary-blue);">🧠 Memory Management</h3>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px; align-items: start;">
+                    <div>
+                        <canvas id="bufferPoolCanvas" width="500" height="400"></canvas>
+                        <div id="bufferPoolStatus" style="text-align: center; margin-top: 10px; color: var(--primary-green); font-weight: bold;">Click to simulate page requests</div>
+                        <div style="text-align: center; margin-top: 10px;">
+                            <button onclick="bufferPoolAnim.simulateRequest()" style="background: var(--primary-blue); color: #000; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-weight: bold;">Request Page</button>
+                            <button onclick="bufferPoolAnim.reset()" style="background: var(--primary-purple); color: #fff; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-weight: bold; margin-left: 10px;">Reset</button>
+                        </div>
+                    </div>
+                    <div>
+                        <pre style="font-size: 0.45em;"><code class="language-python"># DESIGN: LRU cache for pages
+class BufferPool:
+    cache = LRUCache(capacity=4)
+    dirty_pages = set()
+    
+    def get_page(page_id):
+        if page_id in cache:
+            return cache.get(page_id)
+            # Cache hit! ✅
+        
+        page = disk.read(page_id)
+        cache.put(page_id, page)
+        # Cache miss 💸
+        # Evict LRU if full
+        return page</code></pre>
+                        <div class="highlight-box" style="margin-top: 20px; font-size: 0.9em;">
+                            <p><strong>Key Insight:</strong> Buffer pool = LeetCode LRU cache at scale!<br>
+                            99% cache hit rate = 100× speedup</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Slide 6: Layer 3 - Write-Ahead Log -->
+            <section>
+                <h2>Layer 3: Write-Ahead Log (WAL)</h2>
+                <h3 style="color: var(--primary-orange);">💾 Durability Guarantee</h3>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px; align-items: start;">
+                    <div>
+                        <canvas id="walCanvas" width="500" height="400"></canvas>
+                        <div id="walStatus" style="text-align: center; margin-top: 10px; color: var(--primary-orange); font-weight: bold;">Append-only log grows with each write</div>
+                        <div style="text-align: center; margin-top: 10px;">
+                            <button onclick="walAnim.addEntry()" style="background: var(--primary-orange); color: #000; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-weight: bold;">Add Log Entry</button>
+                            <button onclick="walAnim.reset()" style="background: var(--primary-purple); color: #fff; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-weight: bold; margin-left: 10px;">Reset</button>
+                        </div>
+                    </div>
+                    <div>
+                        <pre style="font-size: 0.4em;"><code class="language-python"># DESIGN: Append-only log
+class WriteAheadLog:
+    log_file = open("wal.log", "ab")
+    
+    def log_write(txn_id, key, 
+                  old_val, new_val):
+        entry = {
+            'lsn': next_lsn(),
+            'txn': txn_id,
+            'op': 'UPDATE',
+            'key': key,
+            'before': old_val,
+            'after': new_val
+        }
+        log_file.write(entry)
+        fsync()  # Force to disk!
+        return entry['lsn']</code></pre>
+                        <table style="font-size: 0.7em; margin-top: 15px;">
+                            <tr>
+                                <th>Decision</th>
+                                <th>fsync each</th>
+                                <th>Group commit</th>
+                            </tr>
+                            <tr>
+                                <td><strong>Durability</strong></td>
+                                <td>✅ Strongest</td>
+                                <td>⚠️ 10ms gap</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Throughput</strong></td>
+                                <td>~200 TPS</td>
+                                <td>~50K TPS</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Used by</strong></td>
+                                <td>PostgreSQL</td>
+                                <td>MySQL</td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Slide 7: Layer 4 - Transactions -->
+            <section>
+                <h2>Layer 4: Transaction Manager</h2>
+                <h3 style="color: var(--primary-purple);">🔒 ACID Coordination</h3>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px; align-items: start;">
+                    <div>
+                        <canvas id="txnCanvas" width="500" height="400"></canvas>
+                        <div id="txnStatus" style="text-align: center; margin-top: 10px; color: var(--primary-purple); font-weight: bold;">Transaction lifecycle: BEGIN → EXECUTE → COMMIT</div>
+                        <div style="text-align: center; margin-top: 10px;">
+                            <button onclick="txnAnim.nextPhase()" style="background: var(--primary-purple); color: #fff; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-weight: bold;">Next Phase</button>
+                            <button onclick="txnAnim.reset()" style="background: var(--primary-red); color: #fff; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-weight: bold; margin-left: 10px;">Reset</button>
+                        </div>
+                    </div>
+                    <div>
+                        <pre style="font-size: 0.4em;"><code class="language-python"># DESIGN: Transaction coordinator
+class TransactionManager:
+    active_txns = {}  # txn_id → Txn
+    lock_table = {}   # key → [txns]
+    
+    def begin():
+        txn = Transaction(next_id())
+        active_txns[txn.id] = txn
+        return txn.id
+    
+    def execute(txn_id, op):
+        acquire_locks(txn_id, op.keys)
+        wal.log(txn_id, op)
+        apply_to_storage(op)
+    
+    def commit(txn_id):
+        wal.write_commit(txn_id)
+        release_locks(txn_id)
+        del active_txns[txn_id]</code></pre>
+                        <table style="font-size: 0.65em; margin-top: 15px;">
+                            <tr>
+                                <th>Technique</th>
+                                <th>2PL</th>
+                                <th>MVCC</th>
+                            </tr>
+                            <tr>
+                                <td><strong>Reads block?</strong></td>
+                                <td>❌ Yes</td>
+                                <td>✅ No</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Storage</strong></td>
+                                <td>✅ Low</td>
+                                <td>⚠️ High</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Used by</strong></td>
+                                <td>SQLite</td>
+                                <td>PostgreSQL</td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Slide 8: Layer 5 - Query Processor -->
+            <section>
+                <h2>Layer 5: Query Processor Pipeline</h2>
+                <h3 style="color: var(--primary-green);">📊 SQL → Results</h3>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px; align-items: start;">
+                    <div>
+                        <canvas id="queryCanvas" width="500" height="450"></canvas>
+                        <div id="queryStatus" style="text-align: center; margin-top: 10px; color: var(--primary-green); font-weight: bold;">7-stage pipeline transforms SQL to results</div>
+                        <div style="text-align: center; margin-top: 10px;">
+                            <button onclick="queryAnim.nextStage()" style="background: var(--primary-green); color: #000; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-weight: bold;">Next Stage</button>
+                            <button onclick="queryAnim.reset()" style="background: var(--primary-purple); color: #fff; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-weight: bold; margin-left: 10px;">Reset</button>
+                        </div>
+                    </div>
+                    <div>
+                        <div style="font-size: 0.85em; text-align: left;">
+                            <p><strong style="color: var(--primary-yellow);">Example Query:</strong></p>
+                            <pre style="font-size: 0.75em;"><code class="language-sql">SELECT name FROM users WHERE age > 25;</code></pre>
+                            <div style="margin-top: 20px; line-height: 2;">
+                                <p><strong>1. Lexer:</strong> ['SELECT', 'name', 'FROM', ...]</p>
+                                <p><strong>2. Parser:</strong> AST { select, from, where }</p>
+                                <p><strong>3. Validator:</strong> ✅ Table/columns exist</p>
+                                <p><strong>4. Logical:</strong> Project → Filter → Scan</p>
+                                <p><strong>5. Optimizer:</strong> 🎯 Use index!</p>
+                                <p><strong>6. Physical:</strong> IndexScan → Project</p>
+                                <p><strong>7. Execute:</strong> [Alice, Charlie, ...]</p>
+                            </div>
+                        </div>
+                        <div class="highlight-box" style="margin-top: 15px; font-size: 0.85em;">
+                            <p><strong>Key:</strong> Index scan = 1000× faster than full scan!</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Slide 9: Query Execution -->
+            <section>
+                <h2>Query Execution Design</h2>
+                <h3 style="color: var(--primary-blue);">Join Algorithms</h3>
+                <table>
+                    <tr>
+                        <th>Algorithm</th>
+                        <th>Complexity</th>
+                        <th>When to Use</th>
+                    </tr>
+                    <tr>
+                        <td><strong>Nested Loop</strong></td>
+                        <td>O(n × m)</td>
+                        <td>Small tables (<1000 rows)</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Hash Join</strong></td>
+                        <td>O(n + m)</td>
+                        <td>Equality joins, enough RAM</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Merge Join</strong></td>
+                        <td>O(n log n)</td>
+                        <td>Both tables sorted/indexed</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Index Nested Loop</strong></td>
+                        <td>O(n × log m)</td>
+                        <td>Index on join key exists</td>
+                    </tr>
+                </table>
+                <p class="code-ref">👉 Complete query processor design: Lines 800-1400 in episode8.md<br>
+                👉 Working implementations: <a href="../code/episode8/">code/episode8/</a></p>
+            </section>
+
+            <!-- Slide 10: Putting It Together -->
+            <section>
+                <h2>🔧 From Concepts to Working System</h2>
+                <pre><code class="language-python"># DESIGN: Integrate all 5 layers
+
+class MiniDatabase:
+    # Layer 1: Choose storage engine
+    storage = BTreeStorage()  # or LSMStorage() or HybridStorage()
+    
+    # Layer 2: Add memory caching
+    buffer_pool = BufferPool(storage, capacity=100_pages)
+    
+    # Layer 3: Add durability
+    wal = WriteAheadLog("database.wal")
+    
+    # Layer 4: Add transactions
+    txn_manager = TransactionManager(storage, wal, buffer_pool)
+    
+    # Layer 5: Add query processing
+    query_processor = QueryProcessor(storage, txn_manager)
+    
+    def execute_sql(sql_query):
+        return query_processor.execute(sql_query)</code></pre>
+                <div class="aha-moment">
+                    <p><strong>Each layer has a clear responsibility!<br>
+                    Layers compose: buffer pool wraps storage, txn manager wraps both</strong></p>
+                </div>
+                <p class="code-ref">👉 Working implementation: <a href="../code/episode8/">code/episode8/</a> (1,120 lines)</p>
+            </section>
+
+            <!-- Slide 11: Transaction Flow -->
+            <section>
+                <h2>Transaction Flow (Design Sequence)</h2>
+                <pre><code class="language-plaintext">User: BEGIN TRANSACTION
+   ↓
+User: INSERT INTO users VALUES (1, 'Alice', 30)
+   ↓
+1. Write to WAL (durability)           ← Layer 3
+2. Acquire locks (isolation)           ← Layer 4
+3. Update in buffer pool (performance) ← Layer 2
+4. Put in storage engine (persistence) ← Layer 1
+   ↓
+User: COMMIT
+   ↓
+1. Commit record to WAL
+2. Release locks
+3. Flush dirty pages (async)
+   ↓
+User: "OK" (Transaction durable!)</code></pre>
+                <div class="highlight-box">
+                    <p><strong>Key Takeaway:</strong> Same design pattern across <strong>all databases</strong><br>
+                    (PostgreSQL, MySQL, Cassandra) - only implementation details differ!</p>
+                </div>
+            </section>
+
+            <!-- Slide 12: Real World Examples -->
+            <section>
+                <h2>🌍 Real-World Database Architectures</h2>
+                <div class="feature-grid">
+                    <div class="feature-box">
+                        <h4 style="color: var(--primary-blue);">PostgreSQL</h4>
+                        <p><strong>Storage:</strong> Heap files + B-Tree indexes<br>
+                        <strong>WAL:</strong> fsync every write<br>
+                        <strong>MVCC:</strong> Versioned rows<br>
+                        <strong>Best for:</strong> Complex queries, OLTP</p>
+                    </div>
+                    <div class="feature-box">
+                        <h4 style="color: var(--primary-orange);">Cassandra</h4>
+                        <p><strong>Storage:</strong> LSM-Tree (SSTables)<br>
+                        <strong>WAL:</strong> Commit log<br>
+                        <strong>No transactions:</strong> Eventually consistent<br>
+                        <strong>Best for:</strong> Write-heavy, time-series</p>
+                    </div>
+                </div>
+                <div class="feature-grid">
+                    <div class="feature-box">
+                        <h4 style="color: var(--primary-purple);">MySQL InnoDB</h4>
+                        <p><strong>Storage:</strong> B+Tree (clustered index)<br>
+                        <strong>WAL:</strong> Redo log + group commit<br>
+                        <strong>MVCC:</strong> Undo logs<br>
+                        <strong>Best for:</strong> OLTP, web apps</p>
+                    </div>
+                    <div class="feature-box">
+                        <h4 style="color: var(--primary-yellow);">TiDB</h4>
+                        <p><strong>Storage:</strong> RocksDB (LSM) + TiKV<br>
+                        <strong>WAL:</strong> Raft log (distributed)<br>
+                        <strong>Transactions:</strong> Percolator (distributed ACID)<br>
+                        <strong>Best for:</strong> Scale + ACID</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Slide 13: Philosophy -->
+            <section>
+                <h2>🎭 Database Philosophy</h2>
+                <div class="metaphor-card">
+                    <h4>Philosophy 1: ACID (Traditional)</h4>
+                    <pre><code class="language-plaintext">Correctness > Performance
+Single machine first, scale later
+Strong guarantees for users
+
+Examples: PostgreSQL, MySQL, SQLite
+
+Mantra: "Never lose data, always consistent"</code></pre>
+                </div>
+                <div class="metaphor-card">
+                    <h4>Philosophy 2: BASE (NoSQL)</h4>
+                    <pre><code class="language-plaintext">Performance > Correctness
+Distributed first, scale horizontally
+Eventual consistency acceptable
+
+Examples: Cassandra, Riak, DynamoDB
+
+Mantra: "Never go down, eventually correct"</code></pre>
+                </div>
+                <div class="metaphor-card">
+                    <h4>Philosophy 3: Hybrid (Modern)</h4>
+                    <pre><code class="language-plaintext">ACID + Scale = Complexity managed
+Multiple engines for different workloads
+Intelligent routing
+
+Examples: TiDB, CockroachDB, YugabyteDB
+
+Mantra: "Best of both worlds"</code></pre>
+                </div>
+            </section>
+
+            <!-- Slide 14: Key Takeaways -->
+            <section>
+                <h2>🎯 The 5 Big Ideas</h2>
+                <div style="text-align: left; max-width: 900px; margin: 0 auto;">
+                    <div class="highlight-box">
+                        <p><strong>1. Data Structure Choice Determines Everything</strong><br>
+                        B-Tree → Read-optimized, ACID-friendly<br>
+                        LSM-Tree → Write-optimized, eventual consistency<br>
+                        Hybrid → Complexity but flexibility</p>
+                    </div>
+                    <div class="highlight-box">
+                        <p><strong>2. Layers Build on Each Other</strong><br>
+                        Storage Engine → Buffer Pool → WAL → Transactions → Query Processor</p>
+                    </div>
+                    <div class="highlight-box">
+                        <p><strong>3. No Perfect Database</strong><br>
+                        PostgreSQL: Great OLTP, weak at massive writes<br>
+                        Cassandra: Great writes, weak at complex queries<br>
+                        TiDB: Great hybrid, complex to operate</p>
+                    </div>
+                    <div class="highlight-box">
+                        <p><strong>4. Production = Primitives + Engineering</strong><br>
+                        The algorithms are well-known (B-Tree, LSM)<br>
+                        The hard part: Making it fast, reliable, distributed</p>
+                    </div>
+                    <div class="highlight-box">
+                        <p><strong>5. You Can Build This!</strong><br>
+                        Storage engine: ~1 month<br>
+                        Adding layers: ~6 months<br>
+                        Production-ready: years of hardening</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Slide 15: Next Steps -->
+            <section>
+                <h2>📚 Where to Go Deeper</h2>
+                <div style="text-align: left; max-width: 900px; margin: 0 auto; font-size: 0.9em;">
+                    <h3 style="color: var(--primary-gold);">🎯 Hands-On Building (START HERE!):</h3>
+                    <ul>
+                        <li><strong><a href="https://build-your-own.org/database/">Build Your Own Database From Scratch</a></strong> by James Smith<br>
+                        Step-by-step: B+Tree → Durability → Transactions → SQL (Written in Go)</li>
+                        <li>Alternative: <a href="https://trialofcode.org/">LSM-Tree Database in 45 Steps</a> (test-driven)</li>
+                        <li>Practice: <a href="https://codecrafters.io/">CodeCrafters.io</a> - Build Redis, SQLite, etc.</li>
+                    </ul>
+                    
+                    <h3 style="color: var(--primary-blue);">Storage Engines:</h3>
+                    <ul>
+                        <li>Read: "Database Internals" by Alex Petrov</li>
+                        <li>Implement: Build your own B-Tree, then LSM-Tree</li>
+                        <li>Study: PostgreSQL heap files, RocksDB compaction</li>
+                    </ul>
+                    
+                    <h3 style="color: var(--primary-purple);">Transactions:</h3>
+                    <ul>
+                        <li>Paper: "A Critique of ANSI SQL Isolation Levels"</li>
+                        <li>Implement: MVCC, 2-phase locking</li>
+                        <li>Study: PostgreSQL's MVCC implementation</li>
+                    </ul>
+                    
+                    <h3 style="color: var(--primary-orange);">Query Optimization:</h3>
+                    <ul>
+                        <li>Read: "Database Systems: The Complete Book" (Garcia-Molina)</li>
+                        <li>Implement: Cost-based optimizer</li>
+                        <li>Study: PostgreSQL's planner (pg_plan.c)</li>
+                    </ul>
+                </div>
+            </section>
+
+            <!-- Slide 16: The Complete Picture -->
+            <section>
+                <h2>🏛️ From LeetCode to Production Database</h2>
+                <pre><code class="language-plaintext">Episode 2.1: Binary Search
+    ↓
+Episode 2.2-2.3: SSTables
+    ↓
+Episode 2.4: BST/AVL (In-Memory)
+    ↓
+         ┌──────────────────────┐
+         │                      │
+Episode 2.5:              Episode 2.6:
+B-Tree                    LSM-Tree
+(PostgreSQL)              (Cassandra)
+         │                      │
+         └──────────┬───────────┘
+                    ↓
+              Episode 2.7:
+              Hybrid Engines
+              (TiDB)
+                    ↓
+              Episode 2.8: 👈 YOU ARE HERE
+              Complete Architecture
+              
+                    ↓
+         Season 3: Distributed Systems?
+         (Raft, Paxos, Distributed Transactions)</code></pre>
+                <div class="aha-moment">
+                    <div class="aha-icon">✅</div>
+                    <p><strong>You now understand how databases work from first principles!<br>
+                    How they store, cache, persist, transact, and query data.</strong></p>
+                </div>
+            </section>
+
+            <!-- Slide 17: Final Thought -->
+            <section>
+                <h2>💡 The Secret of Database Engineering</h2>
+                <div class="aha-moment" style="padding: 70px;">
+                    <p style="font-size: 1.5em; line-height: 1.8;">
+                        <em>"A production database is not magic.</em><br><br>
+                        <em>It's a data structure you learned in school...</em><br><br>
+                        <em>+ A cache layer</em><br>
+                        <em>+ A log for durability</em><br>
+                        <em>+ Locks for correctness</em><br>
+                        <em>+ Years of bug fixes and optimizations."</em>
+                    </p>
+                    <p style="margin-top: 2em; font-size: 1.6em; color: var(--primary-gold);">
+                        <strong>You have the fundamentals. The rest is engineering.</strong> 🎯
+                    </p>
+                </div>
+            </section>
+
+            <!-- Slide 18: The End -->
+            <section>
+                <h1 style="font-size: 4em;">THE END 🎬</h1>
+                <p class="subtitle" style="font-size: 1.5em;">Season 2 Complete: Binary Trees → Production Database Systems</p>
+                <div style="margin-top: 3em;">
+                    <p style="font-size: 1.3em; color: var(--primary-purple);">
+                        <strong>Coming Next:</strong><br>
+                        Season 3 - Distributed Systems?<br>
+                        (Raft, Paxos, Distributed Transactions)
+                    </p>
+                </div>
+                <div style="margin-top: 2em; font-size: 0.9em; color: #888;">
+                    <p>📚 Episode materials: <a href="../episode8.md">episode8.md</a><br>
+                    💻 Code implementations: <a href="../../code/episode8/">code/episode8/</a></p>
+                </div>
+            </section>
+
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/reveal.js@4.5.0/dist/reveal.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/reveal.js@4.5.0/plugin/highlight/highlight.js"></script>
+
+    <script>
+        Reveal.initialize({
+            hash: true,
+            width: 1920,
+            height: 1080,
+            margin: 0.1,
+            plugins: [ RevealHighlight ],
+            transition: 'slide',
+            backgroundTransition: 'fade'
+        });
+
+        // ==================== ANIMATION 1: Buffer Pool (LRU Cache) ====================
+        class BufferPoolAnimation {
+            constructor(canvasId, statusId) {
+                this.canvas = document.getElementById(canvasId);
+                if (!this.canvas) return;
+                this.ctx = this.canvas.getContext('2d');
+                this.statusEl = document.getElementById(statusId);
+                this.capacity = 4;
+                this.cache = [];
+                this.requests = 0;
+                this.hits = 0;
+                this.reset();
+            }
+            
+            reset() {
+                this.cache = [];
+                this.requests = 0;
+                this.hits = 0;
+                this.draw();
+                this.statusEl.textContent = 'Click to simulate page requests';
+            }
+            
+            simulateRequest() {
+                const pageIds = [1, 2, 3, 4, 5, 1, 2, 6];
+                const pageId = pageIds[this.requests % pageIds.length];
+                this.requests++;
+                
+                const index = this.cache.indexOf(pageId);
+                if (index !== -1) {
+                    // Cache hit - move to front
+                    this.cache.splice(index, 1);
+                    this.cache.unshift(pageId);
+                    this.hits++;
+                    this.statusEl.textContent = `✅ Cache HIT! Page ${pageId} (${this.hits}/${this.requests} hits = ${Math.round(this.hits/this.requests*100)}%)`;
+                } else {
+                    // Cache miss
+                    if (this.cache.length >= this.capacity) {
+                        const evicted = this.cache.pop();
+                        this.statusEl.textContent = `💸 Cache MISS! Page ${pageId} loaded, evicted page ${evicted} (LRU)`;
+                    } else {
+                        this.statusEl.textContent = `💸 Cache MISS! Page ${pageId} loaded from disk`;
+                    }
+                    this.cache.unshift(pageId);
+                }
+                
+                this.draw();
+            }
+            
+            draw() {
+                const ctx = this.ctx;
+                const w = this.canvas.width;
+                const h = this.canvas.height;
+                
+                ctx.fillStyle = '#1a1a2e';
+                ctx.fillRect(0, 0, w, h);
+                
+                // Title
+                ctx.fillStyle = '#00d4ff';
+                ctx.font = 'bold 20px Segoe UI';
+                ctx.textAlign = 'center';
+                ctx.fillText('Buffer Pool (LRU Cache)', w/2, 30);
+                
+                // Cache capacity indicator
+                ctx.font = '14px Segoe UI';
+                ctx.fillStyle = '#b388ff';
+                ctx.fillText(`Capacity: ${this.cache.length}/${this.capacity} pages`, w/2, 55);
+                
+                // Draw cache slots
+                const slotW = 100;
+                const slotH = 70;
+                const startY = 80;
+                const spacing = 10;
+                
+                // MRU (Most Recently Used) label
+                ctx.fillStyle = '#00ff88';
+                ctx.font = 'bold 14px Segoe UI';
+                ctx.textAlign = 'left';
+                ctx.fillText('MRU →', 20, startY + 35);
+                
+                // Draw occupied slots
+                for (let i = 0; i < this.cache.length; i++) {
+                    const x = 90 + i * (slotW + spacing);
+                    const y = startY;
+                    
+                    // Slot background
+                    const alpha = 1 - (i * 0.15);
+                    ctx.fillStyle = `rgba(0, 255, 136, ${alpha * 0.3})`;
+                    ctx.fillRect(x, y, slotW, slotH);
+                    ctx.strokeStyle = '#00ff88';
+                    ctx.lineWidth = 2;
+                    ctx.strokeRect(x, y, slotW, slotH);
+                    
+                    // Page number
+                    ctx.fillStyle = '#00ff88';
+                    ctx.font = 'bold 24px Segoe UI';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(`Page ${this.cache[i]}`, x + slotW/2, y + slotH/2 + 8);
+                }
+                
+                // Draw empty slots
+                for (let i = this.cache.length; i < this.capacity; i++) {
+                    const x = 90 + i * (slotW + spacing);
+                    const y = startY;
+                    
+                    ctx.strokeStyle = '#444';
+                    ctx.lineWidth = 2;
+                    ctx.setLineDash([5, 5]);
+                    ctx.strokeRect(x, y, slotW, slotH);
+                    ctx.setLineDash([]);
+                    
+                    ctx.fillStyle = '#666';
+                    ctx.font = '14px Segoe UI';
+                    ctx.textAlign = 'center';
+                    ctx.fillText('Empty', x + slotW/2, y + slotH/2 + 5);
+                }
+                
+                // LRU (Least Recently Used) label
+                ctx.fillStyle = '#ff4757';
+                ctx.font = 'bold 14px Segoe UI';
+                ctx.textAlign = 'right';
+                ctx.fillText('← LRU (evict)', w - 20, startY + 35);
+                
+                // Disk section
+                ctx.fillStyle = '#ffd93d';
+                ctx.font = 'bold 18px Segoe UI';
+                ctx.textAlign = 'center';
+                ctx.fillText('💾 Disk (Slow)', w/2, 200);
+                
+                // Disk pages
+                const diskPages = [1, 2, 3, 4, 5, 6, 7, 8];
+                const pageSize = 35;
+                const diskStartY = 220;
+                for (let i = 0; i < diskPages.length; i++) {
+                    const x = 90 + (i % 4) * (pageSize + 20);
+                    const y = diskStartY + Math.floor(i / 4) * (pageSize + 10);
+                    
+                    ctx.fillStyle = '#333';
+                    ctx.fillRect(x, y, pageSize, pageSize);
+                    ctx.strokeStyle = '#666';
+                    ctx.lineWidth = 1;
+                    ctx.strokeRect(x, y, pageSize, pageSize);
+                    
+                    ctx.fillStyle = '#ffd93d';
+                    ctx.font = '12px Segoe UI';
+                    ctx.fillText(diskPages[i], x + pageSize/2, y + pageSize/2 + 4);
+                }
+                
+                // Stats
+                if (this.requests > 0) {
+                    ctx.fillStyle = '#00ff88';
+                    ctx.font = 'bold 16px Segoe UI';
+                    ctx.textAlign = 'center';
+                    const hitRate = Math.round(this.hits / this.requests * 100);
+                    ctx.fillText(`Hit Rate: ${hitRate}% (${this.hits} hits / ${this.requests} requests)`, w/2, 350);
+                    
+                    if (hitRate >= 75) {
+                        ctx.fillStyle = '#00ff88';
+                        ctx.fillText('✅ Excellent cache performance!', w/2, 375);
+                    } else if (hitRate >= 50) {
+                        ctx.fillStyle = '#ffd93d';
+                        ctx.fillText('⚠️ Moderate cache performance', w/2, 375);
+                    } else {
+                        ctx.fillStyle = '#ff4757';
+                        ctx.fillText('❌ Poor cache performance', w/2, 375);
+                    }
+                }
+            }
+        }
+
+        // ==================== ANIMATION 2: Write-Ahead Log ====================
+        class WALAnimation {
+            constructor(canvasId, statusId) {
+                this.canvas = document.getElementById(canvasId);
+                if (!this.canvas) return;
+                this.ctx = this.canvas.getContext('2d');
+                this.statusEl = document.getElementById(statusId);
+                this.entries = [];
+                this.nextLSN = 1;
+                this.reset();
+            }
+            
+            reset() {
+                this.entries = [];
+                this.nextLSN = 1;
+                this.draw();
+                this.statusEl.textContent = 'Append-only log grows with each write';
+            }
+            
+            addEntry() {
+                const operations = ['UPDATE', 'INSERT', 'DELETE'];
+                const keys = ['user:1', 'user:2', 'order:1', 'product:5'];
+                
+                this.entries.push({
+                    lsn: this.nextLSN++,
+                    op: operations[Math.floor(Math.random() * operations.length)],
+                    key: keys[Math.floor(Math.random() * keys.length)]
+                });
+                
+                if (this.entries.length > 8) {
+                    this.entries.shift();
+                }
+                
+                this.statusEl.textContent = `✅ Log Entry LSN=${this.entries[this.entries.length-1].lsn} written and fsync'd to disk`;
+                this.draw();
+            }
+            
+            draw() {
+                const ctx = this.ctx;
+                const w = this.canvas.width;
+                const h = this.canvas.height;
+                
+                ctx.fillStyle = '#1a1a2e';
+                ctx.fillRect(0, 0, w, h);
+                
+                // Title
+                ctx.fillStyle = '#ff9500';
+                ctx.font = 'bold 20px Segoe UI';
+                ctx.textAlign = 'center';
+                ctx.fillText('Write-Ahead Log (WAL)', w/2, 30);
+                
+                // Log file representation
+                ctx.strokeStyle = '#ff9500';
+                ctx.lineWidth = 3;
+                ctx.strokeRect(30, 60, w - 60, 280);
+                
+                ctx.fillStyle = '#888';
+                ctx.font = '14px Segoe UI';
+                ctx.textAlign = 'left';
+                ctx.fillText('wal.log (Append-only)', 40, 55);
+                
+                // Draw log entries
+                const entryH = 30;
+                const startY = 70;
+                this.entries.forEach((entry, i) => {
+                    const y = startY + i * (entryH + 5);
+                    
+                    // Entry background
+                    ctx.fillStyle = 'rgba(255, 149, 0, 0.2)';
+                    ctx.fillRect(40, y, w - 80, entryH);
+                    
+                    // Entry content
+                    ctx.fillStyle = '#ff9500';
+                    ctx.font = '12px Consolas';
+                    ctx.textAlign = 'left';
+                    ctx.fillText(`LSN=${entry.lsn}`, 50, y + 20);
+                    ctx.fillText(`${entry.op}`, 130, y + 20);
+                    ctx.fillText(`key=${entry.key}`, 230, y + 20);
+                    
+                    // Checkmark (persisted)
+                    ctx.fillStyle = '#00ff88';
+                    ctx.font = 'bold 16px Segoe UI';
+                    ctx.textAlign = 'right';
+                    ctx.fillText('✓', w - 50, y + 20);
+                });
+                
+                if (this.entries.length === 0) {
+                    ctx.fillStyle = '#666';
+                    ctx.font = 'italic 16px Segoe UI';
+                    ctx.textAlign = 'center';
+                    ctx.fillText('(Empty log - click to add entries)', w/2, 200);
+                }
+                
+                // Arrow showing append direction
+                if (this.entries.length > 0) {
+                    const arrowY = startY + this.entries.length * (entryH + 5) + 10;
+                    ctx.strokeStyle = '#ffd93d';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.moveTo(w/2 - 30, arrowY);
+                    ctx.lineTo(w/2 + 30, arrowY);
+                    ctx.stroke();
+                    
+                    // Arrow head
+                    ctx.beginPath();
+                    ctx.moveTo(w/2 + 25, arrowY - 5);
+                    ctx.lineTo(w/2 + 35, arrowY);
+                    ctx.lineTo(w/2 + 25, arrowY + 5);
+                    ctx.stroke();
+                    
+                    ctx.fillStyle = '#ffd93d';
+                    ctx.font = '12px Segoe UI';
+                    ctx.textAlign = 'center';
+                    ctx.fillText('Append here', w/2, arrowY + 20);
+                }
+                
+                // Key properties
+                ctx.fillStyle = '#00ff88';
+                ctx.font = 'bold 14px Segoe UI';
+                ctx.textAlign = 'left';
+                ctx.fillText('📝 Properties:', 40, 360);
+                
+                ctx.fillStyle = '#aaa';
+                ctx.font = '13px Segoe UI';
+                ctx.fillText('• Append-only (never modify)', 50, 380);
+                ctx.fillText('• fsync() after each entry (durable)', 250, 380);
+            }
+        }
+
+        // ==================== ANIMATION 3: Transaction Manager ====================
+        class TransactionAnimation {
+            constructor(canvasId, statusId) {
+                this.canvas = document.getElementById(canvasId);
+                if (!this.canvas) return;
+                this.ctx = this.canvas.getContext('2d');
+                this.statusEl = document.getElementById(statusId);
+                this.phase = 0;
+                this.reset();
+            }
+            
+            reset() {
+                this.phase = 0;
+                this.draw();
+                this.statusEl.textContent = 'Transaction lifecycle: BEGIN → EXECUTE → COMMIT';
+            }
+            
+            nextPhase() {
+                this.phase = (this.phase + 1) % 5;
+                const phases = [
+                    'Transaction lifecycle: BEGIN → EXECUTE → COMMIT',
+                    '1️⃣ BEGIN: Transaction started, assigned ID',
+                    '2️⃣ EXECUTE: Acquire locks, write to WAL, update data',
+                    '3️⃣ COMMIT: Write commit record, release locks',
+                    '✅ DONE: Transaction durable and visible to others'
+                ];
+                this.statusEl.textContent = phases[this.phase];
+                this.draw();
+            }
+            
+            draw() {
+                const ctx = this.ctx;
+                const w = this.canvas.width;
+                const h = this.canvas.height;
+                
+                ctx.fillStyle = '#1a1a2e';
+                ctx.fillRect(0, 0, w, h);
+                
+                // Title
+                ctx.fillStyle = '#b388ff';
+                ctx.font = 'bold 20px Segoe UI';
+                ctx.textAlign = 'center';
+                ctx.fillText('Transaction Lifecycle', w/2, 30);
+                
+                // Draw timeline
+                const stages = [
+                    { label: 'BEGIN', color: '#00d4ff' },
+                    { label: 'EXECUTE', color: '#ffd93d' },
+                    { label: 'COMMIT', color: '#00ff88' }
+                ];
+                
+                const stageW = 120;
+                const stageH = 80;
+                const startX = 70;
+                const y = 100;
+                
+                stages.forEach((stage, i) => {
+                    const x = startX + i * (stageW + 60);
+                    const active = this.phase === i + 1 || (this.phase === 4 && i === 2);
+                    
+                    // Stage box
+                    ctx.fillStyle = active ? stage.color : '#333';
+                    ctx.globalAlpha = active ? 1 : 0.3;
+                    ctx.fillRect(x, y, stageW, stageH);
+                    ctx.globalAlpha = 1;
+                    
+                    ctx.strokeStyle = stage.color;
+                    ctx.lineWidth = active ? 4 : 2;
+                    ctx.strokeRect(x, y, stageW, stageH);
+                    
+                    // Label
+                    ctx.fillStyle = active ? '#000' : stage.color;
+                    ctx.font = 'bold 18px Segoe UI';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(stage.label, x + stageW/2, y + stageH/2 + 6);
+                    
+                    // Arrow to next
+                    if (i < stages.length - 1) {
+                        const arrowX = x + stageW + 10;
+                        const arrowY = y + stageH/2;
+                        
+                        ctx.strokeStyle = active ? '#ffd93d' : '#555';
+                        ctx.lineWidth = 2;
+                        ctx.beginPath();
+                        ctx.moveTo(arrowX, arrowY);
+                        ctx.lineTo(arrowX + 40, arrowY);
+                        ctx.stroke();
+                        
+                        ctx.beginPath();
+                        ctx.moveTo(arrowX + 35, arrowY - 5);
+                        ctx.lineTo(arrowX + 45, arrowY);
+                        ctx.lineTo(arrowX + 35, arrowY + 5);
+                        ctx.stroke();
+                    }
+                });
+                
+                // Details for each phase
+                const details = [
+                    [],
+                    ['• txn_id = 42', '• Add to active_txns', '• Ready to execute'],
+                    ['• Acquire lock on key', '• Write to WAL', '• Update storage engine', '• Mark pages dirty'],
+                    ['• Write COMMIT to WAL', '• fsync()', '• Release all locks', '• Remove from active_txns']
+                ];
+                
+                if (this.phase > 0 && this.phase < 4) {
+                    ctx.fillStyle = '#aaa';
+                    ctx.font = '14px Segoe UI';
+                    ctx.textAlign = 'left';
+                    
+                    details[this.phase].forEach((line, i) => {
+                        ctx.fillText(line, 70, 230 + i * 25);
+                    });
+                }
+                
+                // ACID properties
+                if (this.phase === 4) {
+                    ctx.fillStyle = '#00ff88';
+                    ctx.font = 'bold 18px Segoe UI';
+                    ctx.textAlign = 'center';
+                    ctx.fillText('✅ ACID Guarantees Met', w/2, 240);
+                    
+                    ctx.fillStyle = '#aaa';
+                    ctx.font = '14px Segoe UI';
+                    ctx.textAlign = 'left';
+                    const acidProps = [
+                        '🅰️ Atomicity: All operations committed together',
+                        '🅲 Consistency: Constraints maintained',
+                        '🅸 Isolation: Locks prevented conflicts',
+                        '🅳 Durability: WAL persisted to disk'
+                    ];
+                    acidProps.forEach((prop, i) => {
+                        ctx.fillText(prop, 70, 270 + i * 25);
+                    });
+                }
+                
+                // Lock table visualization
+                if (this.phase === 2) {
+                    ctx.strokeStyle = '#ffd93d';
+                    ctx.lineWidth = 2;
+                    ctx.strokeRect(280, 240, 180, 100);
+                    
+                    ctx.fillStyle = '#ffd93d';
+                    ctx.font = 'bold 14px Segoe UI';
+                    ctx.textAlign = 'center';
+                    ctx.fillText('Lock Table', 370, 260);
+                    
+                    ctx.fillStyle = '#aaa';
+                    ctx.font = '12px Consolas';
+                    ctx.textAlign = 'left';
+                    ctx.fillText('user:1 → [txn_42]', 290, 285);
+                    ctx.fillText('user:2 → [txn_42]', 290, 305);
+                    
+                    ctx.fillStyle = '#ff4757';
+                    ctx.font = '11px Segoe UI';
+                    ctx.fillText('🔒 Locked', 290, 325);
+                }
+            }
+        }
+
+        // ==================== ANIMATION 4: Query Processor ====================
+        class QueryProcessorAnimation {
+            constructor(canvasId, statusId) {
+                this.canvas = document.getElementById(canvasId);
+                if (!this.canvas) return;
+                this.ctx = this.canvas.getContext('2d');
+                this.statusEl = document.getElementById(statusId);
+                this.stage = 0;
+                this.reset();
+            }
+            
+            reset() {
+                this.stage = 0;
+                this.draw();
+                this.statusEl.textContent = '7-stage pipeline transforms SQL to results';
+            }
+            
+            nextStage() {
+                this.stage = (this.stage + 1) % 8;
+                const stages = [
+                    '7-stage pipeline transforms SQL to results',
+                    '1. Lexer: Tokenize SQL string',
+                    '2. Parser: Build Abstract Syntax Tree (AST)',
+                    '3. Validator: Check tables/columns exist',
+                    '4. Logical Planner: Create operator tree',
+                    '5. Optimizer: Choose best execution strategy',
+                    '6. Physical Planner: Generate executable plan',
+                    '7. Executor: Run plan and return results'
+                ];
+                this.statusEl.textContent = stages[this.stage];
+                this.draw();
+            }
+            
+            draw() {
+                const ctx = this.ctx;
+                const w = this.canvas.width;
+                const h = this.canvas.height;
+                
+                ctx.fillStyle = '#1a1a2e';
+                ctx.fillRect(0, 0, w, h);
+                
+                // Title
+                ctx.fillStyle = '#00ff88';
+                ctx.font = 'bold 20px Segoe UI';
+                ctx.textAlign = 'center';
+                ctx.fillText('Query Processing Pipeline', w/2, 30);
+                
+                // SQL input
+                ctx.fillStyle = '#00d4ff';
+                ctx.font = '13px Consolas';
+                ctx.fillText('SELECT name FROM users WHERE age > 25', w/2, 60);
+                
+                // Draw pipeline stages
+                const stages = [
+                    { name: 'Lexer', icon: '📝', color: '#00d4ff' },
+                    { name: 'Parser', icon: '🌳', color: '#b388ff' },
+                    { name: 'Validator', icon: '✅', color: '#00ff88' },
+                    { name: 'Logical', icon: '🧠', color: '#ffd93d' },
+                    { name: 'Optimizer', icon: '🎯', color: '#ff9500' },
+                    { name: 'Physical', icon: '⚙️', color: '#ff6b6b' },
+                    { name: 'Executor', icon: '▶️', color: '#00ff88' }
+                ];
+                
+                const boxW = 60;
+                const boxH = 60;
+                const startY = 90;
+                const spacing = 5;
+                
+                stages.forEach((stage, i) => {
+                    const x = 20 + i * (boxW + spacing);
+                    const y = startY;
+                    const active = this.stage === i + 1 || this.stage === 7;
+                    
+                    // Box
+                    ctx.fillStyle = active ? stage.color : '#333';
+                    ctx.globalAlpha = active ? 1 : 0.3;
+                    ctx.fillRect(x, y, boxW, boxH);
+                    ctx.globalAlpha = 1;
+                    
+                    ctx.strokeStyle = stage.color;
+                    ctx.lineWidth = active ? 3 : 1;
+                    ctx.strokeRect(x, y, boxW, boxH);
+                    
+                    // Icon
+                    ctx.font = '24px Segoe UI';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(stage.icon, x + boxW/2, y + 30);
+                    
+                    // Label
+                    ctx.fillStyle = active ? stage.color : '#666';
+                    ctx.font = 'bold 11px Segoe UI';
+                    ctx.fillText(stage.name, x + boxW/2, y + 50);
+                    
+                    // Arrow
+                    if (i < stages.length - 1) {
+                        const arrowX = x + boxW;
+                        const arrowY = y + boxH/2;
+                        
+                        ctx.strokeStyle = active ? '#ffd93d' : '#444';
+                        ctx.lineWidth = 2;
+                        ctx.beginPath();
+                        ctx.moveTo(arrowX, arrowY);
+                        ctx.lineTo(arrowX + spacing, arrowY);
+                        ctx.stroke();
+                    }
+                });
+                
+                // Stage details
+                const stageDetails = [
+                    { title: '', lines: [] },
+                    { title: 'Tokens', lines: ["['SELECT', 'name', 'FROM',", " 'users', 'WHERE', 'age',", " '>', '25']"] },
+                    { title: 'AST', lines: ['SelectStmt {', '  columns: [name]', '  from: users', '  where: age > 25', '}'] },
+                    { title: 'Validation', lines: ['✅ Table "users" exists', '✅ Column "name" exists', '✅ Column "age" exists', '✅ Type INTEGER matches'] },
+                    { title: 'Logical Plan', lines: ['Project(name)', '  ↑', 'Filter(age > 25)', '  ↑', 'Scan(users)'] },
+                    { title: 'Optimization', lines: ['🎯 Index detected!', 'Replace Scan → IndexScan', 'Selectivity: ~10%', 'Cost: 100 (was 10,000)'] },
+                    { title: 'Physical Plan', lines: ['Project(name)', '  ↑', 'IndexScan(age_idx)', '  range: [25, ∞)', '  estimated: 100 rows'] },
+                    { title: 'Results', lines: ['[', '  {name: "Alice"},', '  {name: "Charlie"},', '  {name: "David"}', ']', '', '⏱️ 2ms (1000× faster!)'] }
+                ];
+                
+                if (this.stage > 0) {
+                    const detail = stageDetails[this.stage];
+                    
+                    ctx.fillStyle = '#00ff88';
+                    ctx.font = 'bold 16px Segoe UI';
+                    ctx.textAlign = 'left';
+                    if (detail.title) {
+                        ctx.fillText(detail.title, 30, 180);
+                    }
+                    
+                    ctx.fillStyle = '#aaa';
+                    ctx.font = '13px Consolas';
+                    detail.lines.forEach((line, i) => {
+                        ctx.fillText(line, 30, 205 + i * 20);
+                    });
+                }
+                
+                // Key insight for optimizer stage
+                if (this.stage === 5) {
+                    ctx.fillStyle = 'rgba(255, 215, 0, 0.2)';
+                    ctx.fillRect(20, 350, 460, 80);
+                    ctx.strokeStyle = '#ffd700';
+                    ctx.lineWidth = 2;
+                    ctx.strokeRect(20, 350, 460, 80);
+                    
+                    ctx.fillStyle = '#ffd700';
+                    ctx.font = 'bold 14px Segoe UI';
+                    ctx.textAlign = 'left';
+                    ctx.fillText('💡 This is where magic happens!', 30, 370);
+                    
+                    ctx.fillStyle = '#aaa';
+                    ctx.font = '12px Segoe UI';
+                    ctx.fillText('Optimizer chooses between:', 30, 390);
+                    ctx.fillText('  • Full scan: O(n) = 10,000 rows', 30, 408);
+                    ctx.fillText('  • Index scan: O(log n) = 100 rows ← WINNER', 30, 426);
+                }
+            }
+        }
+
+        // Initialize animations
+        let bufferPoolAnim, walAnim, txnAnim, queryAnim;
+        
+        // Wait for DOM to be ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initAnimations);
+        } else {
+            initAnimations();
+        }
+        
+        function initAnimations() {
+            bufferPoolAnim = new BufferPoolAnimation('bufferPoolCanvas', 'bufferPoolStatus');
+            walAnim = new WALAnimation('walCanvas', 'walStatus');
+            txnAnim = new TransactionAnimation('txnCanvas', 'txnStatus');
+            queryAnim = new QueryProcessorAnimation('queryCanvas', 'queryStatus');
+        }
+    </script>
+</body>
+</html>
