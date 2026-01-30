@@ -23,22 +23,23 @@
         .reveal { font-family: 'Segoe UI', system-ui, sans-serif; }
         .reveal h1, .reveal h2, .reveal h3 { text-transform: none; font-weight: 700; }
         .reveal h1 {
-            font-size: 2.5em;
+            font-size: 2.2em;
             background: linear-gradient(135deg, var(--primary-blue), var(--primary-purple));
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
         }
-        .reveal h2 { font-size: 1.8em; color: var(--primary-green); }
-        .reveal h3 { font-size: 1.4em; color: var(--primary-blue); }
+        .reveal h2 { font-size: 1.6em; color: var(--primary-green); }
+        .reveal h3 { font-size: 1.3em; color: var(--primary-blue); }
+        .reveal p { font-size: 0.95em; }
         
-        .subtitle { font-size: 1.2em; color: var(--primary-purple); margin-top: 0.5em; }
+        .subtitle { font-size: 1.1em; color: var(--primary-purple); margin-top: 0.5em; }
         .episode-badge {
             display: inline-block;
             background: linear-gradient(135deg, var(--primary-orange), var(--primary-red));
             padding: 0.3em 1em;
             border-radius: 20px;
-            font-size: 0.8em;
+            font-size: 0.75em;
             margin-bottom: 1em;
         }
         .season-badge {
@@ -46,92 +47,92 @@
             background: linear-gradient(135deg, var(--primary-blue), var(--primary-purple));
             padding: 0.2em 0.8em;
             border-radius: 15px;
-            font-size: 0.6em;
+            font-size: 0.55em;
             margin-bottom: 0.5em;
         }
         .leetcode-badge {
             display: inline-block;
             background: linear-gradient(135deg, #ffa116, #ff6b00);
-            padding: 5px 15px;
-            border-radius: 20px;
-            font-size: 0.9em;
+            padding: 4px 12px;
+            border-radius: 15px;
+            font-size: 0.75em;
         }
         
         /* ======== AHA MOMENT STYLES ======== */
         .aha-moment {
             background: linear-gradient(135deg, rgba(255, 215, 0, 0.2), rgba(255, 140, 0, 0.1));
             border: 4px solid #ffd700;
-            border-radius: 25px;
-            padding: 50px;
-            margin: 30px auto;
+            border-radius: 20px;
+            padding: 30px;
+            margin: 20px auto;
             max-width: 850px;
             text-align: center;
-            box-shadow: 0 0 60px rgba(255, 215, 0, 0.4);
+            box-shadow: 0 0 50px rgba(255, 215, 0, 0.4);
             animation: glow 2s ease-in-out infinite alternate;
         }
         @keyframes glow {
-            from { box-shadow: 0 0 40px rgba(255, 215, 0, 0.3); }
-            to { box-shadow: 0 0 80px rgba(255, 215, 0, 0.6); }
+            from { box-shadow: 0 0 30px rgba(255, 215, 0, 0.3); }
+            to { box-shadow: 0 0 60px rgba(255, 215, 0, 0.5); }
         }
         .aha-moment h3 {
             color: #ffd700 !important;
-            font-size: 1.8em;
-            margin-bottom: 25px;
+            font-size: 1.5em;
+            margin-bottom: 20px;
         }
-        .aha-moment p { font-size: 1.3em; line-height: 1.6; }
-        .aha-icon { font-size: 4em; margin-bottom: 15px; }
+        .aha-moment p { font-size: 1.05em; line-height: 1.5; }
+        .aha-icon { font-size: 3em; margin-bottom: 12px; }
         
         .big-reveal {
-            font-size: 3em;
+            font-size: 2.3em;
             font-weight: 900;
             color: var(--primary-green);
             text-shadow: 0 0 40px rgba(0, 255, 136, 0.6);
-            margin: 30px 0;
+            margin: 20px 0;
         }
         
         .metaphor-card {
             background: var(--bg-card);
-            border-radius: 20px;
-            padding: 35px;
-            margin: 25px auto;
+            border-radius: 15px;
+            padding: 25px;
+            margin: 20px auto;
             max-width: 800px;
             border-left: 6px solid var(--primary-purple);
         }
-        .metaphor-card .emoji { font-size: 4em; margin-bottom: 20px; }
-        .metaphor-card h4 { color: var(--primary-purple); font-size: 1.4em; margin-bottom: 15px; }
+        .metaphor-card .emoji { font-size: 3em; margin-bottom: 15px; }
+        .metaphor-card h4 { color: var(--primary-purple); font-size: 1.25em; margin-bottom: 12px; }
         
         .versus-container {
             display: grid;
             grid-template-columns: 1fr auto 1fr;
-            gap: 40px;
+            gap: 30px;
             align-items: center;
-            margin: 40px 0;
+            margin: 25px 0;
         }
         .versus-box {
             background: var(--bg-card);
-            border-radius: 15px;
-            padding: 30px;
+            border-radius: 12px;
+            padding: 22px;
             text-align: center;
         }
         .versus-box.bad { border-top: 5px solid var(--primary-red); }
         .versus-box.good { border-top: 5px solid var(--primary-green); }
-        .versus-box .number { font-size: 3.5em; font-weight: 900; }
+        .versus-box .number { font-size: 3em; font-weight: 900; }
         .versus-box.bad .number { color: var(--primary-red); }
         .versus-box.good .number { color: var(--primary-green); }
-        .vs-text { font-size: 3em; color: var(--primary-yellow); font-weight: bold; }
+        .vs-text { font-size: 2.3em; color: var(--primary-yellow); font-weight: bold; }
         
         .warning-box {
             background: rgba(255, 71, 87, 0.1);
             border-left: 4px solid var(--primary-red);
-            padding: 1em;
-            margin: 1em 0;
+            padding: 0.9em;
+            margin: 0.8em 0;
             border-radius: 0 10px 10px 0;
         }
         .highlight-box {
             background: rgba(0, 255, 136, 0.1);
             border-left: 4px solid var(--primary-green);
-            padding: 1em;
-            margin: 1em 0;
+            padding: 0.9em;
+            margin: 0.8em 0;
             border-radius: 0 10px 10px 0;
         }
         
@@ -139,22 +140,22 @@
             position: absolute;
             top: 10px;
             right: 20px;
-            font-size: 0.6em;
+            font-size: 0.55em;
             color: var(--primary-purple);
             opacity: 0.7;
         }
         
         .animation-container {
             background: var(--bg-card);
-            border-radius: 15px;
-            padding: 20px;
-            margin: 20px auto;
+            border-radius: 12px;
+            padding: 18px;
+            margin: 18px auto;
             max-width: 900px;
             box-shadow: 0 10px 40px rgba(0,0,0,0.3);
         }
         .animation-canvas {
             background: var(--bg-dark);
-            border-radius: 10px;
+            border-radius: 8px;
             display: block;
             margin: 0 auto;
         }
@@ -162,17 +163,17 @@
             display: flex;
             justify-content: center;
             gap: 10px;
-            margin-top: 15px;
+            margin-top: 12px;
             flex-wrap: wrap;
         }
         .control-btn {
             background: linear-gradient(135deg, var(--primary-blue), var(--primary-purple));
             border: none;
             color: white;
-            padding: 10px 20px;
-            border-radius: 25px;
+            padding: 8px 18px;
+            border-radius: 20px;
             cursor: pointer;
-            font-size: 0.9em;
+            font-size: 0.85em;
             transition: all 0.3s ease;
         }
         .control-btn:hover { transform: translateY(-2px); box-shadow: 0 5px 20px rgba(0, 212, 255, 0.4); }
@@ -180,50 +181,69 @@
         .control-btn.danger { background: linear-gradient(135deg, var(--primary-orange), var(--primary-red)); }
         .status-display {
             text-align: center;
-            margin-top: 10px;
-            font-size: 0.9em;
+            margin-top: 8px;
+            font-size: 0.85em;
             color: var(--primary-yellow);
-            min-height: 24px;
+            min-height: 20px;
         }
         
         .takeaway-grid {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
-            gap: 15px;
-            margin-top: 20px;
+            gap: 12px;
+            margin-top: 18px;
         }
         .takeaway-item {
             background: var(--bg-card);
             border-radius: 10px;
-            padding: 15px;
+            padding: 12px;
             display: flex;
             align-items: center;
-            gap: 15px;
+            gap: 12px;
         }
-        .takeaway-item .icon { font-size: 2em; min-width: 50px; text-align: center; }
-        .takeaway-item .text { text-align: left; font-size: 0.85em; }
+        .takeaway-item .icon { font-size: 1.8em; min-width: 45px; text-align: center; }
+        .takeaway-item .text { text-align: left; font-size: 0.8em; }
         
         .evolution-step {
             background: var(--bg-card);
             border-radius: 10px;
-            padding: 15px;
-            margin: 10px 0;
+            padding: 12px;
+            margin: 8px 0;
             text-align: left;
+            border-left: 4px solid var(--primary-blue);
         }
-        .evolution-step h4 { color: var(--primary-blue); margin-bottom: 8px; }
-        .evolution-step.current { border: 2px solid var(--primary-green); }
+        .evolution-step h4 { color: var(--primary-blue); margin-bottom: 8px; font-size: 1.05em; }
+        .evolution-step.current { border-left-color: var(--primary-green); box-shadow: 0 0 30px rgba(0, 255, 136, 0.3); }
+        .evolution-step.current h4 { color: var(--primary-green); }
+        .evolution-step p { margin: 0; font-size: 0.85em; color: #aaa; }
         
         .tree-stat {
             display: flex;
+            justify-content: space-between;
             align-items: center;
-            gap: 15px;
-            margin: 10px 0;
-            padding: 15px;
+            padding: 15px 25px;
+            margin: 8px 0;
             background: var(--bg-card);
             border-radius: 10px;
+            border-left: 5px solid var(--primary-purple);
         }
-        .tree-stat .label { flex: 1; text-align: left; }
-        .tree-stat .value { font-size: 1.5em; font-weight: bold; }
+        .tree-stat .label { font-size: 1.05em; color: #ddd; }
+        .tree-stat .value { font-size: 1.4em; font-weight: bold; }
+        
+        /* Code block improvements */
+        .reveal pre {
+            width: 100%;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+            margin: 15px 0;
+        }
+        .reveal code {
+            max-height: 650px;
+            overflow-y: auto;
+            padding: 15px;
+        }
+        
+        /* Ensure fragments don't cause overflow */
+        .fragment { max-width: 100%; }
     </style>
 </head>
 <body>
@@ -379,6 +399,38 @@
                     </div>
                 </div>
             </section>
+
+            <!-- Slide 8.5: LeetCode #98 Solution -->
+            <section>
+                <span class="act-label">ACT 2: THE LEETCODE</span>
+                <div class="leetcode-badge">LeetCode #98</div>
+                <h2>The Solution</h2>
+                <div class="metaphor-card" style="max-width: 900px; border-left-color: var(--primary-orange);">
+                    <h4>The Trick: Track Valid Range</h4>
+                    <pre style="width: 100%;"><code class="language-python" data-line-numbers="1-8|10-15" style="font-size: 0.8em; text-align: left;">
+def isValidBST(root):
+    def validate(node, min_val, max_val):
+        if not node:
+            return True
+        
+        # Current node must be in valid range
+        if not (min_val < node.val < max_val):
+            return False
+        
+        # Left subtree: all values < node.val
+        # Right subtree: all values > node.val
+        return (validate(node.left, min_val, node.val) and
+                validate(node.right, node.val, max_val))
+    
+    return validate(root, float('-inf'), float('inf'))
+                    </code></pre>
+                    <div class="fragment" style="margin-top: 15px; padding: 12px; background: rgba(255,149,0,0.1); border-radius: 10px;">
+                        <p style="color: var(--primary-orange); font-size: 1.05em; margin: 0;">
+                            This is the same check MySQL/PostgreSQL run during index verification. One corrupted node breaks millions of queries.
+                        </p>
+                    </div>
+                </div>
+            </section>
             
             <!-- Slide 9: AHA MOMENT #3 - The Balance Problem -->
             <section>
@@ -439,6 +491,49 @@
                     1 million nodes: Height 20 (balanced) vs Height 1,000,000 (degenerate)
                 </p>
             </section>
+
+            <!-- SLIDE 11.5: NEW "WOW" MOMENT SLIDE -->
+            <section>
+                <span class="act-label">💡 WOW MOMENT</span>
+                <h2>One Line of Code... 1 Million Operations</h2>
+                <p style="margin-bottom: 30px;">The exact same search code runs on two different trees. The only difference is the data's insertion order.</p>
+                <div class="versus-container">
+                    <div class="versus-box good">
+                        <h4 style="color: var(--primary-green);">Balanced Tree (Random Inserts)</h4>
+                        <pre style="width: 100%; margin: 10px 0;"><code class="language-python" data-line-numbers="3-4" style="font-size: 0.7em; text-align: left;">
+def search(node, key):
+    while node is not None:
+        if key < node.key:
+            node = node.left
+        elif key > node.key:
+            node = node.right
+        else:
+            return node
+    return None
+                        </code></pre>
+                        <p class="number">~20</p>
+                        <p>comparisons</p>
+                    </div>
+                    <div class="vs-text">vs</div>
+                    <div class="versus-box bad">
+                        <h4 style="color: var(--primary-red);">Unbalanced Tree (Sorted Inserts)</h4>
+                        <pre style="width: 100%; margin: 10px 0;"><code class="language-python" data-line-numbers="4" style="font-size: 0.7em; text-align: left;">
+def search(node, key):
+    while node is not None:
+        if key < node.key:
+            node = node.left # This line is never hit!
+        elif key > node.key:
+            node = node.right
+        else:
+            return node
+    return None
+                        </code></pre>
+                        <p class="number">~1M</p>
+                        <p>comparisons</p>
+                    </div>
+                </div>
+                <p class="fragment" style="font-size: 1.2em; color: var(--primary-yellow);">The code is identical. The performance is 50,000x worse because one branch is never taken.</p>
+            </section>
             
             <!-- Slide 12: AHA MOMENT #4 - The AVL Solution -->
             <section>
@@ -460,7 +555,228 @@
                     </p>
                 </div>
             </section>
+
+            <!-- SLIDE 12.5: NEW CODE SLIDE -->
+            <section>
+                <span class="act-label">ACT 4: PRODUCTION</span>
+                <h2>The Self-Balancing Promise in Code</h2>
+                <div class="metaphor-card" style="max-width: 900px;">
+                    <h4>AVL Insert — The Tiny Additions That Save You</h4>
+                    <pre style="width: 100%;"><code class="language-python" data-line-numbers="1-10|12-30|32-55" style="font-size: 0.72em; text-align: left;">
+def height(n):
+    return n.height if n else 0
+
+def balance_factor(n):
+    return height(n.left) - height(n.right)
+
+def insert(n, key):
+    # 1) Standard BST insert
+    if not n:
+        return Node(key)
+    if key < n.key:
+        n.left = insert(n.left, key)
+    else:
+        n.right = insert(n.right, key)
+
+    # 2) The two lines that change everything
+    n.height = 1 + max(height(n.left), height(n.right))
+    bf = balance_factor(n)
+
+    # 3) Rebalance (4 cases - check child balance factor)
+    if bf > 1:  # Left-heavy
+        if balance_factor(n.left) >= 0:       # Left-Left
+            return rotate_right(n)
+        else:                                  # Left-Right
+            n.left = rotate_left(n.left)
+            return rotate_right(n)
+    if bf < -1:  # Right-heavy
+        if balance_factor(n.right) <= 0:      # Right-Right
+            return rotate_left(n)
+        else:                                  # Right-Left
+            n.right = rotate_right(n.right)
+            return rotate_left(n)
+
+    return n
+
+def rotate_left(z):
+    y = z.right
+    T2 = y.left
+    y.left = z
+    z.right = T2
+    z.height = 1 + max(height(z.left), height(z.right))
+    y.height = 1 + max(height(y.left), height(y.right))
+    return y
+
+def rotate_right(z):
+    y = z.left
+    T3 = y.right
+    y.right = z
+    z.left = T3
+    z.height = 1 + max(height(z.left), height(z.right))
+    y.height = 1 + max(height(y.left), height(y.right))
+    return y
+                    </code></pre>
+                    <div class="fragment" style="margin-top: 20px; padding: 15px; background: rgba(0,255,136,0.1); border-radius: 10px;">
+                        <p style="color: var(--primary-green); font-size: 1.1em;">
+                            Height update + balance check are the safety net.
+                            Tiny code, massive impact: prevent the “linked list collapse” and keep operations ~O(log n).
+                        </p>
+                    </div>
+                </div>
+            </section>
             
+            <!-- SLIDE 12.6: BST vs AVL - Tiny Diff, Huge Outcome -->
+            <section>
+                <span class="act-label">ACT 4: PRODUCTION</span>
+                <h2>BST vs AVL: The Diff is Tiny</h2>
+                <p style="margin-bottom: 25px; color: #bbb;">Same insert. Two extra ideas. Completely different worst-case.</p>
+                <div class="versus-container">
+                    <div class="versus-box">
+                        <h4 style="color: var(--primary-blue);">Naive BST Insert</h4>
+                        <pre style="width: 100%; margin: 10px 0;"><code class="language-python" data-line-numbers style="font-size: 0.75em; text-align: left;">
+def insert_bst(n, key):
+    if not n:
+        return Node(key)
+    if key < n.key:
+        n.left = insert_bst(n.left, key)
+    else:
+        n.right = insert_bst(n.right, key)
+    return n
+                        </code></pre>
+                        <div class="warning-box" style="text-align: left;">
+                            Worst-case: sorted inserts → height becomes n → operations become O(n)
+                        </div>
+                    </div>
+                    <div class="vs-text">+</div>
+                    <div class="versus-box">
+                        <h4 style="color: var(--primary-green);">AVL Insert (BST + Safety Net)</h4>
+                        <pre style="width: 100%; margin: 10px 0;"><code class="language-python" data-line-numbers="1-3|5-9" style="font-size: 0.75em; text-align: left;">
+def insert_avl(n, key):
+    # ...same BST insert as left...
+
+    n.height = 1 + max(height(n.left), height(n.right))
+    bf = balance_factor(n)
+    return rebalance(n, bf, key)
+                        </code></pre>
+                        <div class="highlight-box" style="text-align: left;">
+                            Those 2 additions enforce: height ≈ log₂(n) → ops stay ~O(log n)
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SLIDE 12.6.5: Visual Break - The Balancing Metaphor -->
+            <section>
+                <span class="act-label">ACT 4: PRODUCTION</span>
+                <h2>🎯 The Core Insight</h2>
+                <div class="metaphor-card">
+                    <div class="emoji">⚖️</div>
+                    <h4>Balance isn't perfection—it's a guarantee</h4>
+                    <p style="font-size: 1.2em; line-height: 1.6;">
+                        AVL trees don't demand perfect balance.<br>
+                        They only demand: <span style="color: var(--primary-green);">"Left and right never differ by more than 1 level."</span>
+                    </p>
+                    <div class="fragment" style="margin-top: 25px; padding: 20px; background: rgba(0,0,0,0.3); border-radius: 10px;">
+                        <p style="font-size: 1.1em;">
+                            That one simple rule is enough to keep height ~log₂(n).<br>
+                            <span style="color: var(--primary-yellow);">And that's all we need.</span>
+                        </p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SLIDE 12.7: Rotation Trace -->
+            <section>
+                <span class="act-label">ACT 4: PRODUCTION</span>
+                <h2>A Single Rotation Saves the Day</h2>
+                <div class="metaphor-card" style="max-width: 950px;">
+                    <h4>Insert 30, 20, 10 (Left-Left case)</h4>
+                    <div style="display: grid; grid-template-columns: 1.2fr 1fr; gap: 25px; align-items: start;">
+                        <div>
+                            <div class="evolution-step" style="margin: 0 0 12px 0;">
+                                <h4>Step 1</h4>
+                                <pre><code class="language-text">30</code></pre>
+                            </div>
+                            <div class="evolution-step fragment" style="margin: 0 0 12px 0;">
+                                <h4>Step 2</h4>
+                                <pre><code class="language-text">30
+└─20</code></pre>
+                            </div>
+                            <div class="evolution-step fragment" style="margin: 0 0 12px 0; border-left: 4px solid var(--primary-red);">
+                                <h4>Step 3 (imbalance)</h4>
+                                <pre><code class="language-text">30
+└─20
+  └─10</code></pre>
+                                <p style="margin-top: 8px; color: var(--primary-red);">bf(30) = +2 → violates AVL rule</p>
+                            </div>
+                            <div class="evolution-step fragment" style="margin: 0; border-left: 4px solid var(--primary-green);">
+                                <h4>After rotate_right(30)</h4>
+                                <pre><code class="language-text">20
+├─10
+└─30</code></pre>
+                                <p style="margin-top: 8px; color: var(--primary-green);">Height drops immediately. Future ops stay fast.</p>
+                            </div>
+                        </div>
+                        <div>
+                            <h4 style="color: var(--primary-yellow); margin-top: 0;">The exact trigger in code</h4>
+                            <pre style="width: 100%;"><code class="language-python" data-line-numbers="1-2" style="font-size: 0.8em; text-align: left;">
+if bf > 1 and balance_factor(n.left) >= 0:
+    return rotate_right(n)  # LL case
+                            </code></pre>
+                            <div style="margin-top: 15px; padding: 12px; background: rgba(0,212,255,0.1); border-radius: 10px; text-align: left;">
+                                <p style="margin: 0 0 10px 0; color: var(--primary-blue); font-weight: bold;">Visual: Pointer changes</p>
+                                <pre style="font-size: 0.75em; color: #888; margin: 0;">Before:    After:
+   30         20
+  /          /  \
+ 20   →    10   30
+/
+10</pre>
+                            </div>
+                            <div class="fragment" style="margin-top: 15px; padding: 12px; background: rgba(255,217,61,0.1); border-radius: 10px; text-align: left;">
+                                <p style="margin: 0; color: var(--primary-yellow);">3 pointer reassignments. O(1) time. Tree fixed.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SLIDE 12.8: Micro-benchmark - Count The Steps -->
+            <section>
+                <span class="act-label">ACT 4: PRODUCTION</span>
+                <h2>Same Search Code. Wildly Different Cost.</h2>
+                <div class="metaphor-card" style="max-width: 950px;">
+                    <h4>Count comparisons (instrumentation)</h4>
+                    <pre style="width: 100%;"><code class="language-python" data-line-numbers="2|3-9" style="font-size: 0.78em; text-align: left;">
+def search_count(n, key):
+    steps = 0
+    while n:
+        steps += 1
+        if key < n.key:
+            n = n.left
+        elif key > n.key:
+            n = n.right
+        else:
+            return steps
+    return steps
+                    </code></pre>
+
+                    <div class="versus-container" style="margin-top: 20px;">
+                        <div class="versus-box good">
+                            <p style="font-size: 1.1em;">Balanced (height ≈ log₂ n)</p>
+                            <p class="number">~20</p>
+                            <p>steps for n = 1,000,000</p>
+                        </div>
+                        <div class="vs-text">vs</div>
+                        <div class="versus-box bad">
+                            <p style="font-size: 1.1em;">Degenerate (height ≈ n)</p>
+                            <p class="number">~1,000,000</p>
+                            <p>steps for n = 1,000,000</p>
+                        </div>
+                    </div>
+                    <p class="fragment" style="margin-top: 15px; color: var(--primary-yellow);">The algorithm is identical. The tree shape decides the bill.</p>
+                </div>
+            </section>
+
             <!-- Slide 13: Rotation Visualization -->
             <section>
                 <span class="act-label">ACT 4: PRODUCTION</span>
@@ -499,37 +815,81 @@
                 </p>
             </section>
             
+            <!-- Slide 14.5: Production War Story -->
+            <section>
+                <span class="act-label">ACT 4: PRODUCTION</span>
+                <h2>💀 Production War Story</h2>
+                <div class="metaphor-card" style="border-left-color: var(--primary-red);">
+                    <div class="emoji">🚨</div>
+                    <h4>The Sorted Import Disaster (2019)</h4>
+                    <p style="font-size: 1.05em; line-height: 1.6; text-align: left;">
+                        A financial services company imported 500K customer records <strong>in sorted order by account number</strong> into their custom in-memory index.<br><br>
+                        <span style="color: var(--primary-red);">❌ No self-balancing. Pure BST.</span><br><br>
+                        Result: The "tree" was a 500K-node linked list.<br>
+                        Query time: <strong>0.1ms → 30 seconds</strong> 💀<br><br>
+                        <span style="color: var(--primary-yellow);">Fix: Switched to AVL. Import time +2%, query time back to 0.1ms.</span>
+                    </p>
+                    <div class="fragment" style="margin-top: 20px; padding: 15px; background: rgba(255,71,87,0.1); border-radius: 10px;">
+                        <p style="color: var(--primary-red); font-size: 1.1em; margin: 0;">
+                            The lesson: Never assume random insertion order. Sorted data is common in the real world.
+                        </p>
+                    </div>
+                </div>
+            </section>
+
             <!-- Slide 15: Production Connection -->
             <section>
                 <span class="act-label">ACT 4: PRODUCTION</span>
-                <h2>🏭 Where BSTs Live in Production</h2>
-                <div class="takeaway-grid">
-                    <div class="takeaway-item">
-                        <div class="icon">🗄️</div>
-                        <div class="text">
-                            <strong>Database Indexes</strong><br>
-                            Every MySQL, PostgreSQL index is a tree variant
-                        </div>
+                <h2>🏭 The Evolution in Production</h2>
+                <div class="evolution-step" style="max-width: 800px; margin: 20px auto;">
+                    <h4>📖 The Tree Family</h4>
+                    <div style="text-align: left; padding: 15px;">
+                        <p><strong style="color: var(--primary-blue);">BST/AVL Trees:</strong> In-memory ordered data (RAM-resident)</p>
+                        <p style="margin-left: 30px; color: #888;">✓ Fast operations, ✗ Random disk access if spilled</p>
+                        <p style="margin-top: 15px;"><strong style="color: var(--primary-purple);">B-Trees (Episode 2.5):</strong> Disk-optimized with many keys per node</p>
+                        <p style="margin-left: 30px; color: #888;">Used by: MySQL InnoDB, PostgreSQL, NTFS, ext4</p>
+                        <p style="margin-top: 15px;"><strong style="color: var(--primary-green);">B+ Trees:</strong> B-Tree variant with all data in leaves</p>
+                        <p style="margin-left: 30px; color: #888;">Used by: Most database indexes (optimized range scans)</p>
                     </div>
+                </div>
+                <div class="fragment" style="max-width: 700px; margin: 0 auto;">
+                    <div class="highlight-box" style="text-align: left;">
+                        <p style="font-size: 1.05em;"><strong>Key insight:</strong> BSTs taught us the concept. B-trees adapted it for disk. Same principles, different scale.</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Slide 15.5: Other Production Uses -->
+            <section>
+                <span class="act-label">ACT 4: PRODUCTION</span>
+                <h2>🏭 BSTs Beyond Databases</h2>
+                <div class="takeaway-grid">
                     <div class="takeaway-item">
                         <div class="icon">🧠</div>
                         <div class="text">
                             <strong>In-Memory Caches</strong><br>
-                            Redis sorted sets use skip lists (tree-like)
-                        </div>
-                    </div>
-                    <div class="takeaway-item">
-                        <div class="icon">📁</div>
-                        <div class="text">
-                            <strong>File Systems</strong><br>
-                            Directory trees, B-trees for disk
+                            Redis sorted sets use skip lists (probabilistic balanced tree)
                         </div>
                     </div>
                     <div class="takeaway-item">
                         <div class="icon">🎮</div>
                         <div class="text">
                             <strong>Game Engines</strong><br>
-                            Spatial trees for collision detection
+                            Spatial trees (Quad/Octrees) for collision detection
+                        </div>
+                    </div>
+                    <div class="takeaway-item">
+                        <div class="icon">🔍</div>
+                        <div class="text">
+                            <strong>Compiler Symbol Tables</strong><br>
+                            Red-Black trees (another self-balancing variant)
+                        </div>
+                    </div>
+                    <div class="takeaway-item">
+                        <div class="icon">📊</div>
+                        <div class="text">
+                            <strong>Priority Queues</strong><br>
+                            Heap-ordered trees for task scheduling
                         </div>
                     </div>
                 </div>
@@ -643,7 +1003,10 @@
             slideNumber: true,
             width: 1920,
             height: 1080,
-            margin: 0.1,
+            margin: 0.08,
+            center: true,
+            minScale: 0.2,
+            maxScale: 1.5,
             plugins: [RevealNotes, RevealHighlight]
         });
         
